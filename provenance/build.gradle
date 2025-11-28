@@ -1,0 +1,70 @@
+import com.github.spotbugs.snom.SpotBugsTask
+
+plugins {
+    id("java-library")
+
+    // code quality
+    id("checkstyle")
+    alias(libs.plugins.errorprone)
+    alias(libs.plugins.owasp)
+    alias(libs.plugins.spotbugs)
+    alias(libs.plugins.openrewrite)
+}
+
+group = "com.guardtime.mapguard"
+version = "0.1.0-SNAPSHOT"
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    api 'com.guardtime:ksi-api:4.19.220'
+
+    implementation(libs.jackson.databind)
+    implementation 'io.github.erdtman:java-json-canonicalization:1.1'
+
+    testImplementation(platform("org.junit:junit-bom:5.13.4"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    errorprone(libs.error.prone.core)
+    rewrite(libs.rewrite.static.analysis)
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.named("test", Test) {
+    useJUnitPlatform()
+}
+
+dependencyCheck {
+    outputDirectory = layout.buildDirectory.dir("reports/dependency-check").get()
+    formats = ["XML", "HTML"]
+    scanConfigurations = ["compileClasspath", "runtimeClasspath"]
+    nvd {
+        apiKey = providers.gradleProperty("dependencyCheck.nvd.apiKey").getOrNull()
+    }
+}
+
+tasks.withType(SpotBugsTask).configureEach {
+    ignoreFailures = true
+    reports {
+        html.required = true
+        xml.required = true
+    }
+}
+
+checkstyle {
+    toolVersion = libs.versions.checkstyle.get()
+}
+
+rewrite {
+    activeRecipe("org.openrewrite.java.RemoveUnusedImports")
+    activeRecipe("org.openrewrite.staticanalysis.CodeCleanup")
+    setExportDatatables(true)
+}

@@ -1,0 +1,16 @@
+[versions]
+checkstyle = "10.24.0"
+
+[libraries]
+error-prone-core = { module = "com.google.errorprone:error_prone_core", version = "2.38.0" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version = "2.19.0" }
+rewrite-static-analysis = { module = "org.openrewrite.recipe:rewrite-static-analysis", version = "2.9.0" }
+
+[bundles]
+
+
+[plugins]
+errorprone = { id = "net.ltgt.errorprone", version = "4.2.0" }
+openrewrite = { id = "org.openrewrite.rewrite", version = "7.6.1" }
+owasp = { id = "org.owasp.dependencycheck", version = "12.1.1" }
+spotbugs = { id = "com.github.spotbugs", version = "6.1.10" }
