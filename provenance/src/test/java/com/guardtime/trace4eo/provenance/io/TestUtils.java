@@ -18,8 +18,8 @@ import java.util.List;
 
 @SuppressWarnings("MutablePublicArray")
 public final class TestUtils {
-    public static final byte[] TEST_BYTES_1 = new byte[] {1, 2, 3};
-    public static final byte[] TEST_BYTES_2 = new byte[] {4, 5, 6};
+    public static final byte[] TEST_BYTES_1 = new byte[]{1, 2, 3};
+    public static final byte[] TEST_BYTES_2 = new byte[]{4, 5, 6};
     public static final String TEST_FILE_1 = "src/test/resources/test1.txt";
     public static final String TEST_FILE_2 = "src/test/resources/test2.txt";
     public static final String SIGNATURE_1 = "src/test/resources/signature1.json";
