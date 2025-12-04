@@ -1,7 +1,5 @@
 package com.guardtime.trace4eo.provenance.container.model;
 
-import com.guardtime.ksi.hashing.HashAlgorithm;
-
 import java.nio.file.Path;
 
 public record FileHashInfo(

@@ -1,11 +1,9 @@
 package com.guardtime.trace4eo.provenance.container.model;
 
-import com.guardtime.ksi.hashing.HashAlgorithm;
-import com.guardtime.trace4eo.provenance.container.io.FileHasher;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.NoSuchAlgorithmException;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -19,7 +17,7 @@ public class FilesInfoBuilder {
         this.filesInfo = new FilesInfo(new LinkedHashSet<>(), filesContext);
     }
 
-    public FilesInfo build() throws IOException {
+    public FilesInfo build() {
         return this.filesInfo;
     }
 
@@ -37,7 +35,12 @@ public class FilesInfoBuilder {
 
     public FilesInfoBuilder addFile(Path filePath, Path destinationPath) throws IOException {
         validateFilePath(filePath);
-        byte[] hashBytes = FileHasher.hashFile(this.hashAlgorithm, filePath);
+        byte[] hashBytes;
+        try {
+            hashBytes = FileHasher.hashFile(this.hashAlgorithm, filePath);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
         FileHashInfo fileHashInfo = new FileHashInfo(destinationPath, this.hashAlgorithm, hashBytes);
         filesContext.addFileMapping(fileHashInfo, filePath);
         this.filesInfo.files().add(fileHashInfo);

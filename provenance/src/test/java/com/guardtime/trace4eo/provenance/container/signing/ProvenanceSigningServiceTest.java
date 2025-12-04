@@ -1,0 +1,29 @@
+package com.guardtime.trace4eo.provenance.container.signing;
+
+import com.guardtime.trace4eo.provenance.container.model.HashAlgorithm;
+import com.guardtime.trace4eo.provenance.container.model.ProvenanceSignature;
+import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+
+import static com.guardtime.trace4eo.provenance.container.io.TestUtils.TEST_BYTES_1;
+import static com.guardtime.trace4eo.provenance.container.io.TestUtils.TEST_BYTES_2;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+class ProvenanceSigningServiceTest {
+
+    private final ProvenanceSigningService provenanceSigningService = new ProvenanceSigningService();
+
+    @Test
+    void sign() {
+        HashAlgorithm hashAlgorithm = HashAlgorithm.SHA256;
+        ProvenanceSignature signature1 = provenanceSigningService.sign(hashAlgorithm, TEST_BYTES_1);
+        assertNotNull(signature1);
+        ProvenanceSignature signature2 = provenanceSigningService.sign(hashAlgorithm, TEST_BYTES_2);
+        assertNotNull(signature2);
+        assertFalse(Arrays.equals(signature1.bytes(), signature2.bytes()));
+        assertEquals(hashAlgorithm, signature1.hashAlgorithm());
+    }
+}

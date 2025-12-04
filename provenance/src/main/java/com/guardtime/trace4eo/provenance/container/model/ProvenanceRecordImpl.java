@@ -1,7 +1,5 @@
 package com.guardtime.trace4eo.provenance.container.model;
 
-import com.guardtime.ksi.unisignature.KSISignature;
-
 import java.util.UUID;
 
 record ProvenanceRecordImpl(
@@ -9,6 +7,6 @@ record ProvenanceRecordImpl(
     Metadata metadata,
     FilesInfo filesInfo,
     Manifest manifest,
-    KSISignature signature
+    ProvenanceSignature signature
 ) implements ProvenanceRecord {
 }

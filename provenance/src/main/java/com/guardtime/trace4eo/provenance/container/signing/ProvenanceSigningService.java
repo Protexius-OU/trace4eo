@@ -1,28 +1,41 @@
 package com.guardtime.trace4eo.provenance.container.signing;
 
-import com.guardtime.ksi.Signer;
-import com.guardtime.ksi.exceptions.KSIException;
-import com.guardtime.ksi.hashing.DataHasher;
-import com.guardtime.ksi.hashing.HashAlgorithm;
-import com.guardtime.ksi.unisignature.KSISignature;
+import com.guardtime.trace4eo.provenance.container.model.HashAlgorithm;
+import com.guardtime.trace4eo.provenance.container.model.ProvenanceSignature;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 
 public class ProvenanceSigningService {
-    private final Signer signer;
 
-    public ProvenanceSigningService(Signer signer) {
-        this.signer = signer;
-    }
+    private static final Logger log = LoggerFactory.getLogger(ProvenanceSigningService.class);
 
-    public KSISignature sign(HashAlgorithm hashAlgorithm, byte[] bytes) throws KSIException {
+    public ProvenanceSignature sign(HashAlgorithm hashAlgorithm, byte[] bytes) {
         return sign(hashAlgorithm, new ByteArrayInputStream(bytes));
     }
 
-    public KSISignature sign(HashAlgorithm hashAlgorithm, InputStream inputStream) throws KSIException {
-        DataHasher dh = new DataHasher(hashAlgorithm);
-        dh.addData(inputStream);
-        return signer.sign(dh.getHash());
+    public ProvenanceSignature sign(HashAlgorithm hashAlgorithm, InputStream inputStream) {
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance(hashAlgorithm.name());
+        } catch (NoSuchAlgorithmException e) {
+            log.error("Hash algorithm {} not supported", hashAlgorithm.name(), e);
+            throw new RuntimeException(e);
+        }
+        try (DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)) {
+            digestInputStream.transferTo(OutputStream.nullOutputStream());
+            return new ProvenanceSignature(md.digest(), Instant.now(), hashAlgorithm);
+        } catch (IOException e) {
+            log.error("Failed to sign provenance signature", e);
+            throw new RuntimeException(e);
+        }
     }
 }

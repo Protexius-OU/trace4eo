@@ -48,7 +48,7 @@ class JsonContainerTest {
 
     @Test
     @Order(2)
-    void read() throws IOException {
+    void read() {
         JsonContainerReader reader = new JsonContainerReader(new ProvenanceJsonMapper());
         Path provenanceRecordPath = tempDir.resolve(PROVENANCE_RECORD_FILENAME);
         Container readContainer = reader.read(provenanceRecordPath);
