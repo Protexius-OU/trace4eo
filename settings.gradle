@@ -1,3 +1,3 @@
-rootProject.name = 'traceguard'
+rootProject.name = 'trace4eo'
 
 include('provenance')
