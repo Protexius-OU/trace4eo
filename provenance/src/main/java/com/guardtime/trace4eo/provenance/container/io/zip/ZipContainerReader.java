@@ -1,9 +1,5 @@
 package com.guardtime.trace4eo.provenance.container.io.zip;
 
-import com.guardtime.ksi.exceptions.KSIException;
-import com.guardtime.ksi.unisignature.KSISignature;
-import com.guardtime.ksi.unisignature.KSISignatureFactory;
-import com.guardtime.ksi.unisignature.inmemory.InMemoryKsiSignatureFactory;
 import com.guardtime.trace4eo.provenance.container.io.ContainerReader;
 import com.guardtime.trace4eo.provenance.container.model.Container;
 import com.guardtime.trace4eo.provenance.container.model.FilesInfo;
@@ -12,6 +8,7 @@ import com.guardtime.trace4eo.provenance.container.model.Metadata;
 import com.guardtime.trace4eo.provenance.container.model.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.container.model.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.container.model.ProvenanceRecordBuilder;
+import com.guardtime.trace4eo.provenance.container.model.ProvenanceSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +32,6 @@ public class ZipContainerReader implements ContainerReader {
     private static final Logger log = LoggerFactory.getLogger(ZipContainerReader.class);
 
     private final ProvenanceJsonMapper provenanceJsonMapper;
-    private final KSISignatureFactory signatureFactory = new InMemoryKsiSignatureFactory();
 
     public ZipContainerReader(ProvenanceJsonMapper provenanceJsonMapper) {
         this.provenanceJsonMapper = provenanceJsonMapper;
@@ -103,15 +99,7 @@ public class ZipContainerReader implements ContainerReader {
             );
             readProvenanceRecordComponent(
                     ContainerLayout.MANIFEST_SIGNATURE_FILE_NAME,
-                    inputStream -> {
-                        KSISignature signature;
-                        try {
-                            signature = signatureFactory.createSignature(inputStream);
-                        } catch (KSIException e) {
-                            throw new RuntimeException(e);
-                        }
-                        containerBuilder.withSignature(signature);
-                    }
+                    inputStream -> containerBuilder.withSignature(readValue(inputStream, ProvenanceSignature.class))
             );
             // TODO - check that there are no unexpected files/folders
             return containerBuilder.build();

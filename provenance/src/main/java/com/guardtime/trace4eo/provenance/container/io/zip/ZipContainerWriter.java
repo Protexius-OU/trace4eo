@@ -1,6 +1,5 @@
 package com.guardtime.trace4eo.provenance.container.io.zip;
 
-import com.guardtime.ksi.exceptions.KSIException;
 import com.guardtime.trace4eo.provenance.container.io.ContainerWriter;
 import com.guardtime.trace4eo.provenance.container.model.Container;
 import com.guardtime.trace4eo.provenance.container.model.FileHashInfo;
@@ -78,16 +77,12 @@ public class ZipContainerWriter implements ContainerWriter {
         zipOut.write(manifestBytes);
         zipOut.closeEntry();
 
-        // Add manifest.ksig to zip
+        // Add signature of manifest.json to zip
         String manifestSignaturePath = getManifestSignaturePath(provenanceRecord.id());
         ZipEntry manifestSignatureEntry = new ZipEntry(manifestSignaturePath);
         zipOut.putNextEntry(manifestSignatureEntry);
-        try {
-            provenanceRecord.signature().writeTo(zipOut);
-        } catch (KSIException e) {
-            log.error("Failed to write KSI signature to zip: ", e);
-            throw new RuntimeException(e);
-        }
+        byte[] signatureBytes = provenanceJsonMapper.writeValueAsBytes(provenanceRecord.signature());
+        zipOut.write(signatureBytes);
         zipOut.closeEntry();
     }
 

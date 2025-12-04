@@ -1,6 +1,5 @@
 package com.guardtime.trace4eo.provenance.container.model;
 
-import com.guardtime.ksi.unisignature.KSISignature;
 import com.guardtime.trace4eo.provenance.container.signing.SignatureUtil;
 
 import java.io.IOException;
@@ -10,7 +9,7 @@ public class ProvenanceRecordBuilder {
     private Metadata metadata;
     private FilesInfo filesInfo;
     private Manifest manifest;
-    private KSISignature signature;
+    private ProvenanceSignature signature;
 
     public ProvenanceRecordBuilder() {
     }
@@ -28,7 +27,7 @@ public class ProvenanceRecordBuilder {
         if (signature == null) {
             throw new IllegalStateException("Signature must not be null.");
         }
-        UUID provenanceRecordId = SignatureUtil.createUuidFromSignature(signature);
+        UUID provenanceRecordId = SignatureUtil.createUuid(signature.bytes(), signature.signingTime().toEpochMilli());
         return new ProvenanceRecordImpl(provenanceRecordId, metadata, filesInfo, manifest, signature);
     }
 
@@ -47,7 +46,7 @@ public class ProvenanceRecordBuilder {
         return this;
     }
 
-    public ProvenanceRecordBuilder withSignature(KSISignature signature) {
+    public ProvenanceRecordBuilder withSignature(ProvenanceSignature signature) {
         this.signature = signature;
         return this;
     }
