@@ -7,6 +7,7 @@ import com.guardtime.trace4eo.provenance.io.json.JsonContainerReader;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationResult;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationService;
+import org.erdtman.jcs.JsonCanonicalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -52,9 +53,14 @@ public class VerificationTool {
         for (ProvenanceRecord provenanceRecord : container.provenanceRecords()) {
             ProvenanceVerificationResult result = verificationService.verify(provenanceRecord);
             results.add(result);
-            byte[] manifestBytes = provenanceJsonMapper.writeValueAsBytes(provenanceRecord.manifest());
-            ProvenanceVerificationResult manifestResult = verificationService.verify(provenanceRecord.signature(), manifestBytes);
-            results.add(manifestResult);
+            try {
+                byte[] manifestBytes = new JsonCanonicalizer(provenanceJsonMapper.writeValueAsBytes(provenanceRecord.manifest())).getEncodedUTF8();
+                ProvenanceVerificationResult manifestResult = verificationService.verify(provenanceRecord.signature(), manifestBytes);
+                results.add(manifestResult);
+            } catch (IOException e) {
+                log.error("Failed to canonicalize manifest", e);
+                throw new RuntimeException(e);
+            }
         }
         return results;
     }

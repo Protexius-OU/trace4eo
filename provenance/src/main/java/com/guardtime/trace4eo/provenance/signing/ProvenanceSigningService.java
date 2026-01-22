@@ -5,6 +5,7 @@ import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import dev.sigstore.KeylessSigner;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.rekor.client.RekorEntry;
+import org.erdtman.jcs.JsonCanonicalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +56,8 @@ public class ProvenanceSigningService {
                 throw new IllegalStateException("Timestamp is null");
             }
             Instant timestamp = rekorEntry.getIntegratedTimeInstant();
-            return new ProvenanceSignature(messageSignature.getSignature(), timestamp, hashAlgorithm);
+            byte[] bundleBytes = new JsonCanonicalizer(bundle.toJson()).getEncodedUTF8();
+            return new ProvenanceSignature(bundleBytes, timestamp, hashAlgorithm);
         } catch (Exception e) {
             log.error("Failed to sign provenance signature", e);
             throw new RuntimeException(e);

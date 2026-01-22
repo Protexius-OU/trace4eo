@@ -12,6 +12,7 @@ import com.guardtime.trace4eo.provenance.record.Predecessor;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecordBuilder;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
+import org.erdtman.jcs.JsonCanonicalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.shell.core.command.annotation.Command;
@@ -54,7 +55,7 @@ public class SigningTool {
             .withFilesInfo(filesInfo)
             .withMetadata(metadata)
             .build();
-        byte[] manifestBytes = provenanceJsonMapper.writeValueAsBytes(manifest);
+        byte[] manifestBytes = new JsonCanonicalizer(provenanceJsonMapper.writeValueAsBytes(manifest)).getEncodedUTF8();
         ProvenanceSigningService signingService = new ProvenanceSigningService();
         ProvenanceSignature provenanceSignature = signingService.sign(manifestBytes, HashAlgorithm.valueOf(hashAlgorithm));
         return new ProvenanceRecordBuilder()

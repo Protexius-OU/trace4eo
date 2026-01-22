@@ -1,13 +1,11 @@
 package com.guardtime.trace4eo.provenance.verification;
 
+import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
+import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import static com.guardtime.trace4eo.provenance.io.TestUtils.SIGNATURE_1;
-import static com.guardtime.trace4eo.provenance.io.TestUtils.SIGNATURE_2;
-import static com.guardtime.trace4eo.provenance.io.TestUtils.TEST_BYTES_1;
-import static com.guardtime.trace4eo.provenance.io.TestUtils.TEST_BYTES_2;
-import static com.guardtime.trace4eo.provenance.io.TestUtils.readSignature;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -15,30 +13,46 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ProvenanceVerificationServiceTest {
 
-    private final ProvenanceVerificationService provenanceVerificationService = new ProvenanceVerificationService();
+    private static final byte[] TEST_DATA_1 = new byte[]{1, 2, 3};
+    private static final byte[] TEST_DATA_2 = new byte[]{4, 5, 6};
 
-    @Test
-    void verifySuccess() {
-        ProvenanceSignature signature1 = readSignature(SIGNATURE_1);
-        ProvenanceVerificationResult result1 = provenanceVerificationService.verify(signature1, TEST_BYTES_1);
-        assertTrue(result1.status());
-        assertNull(result1.error());
+    private static ProvenanceSignature signature1;
+    private static ProvenanceSignature signature2;
 
-        ProvenanceSignature signature2 = readSignature(SIGNATURE_2);
-        ProvenanceVerificationResult result2 = provenanceVerificationService.verify(signature2, TEST_BYTES_2);
-        assertTrue(result2.status());
-        assertNull(result2.error());
+    private final ProvenanceVerificationService verificationService = new ProvenanceVerificationService();
+
+    @BeforeAll
+    static void signTestData() {
+        ProvenanceSigningService signingService = new ProvenanceSigningService();
+        signature1 = signingService.sign(TEST_DATA_1, HashAlgorithm.SHA256);
+        signature2 = signingService.sign(TEST_DATA_2, HashAlgorithm.SHA256);
     }
 
     @Test
-    void verifyFailure() {
-        ProvenanceSignature signature1 = readSignature(SIGNATURE_1);
-        ProvenanceVerificationResult result1 = provenanceVerificationService.verify(signature1, new byte[]{6, 6, 6});
-        assertFalse(result1.status());
-        assertEquals(ProvenanceVerificationError.HASH_MISMATCH, result1.error());
+    void verifyValidSignature() {
+        ProvenanceVerificationResult result = verificationService.verify(signature1, TEST_DATA_1);
+        assertTrue(result.status());
+        assertNull(result.error());
+    }
 
-        ProvenanceVerificationResult result2 = provenanceVerificationService.verify(signature1, new byte[]{});
-        assertFalse(result2.status());
-        assertEquals(ProvenanceVerificationError.HASH_MISMATCH, result2.error());
+    @Test
+    void verifyValidSignatureWithDifferentData() {
+        ProvenanceVerificationResult result = verificationService.verify(signature2, TEST_DATA_2);
+        assertTrue(result.status());
+        assertNull(result.error());
+    }
+
+    @Test
+    void verifyFailsWhenDataDoesNotMatchSignature() {
+        ProvenanceVerificationResult result = verificationService.verify(signature1, TEST_DATA_2);
+        assertFalse(result.status());
+        assertEquals(ProvenanceVerificationError.SIGNATURE_VERIFICATION_FAILED, result.error());
+    }
+
+    @Test
+    void verifyFailsWithEmptyData() {
+        ProvenanceVerificationResult result = verificationService.verify(signature1, new byte[]{});
+        assertFalse(result.status());
+        assertEquals(ProvenanceVerificationError.SIGNATURE_VERIFICATION_FAILED, result.error());
     }
 }

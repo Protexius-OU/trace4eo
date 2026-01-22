@@ -28,7 +28,7 @@ public class ProvenanceRecordBuilder {
         if (signature == null) {
             throw new IllegalStateException("Signature must not be null.");
         }
-        UUID provenanceRecordId = SignatureUtil.createUuid(signature.bytes(), signature.signingTime().toEpochMilli());
+        UUID provenanceRecordId = SignatureUtil.createUuid(signature);
         return new ProvenanceRecordImpl(provenanceRecordId, metadata, filesInfo, manifest, signature);
     }
 

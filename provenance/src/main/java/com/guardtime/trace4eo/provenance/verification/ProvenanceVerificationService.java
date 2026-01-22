@@ -8,6 +8,10 @@ import com.guardtime.trace4eo.provenance.record.FilesInfo;
 import com.guardtime.trace4eo.provenance.record.Manifest;
 import com.guardtime.trace4eo.provenance.record.Metadata;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
+import dev.sigstore.KeylessVerifier;
+import dev.sigstore.VerificationOptions;
+import dev.sigstore.bundle.Bundle;
+import dev.sigstore.bundle.BundleParseException;
 import org.erdtman.jcs.JsonCanonicalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +19,10 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -24,6 +31,17 @@ import java.util.Arrays;
 public class ProvenanceVerificationService {
 
     private static final Logger log = LoggerFactory.getLogger(ProvenanceVerificationService.class);
+
+    private final KeylessVerifier verifier;
+
+    public ProvenanceVerificationService() {
+        try {
+            this.verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();
+        } catch (Exception e) {
+            log.error("Failed to initialize provenance verification service", e);
+            throw new RuntimeException(e);
+        }
+    }
 
     public ProvenanceVerificationResult verify(ProvenanceSignature signature, byte[] bytes) {
         return verify(signature, new ByteArrayInputStream(bytes));
@@ -39,16 +57,24 @@ public class ProvenanceVerificationService {
                 String.format("Hash algorithm %s is not supported.", hashAlgorithm.name()));
         }
         try (DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)) {
-            byte[] expectedSignatureBytes = signature.bytes();
             digestInputStream.transferTo(OutputStream.nullOutputStream());
-            if (Arrays.equals(expectedSignatureBytes, md.digest())) {
-                return new ProvenanceVerificationResult();
-            }
-            return new ProvenanceVerificationResult(ProvenanceVerificationError.HASH_MISMATCH,
-                "Hash of data didn't match provided signature.");
-        } catch (IOException e) {
+            byte[] digest = md.digest();
+
+            Bundle bundle = parseBundle(signature.bytes());
+            verifier.verify(digest, bundle, VerificationOptions.empty());
+            return new ProvenanceVerificationResult();
+        } catch (Exception e) {
             log.error("Failed to verify provenance signature", e);
-            return new ProvenanceVerificationResult(ProvenanceVerificationError.UNKNOWN_ERROR, e.getMessage());
+            return new ProvenanceVerificationResult(ProvenanceVerificationError.SIGNATURE_VERIFICATION_FAILED,
+                "Signature verification failed: " + e.getMessage());
+        }
+    }
+
+    private Bundle parseBundle(byte[] bundleBytes) throws IOException {
+        try (Reader reader = new InputStreamReader(new ByteArrayInputStream(bundleBytes), StandardCharsets.UTF_8)) {
+            return Bundle.from(reader);
+        } catch (BundleParseException e) {
+            throw new IOException("Failed to parse bundle", e);
         }
     }
 
@@ -119,7 +145,12 @@ public class ProvenanceVerificationService {
         return new ProvenanceVerificationResult();
     }
 
+    // TODO: revisit file content verification when filesContext is null - should this be an error or warning?
     private ProvenanceVerificationResult verifyFiles(FilesInfo filesInfo) {
+        if (filesInfo.filesContext() == null) {
+            log.debug("Skipping file content verification - no filesContext available");
+            return new ProvenanceVerificationResult();
+        }
         for (FileHashInfo file : filesInfo.files()) {
             log.info("Verifying file {}", file);
             MessageDigest md;

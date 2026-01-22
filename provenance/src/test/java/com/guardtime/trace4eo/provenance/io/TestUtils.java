@@ -10,7 +10,8 @@ import com.guardtime.trace4eo.provenance.record.ManifestBuilder;
 import com.guardtime.trace4eo.provenance.record.Metadata;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecordBuilder;
-import tools.jackson.databind.json.JsonMapper;
+import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
+import org.erdtman.jcs.JsonCanonicalizer;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -18,38 +19,39 @@ import java.util.List;
 
 @SuppressWarnings("MutablePublicArray")
 public final class TestUtils {
+
     public static final byte[] TEST_BYTES_1 = new byte[]{1, 2, 3};
     public static final byte[] TEST_BYTES_2 = new byte[]{4, 5, 6};
     public static final String TEST_FILE_1 = "src/test/resources/test1.txt";
     public static final String TEST_FILE_2 = "src/test/resources/test2.txt";
-    public static final String SIGNATURE_1 = "src/test/resources/signature1.json";
-    public static final String SIGNATURE_2 = "src/test/resources/signature2.json";
+
+    private static final ProvenanceSigningService SIGNING_SERVICE = new ProvenanceSigningService();
 
     private TestUtils() {
     }
 
-    public static ProvenanceRecord createProvenanceRecord(
-        String filePath,
-        String signaturePath
-    ) throws IOException {
+    public static ProvenanceRecord createProvenanceRecord(String filePath) throws IOException {
         Metadata metadata = new Metadata("data-id", "container-type", List.of());
         HashAlgorithm hashAlgorithm = HashAlgorithm.SHA256;
         FilesInfo filesInfo = new FilesInfoBuilder(hashAlgorithm)
             .addFile(Path.of(filePath))
             .build();
-        Manifest manifest = new ManifestBuilder(hashAlgorithm, new ProvenanceJsonMapper())
+        ProvenanceJsonMapper provenanceJsonMapper = new ProvenanceJsonMapper();
+        Manifest manifest = new ManifestBuilder(hashAlgorithm, provenanceJsonMapper)
             .withFilesInfo(filesInfo)
             .withMetadata(metadata)
             .build();
+        byte[] manifestBytes = new JsonCanonicalizer(provenanceJsonMapper.writeValueAsBytes(manifest)).getEncodedUTF8();
+        ProvenanceSignature signature = SIGNING_SERVICE.sign(manifestBytes, hashAlgorithm);
         return new ProvenanceRecordBuilder()
             .withMetadata(metadata)
             .withFilesInfo(filesInfo)
             .withManifest(manifest)
-            .withSignature(readSignature(signaturePath))
+            .withSignature(signature)
             .build();
     }
 
-    public static ProvenanceSignature readSignature(String path) {
-        return new JsonMapper().readValue(Path.of(path), ProvenanceSignature.class);
+    public static ProvenanceSignature sign(byte[] data) {
+        return SIGNING_SERVICE.sign(data, HashAlgorithm.SHA256);
     }
 }
