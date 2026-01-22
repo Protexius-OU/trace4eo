@@ -12,7 +12,7 @@ import dev.sigstore.KeylessVerifier;
 import dev.sigstore.VerificationOptions;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.bundle.BundleParseException;
-import org.erdtman.jcs.JsonCanonicalizer;
+import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

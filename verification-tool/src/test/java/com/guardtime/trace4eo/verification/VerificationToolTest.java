@@ -14,7 +14,7 @@ import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecordBuilder;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationResult;
-import org.erdtman.jcs.JsonCanonicalizer;
+import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

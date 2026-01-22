@@ -11,7 +11,7 @@ import com.guardtime.trace4eo.provenance.record.ProvenanceRecordBuilder;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationResult;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationService;
-import org.erdtman.jcs.JsonCanonicalizer;
+import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

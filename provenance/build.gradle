@@ -23,7 +23,6 @@ dependencies {
     api(libs.sigstore.java)
     implementation(libs.jackson.databind)
     implementation(libs.sigstore.java)
-    implementation("io.github.erdtman:java-json-canonicalization:1.1")
     implementation("org.slf4j:slf4j-api:2.0.17")
 
     errorprone(libs.error.prone.core)

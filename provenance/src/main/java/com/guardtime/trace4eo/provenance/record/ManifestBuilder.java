@@ -2,7 +2,7 @@ package com.guardtime.trace4eo.provenance.record;
 
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
-import org.erdtman.jcs.JsonCanonicalizer;
+import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 
 import java.io.IOException;
 import java.security.MessageDigest;

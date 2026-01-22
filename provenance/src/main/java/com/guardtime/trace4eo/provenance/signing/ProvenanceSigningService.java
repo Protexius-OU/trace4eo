@@ -4,8 +4,8 @@ import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import dev.sigstore.KeylessSigner;
 import dev.sigstore.bundle.Bundle;
+import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import dev.sigstore.rekor.client.RekorEntry;
-import org.erdtman.jcs.JsonCanonicalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
