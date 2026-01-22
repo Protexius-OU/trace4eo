@@ -5,6 +5,7 @@ checkstyle = "12.2.0"
 error-prone-core = { module = "com.google.errorprone:error_prone_core", version = "2.45.0" }
 jackson-databind = { module = "tools.jackson.core:jackson-databind", version = "3.0.3" }
 rewrite-static-analysis = { module = "org.openrewrite.recipe:rewrite-static-analysis", version = "2.22.0" }
+sigstore-java = { module = "dev.sigstore:sigstore-java", version = "2.0.0" }
 
 [bundles]
 
@@ -14,3 +15,4 @@ errorprone = { id = "net.ltgt.errorprone", version = "4.3.0" }
 openrewrite = { id = "org.openrewrite.rewrite", version = "7.21.0" }
 owasp = { id = "org.owasp.dependencycheck", version = "12.1.9" }
 spotbugs = { id = "com.github.spotbugs", version = "6.4.7" }
+spring-boot = { id = "org.springframework.boot", version = "4.0.1" }

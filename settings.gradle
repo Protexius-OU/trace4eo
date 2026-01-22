@@ -1,3 +1,6 @@
 rootProject.name = 'trace4eo'
 
 include('provenance')
+include('tracing-system')
+include('verification-tool')
+include('signing-tool')

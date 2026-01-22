@@ -19,7 +19,10 @@ repositories {
 }
 
 dependencies {
+    api(libs.jackson.databind)
+    api(libs.sigstore.java)
     implementation(libs.jackson.databind)
+    implementation(libs.sigstore.java)
     implementation("io.github.erdtman:java-json-canonicalization:1.1")
     implementation("org.slf4j:slf4j-api:2.0.17")
 
@@ -36,7 +39,7 @@ java {
 testing {
     suites {
         test {
-            useJUnitJupiter("6.0.1")
+            useJUnitJupiter("6.0.2")
         }
     }
 }

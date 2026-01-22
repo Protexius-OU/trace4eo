@@ -1,0 +1,38 @@
+{
+  "head": "019be085-3180-8737-98d4-2e64351aa7ec",
+  "provenanceRecords": [
+    {
+      "id": "019be085-3180-8737-98d4-2e64351aa7ec",
+      "metadata": {
+        "dataId": "test",
+        "dataType": "test",
+        "predecessors": []
+      },
+      "filesInfo": {
+        "files": [
+          {
+            "path": "test.txt",
+            "hashAlgorithm": "SHA256",
+            "hashValue": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+          }
+        ]
+      },
+      "manifest": {
+        "version": "1",
+        "metadataHashInfo": {
+          "hashAlgorithm": "SHA256",
+          "hashValue": "eyJkYXRhSWQiOiJ0ZXN0IiwiZGF0YVR5cGUiOiJ0ZXN0IiwicHJlZGVjZXNzb3JzIjpbXX0="
+        },
+        "filesHashInfo": {
+          "hashAlgorithm": "SHA256",
+          "hashValue": "eyJmaWxlcyI6W3siaGFzaEFsZ29yaXRobSI6IlNIQTI1NiIsImhhc2hWYWx1ZSI6IjQ3REVRcGo4SEJTYSsvVEltVys1SkNldVFlUmttNU5NcEpXWkczaFN1RlU9IiwicGF0aCI6InRlc3QudHh0In1dfQ=="
+        }
+      },
+      "signature": {
+        "bytes": "MEQCIDDSPjmh+9zRqeheH+gmv/oFbr/k1wGs8U0W3K8KrtHEAiBKd91ht/FPKh++n9+BZXgidPV2aHwqfkiSnRUiIcPlaA==",
+        "signingTime": "2026-01-21T12:26:24Z",
+        "hashAlgorithm": "SHA256"
+      }
+    }
+  ]
+}

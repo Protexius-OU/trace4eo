@@ -1,6 +1,11 @@
 # trace4eo
 
-TODO
+The project consists of multiple software components:
+
+* Provenance SDK
+* Tracing system
+* Signing CLI tool
+* Verification CLI tool
 
 ## Prerequisites
 
@@ -8,7 +13,7 @@ TODO
 
 ## Running via Docker
 
-
+TODO instructions
 
 ## Static code analysis
 

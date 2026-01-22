@@ -19,9 +19,9 @@ class ProvenanceSigningServiceTest {
     @Test
     void sign() {
         HashAlgorithm hashAlgorithm = HashAlgorithm.SHA256;
-        ProvenanceSignature signature1 = provenanceSigningService.sign(hashAlgorithm, TEST_BYTES_1);
+        ProvenanceSignature signature1 = provenanceSigningService.sign(TEST_BYTES_1, hashAlgorithm);
         assertNotNull(signature1);
-        ProvenanceSignature signature2 = provenanceSigningService.sign(hashAlgorithm, TEST_BYTES_2);
+        ProvenanceSignature signature2 = provenanceSigningService.sign(TEST_BYTES_2, hashAlgorithm);
         assertNotNull(signature2);
         assertFalse(Arrays.equals(signature1.bytes(), signature2.bytes()));
         assertEquals(hashAlgorithm, signature1.hashAlgorithm());
