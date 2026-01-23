@@ -35,7 +35,15 @@ public class SigningTool {
 
     private static final Logger log = LoggerFactory.getLogger(SigningTool.class);
 
-    private final ProvenanceSigningService signingService = new ProvenanceSigningService();
+    private final ProvenanceSigningService signingService;
+
+    public SigningTool() {
+        this(new ProvenanceSigningService());
+    }
+
+    SigningTool(ProvenanceSigningService signingService) {
+        this.signingService = signingService;
+    }
 
     @Command(name = "sign", description = "Sign input data")
     public ProvenanceSignature sign(

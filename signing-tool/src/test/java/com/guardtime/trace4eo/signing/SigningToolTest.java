@@ -1,7 +1,11 @@
 package com.guardtime.trace4eo.signing;
 
+import com.guardtime.trace4eo.provenance.HashAlgorithm;
+import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
+import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
@@ -11,20 +15,46 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class SigningToolTest {
 
     private static final Logger log = LoggerFactory.getLogger(SigningToolTest.class);
 
+    private SigningTool signingTool;
+    private ProvenanceSignature testSignature;
+
+    @BeforeEach
+    void setUp() throws IOException {
+        ProvenanceJsonMapper mapper = new ProvenanceJsonMapper();
+        testSignature = mapper.readValue(
+            Path.of("src/test/resources/signature.json").toFile(),
+            ProvenanceSignature.class
+        );
+
+        AtomicInteger callCount = new AtomicInteger(0);
+        ProvenanceSigningService mockSigningService = mock(ProvenanceSigningService.class);
+        when(mockSigningService.sign(any(byte[].class), any(HashAlgorithm.class)))
+            .thenAnswer(invocation -> new ProvenanceSignature(
+                testSignature.bytes(),
+                testSignature.signingTime().plusSeconds(callCount.getAndIncrement()),
+                testSignature.hashAlgorithm()
+            ));
+
+        signingTool = new SigningTool(mockSigningService);
+    }
+
     @Test
     void sign() {
-        SigningTool signingTool = new SigningTool();
         String artifactPath = "src/test/resources/test.txt";
         ProvenanceSignature result = signingTool.sign(Path.of(artifactPath));
         assertNotNull(result);
@@ -35,9 +65,8 @@ class SigningToolTest {
 
     @Test
     void createProvenanceRecord() throws IOException {
-        SigningTool signingTool = new SigningTool();
         List<Path> files = List.of(Path.of("src/test/resources/test.txt"));
-        ProvenanceRecord result = signingTool.createProvenanceRecord(files, "test", "test",  List.of(), "SHA256");
+        ProvenanceRecord result = signingTool.createProvenanceRecord(files, "test", "test", List.of(), "SHA256");
         assertNotNull(result);
         assertNotNull(result.id());
         assertNotNull(result.filesInfo());
@@ -54,7 +83,6 @@ class SigningToolTest {
         Files.writeString(file2, "content2");
         Path outputPath = tempDir.resolve("output.zip");
 
-        SigningTool signingTool = new SigningTool();
         BatchSigningResult result = signingTool.batchSign(
             List.of(file1, file2),
             null,
@@ -82,7 +110,6 @@ class SigningToolTest {
         Files.writeString(inputDir.resolve("other.txt"), "other");
         Path outputPath = tempDir.resolve("output.zip");
 
-        SigningTool signingTool = new SigningTool();
         BatchSigningResult result = signingTool.batchSign(
             null,
             inputDir,
@@ -101,7 +128,6 @@ class SigningToolTest {
 
     @Test
     void batchSign_emptyFilesList_throws() {
-        SigningTool signingTool = new SigningTool();
         Path outputPath = Path.of("/tmp/output.zip");
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
@@ -112,7 +138,7 @@ class SigningToolTest {
     }
 
     @Test
-    void batchSign_tooManyFiles_throws(@TempDir Path tempDir) throws IOException {
+    void batchSign_tooManyFiles_throws(@TempDir Path tempDir) {
         List<Path> files = IntStream.range(0, 101)
             .mapToObj(i -> {
                 Path file = tempDir.resolve("file" + i + ".txt");
@@ -126,7 +152,6 @@ class SigningToolTest {
             .toList();
         Path outputPath = tempDir.resolve("output.zip");
 
-        SigningTool signingTool = new SigningTool();
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             signingTool.batchSign(files, null, "*", "test", "test", outputPath, "SHA256")
         );
@@ -141,7 +166,6 @@ class SigningToolTest {
         Path nonExistentFile = tempDir.resolve("nonexistent.txt");
         Path outputPath = tempDir.resolve("output.zip");
 
-        SigningTool signingTool = new SigningTool();
         BatchSigningResult result = signingTool.batchSign(
             List.of(validFile, nonExistentFile),
             null,
