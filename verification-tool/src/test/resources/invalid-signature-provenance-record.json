@@ -1,11 +1,11 @@
 {
-  "head": "019bdac6-8938-8e2a-af97-0407776cac62",
+  "head": "019bea4a-bc08-8c3c-b844-136000cce56e",
   "provenanceRecords": [
     {
-      "id": "019bdac6-8938-8e2a-af97-0407776cac62",
+      "id": "019bea4a-bc08-8c3c-b844-136000cce56e",
       "metadata": {
-        "dataId": "test",
-        "dataType": "test",
+        "dataId": "data-id",
+        "dataType": "container-type",
         "predecessors": []
       },
       "filesInfo": {
@@ -21,16 +21,16 @@
         "version": "1",
         "metadataHashInfo": {
           "hashAlgorithm": "SHA256",
-          "hashValue": "eyJkYXRhSWQiOiJ0ZXN0IiwiZGF0YVR5cGUiOiJ0ZXN0IiwicHJlZGVjZXNzb3JzIjpbXX0="
+          "hashValue": "ZQuKd+CWpVsBMqevihf5Qo1Q7jgd4Gflr86qAMQfRBk="
         },
         "filesHashInfo": {
           "hashAlgorithm": "SHA256",
-          "hashValue": "eyJmaWxlcyI6W3sicGF0aCI6InRlc3QudHh0IiwiaGFzaEFsZ29yaXRobSI6IlNIQTI1NiIsImhhc2hWYWx1ZSI6IjQ3REVRcGo4SEJTYSsvVEltVys1SkNldVFlUmttNU5NcEpXWkczaFN1RlU9In1dfQ=="
+          "hashValue": "ru0aI+19f7qhgQxYXiaoJH90A/TsIgOTFmdCakf6Wlo="
         }
       },
       "signature": {
-        "bytes": "MEQCIAbVueDcVNfmJpeYvCGa1zbesS+l1Yvi2AY0DrCGNbgtAiBXtQvGZN8KoOnmKhu5v/8zyWZzCaZJpWS+aRO/kL/ezA==",
-        "signingTime": "2026-01-20T09:40:03Z",
+        "bytes": "aW52YWxpZC1zaWduYXR1cmUtYnl0ZXM=",
+        "signingTime": "2026-01-23T09:58:45Z",
         "hashAlgorithm": "SHA256"
       }
     }
