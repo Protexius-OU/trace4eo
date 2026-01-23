@@ -79,12 +79,14 @@ public class ProvenanceVerificationService {
     }
 
     public ProvenanceVerificationResult verify(ProvenanceRecord provenanceRecord) {
-        ProvenanceVerificationResult filesInfoVerificationResult = verifyFilesInfo(provenanceRecord.manifest(), provenanceRecord.filesInfo());
+        ProvenanceVerificationResult filesInfoVerificationResult = verifyFilesInfo(provenanceRecord.manifest(),
+            provenanceRecord.filesInfo());
         if (!filesInfoVerificationResult.status()) {
             return filesInfoVerificationResult;
         }
 
-        ProvenanceVerificationResult metadataVerificationResult = verifyMetadata(provenanceRecord.manifest(), provenanceRecord.metadata());
+        ProvenanceVerificationResult metadataVerificationResult = verifyMetadata(provenanceRecord.manifest(),
+            provenanceRecord.metadata());
         if (!metadataVerificationResult.status()) {
             return metadataVerificationResult;
         }
