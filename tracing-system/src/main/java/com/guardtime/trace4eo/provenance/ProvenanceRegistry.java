@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import tools.jackson.databind.ObjectMapper;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Optional;
@@ -20,6 +21,7 @@ import java.util.UUID;
 public class ProvenanceRegistry {
 
     private static final Logger log = LoggerFactory.getLogger(ProvenanceRegistry.class);
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final JdbcClient jdbcClient;
 
@@ -34,7 +36,7 @@ public class ProvenanceRegistry {
     ) {
         int rowsUpdated = jdbcClient.sql("""
                 insert into signature (id, signing_time, signature)
-                values (:id, :signing_time, :signature, :is_extended)
+                values (:id, :signing_time, :signature)
                 """)
             .param("id", id)
             .param("signing_time", Timestamp.from(signingTime))
@@ -63,7 +65,7 @@ public class ProvenanceRegistry {
             .param("files", filesJson)
             .param("created_at", Timestamp.from(createdAt))
             .update();
-        if (rowsUpdated > 1) {
+        if (rowsUpdated != 1) {
             String message = String.format("Expected to update exactly one row, updated %s instead", rowsUpdated);
             throw new IllegalStateException(message);
         }
@@ -78,7 +80,7 @@ public class ProvenanceRegistry {
                     pr.files,
                     s.signature
                 from provenance_record pr
-                inner join signature s on pr.id = ks.id
+                inner join signature s on pr.id = s.id
                 left join (
                     select *
                     from verification_log v where v.provenance_record_id = :id
@@ -101,18 +103,21 @@ public class ProvenanceRegistry {
             .param("created_at", Timestamp.from(createdAt))
             .param("status", status)
             .update();
-        if (rowsUpdated > 1) {
+        if (rowsUpdated != 1) {
             String message = String.format("Expected to update exactly one row, updated %s instead", rowsUpdated);
             throw new IllegalStateException(message);
         }
     }
 
     private final RowMapper<ProvenanceRecord> provenanceRecordRowMapper = (rs, rowNum) -> {
-        ObjectMapper mapper = new ObjectMapper();
-        Manifest manifest = mapper.readValue(rs.getString("manifest"), Manifest.class);
-        Metadata metadata = mapper.readValue(rs.getString("metadata"), Metadata.class);
-        FilesInfo filesInfo = mapper.readValue(rs.getString("files"), FilesInfo.class);
-        ProvenanceSignature signature = mapper.readValue(rs.getString("signature"), ProvenanceSignature.class);
+        Manifest manifest = OBJECT_MAPPER.readValue(rs.getString("manifest"), Manifest.class);
+        Metadata metadata = OBJECT_MAPPER.readValue(rs.getString("metadata"), Metadata.class);
+        String filesJson = rs.getString("files");
+        FilesInfo filesInfo = filesJson != null
+            ? OBJECT_MAPPER.readValue(filesJson, FilesInfo.class)
+            : null;
+        String signatureJson = new String(rs.getBytes("signature"), StandardCharsets.UTF_8);
+        ProvenanceSignature signature = OBJECT_MAPPER.readValue(signatureJson, ProvenanceSignature.class);
         return new ProvenanceRecordImpl(
             UUID.fromString(rs.getString("id")),
             metadata,

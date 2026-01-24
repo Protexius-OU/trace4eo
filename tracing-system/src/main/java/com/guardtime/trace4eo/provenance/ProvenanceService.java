@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -44,8 +45,8 @@ public class ProvenanceService {
     public void saveSignature(ProvenanceRecord provenanceRecord) {
         UUID id = provenanceRecord.id();
         Instant signingTime = provenanceRecord.signature().signingTime();
-        byte[] signatureBytes = provenanceRecord.signature().bytes();
-        provenanceRegistry.addSignature(id, signingTime, signatureBytes);
+        String signatureJson = provenanceJsonMapper.writeValueAsString(provenanceRecord.signature());
+        provenanceRegistry.addSignature(id, signingTime, signatureJson.getBytes(StandardCharsets.UTF_8));
     }
 
     public void saveProvenanceRecord(ProvenanceRecord provenanceRecord) {
