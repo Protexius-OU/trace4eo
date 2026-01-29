@@ -73,7 +73,8 @@ class ProvenanceServiceTest {
         Instant signingTime = Instant.parse("2024-01-15T10:30:00Z");
         byte[] signatureBytes = new byte[]{1, 2, 3, 4, 5};
         ProvenanceRecord record = createTestRecordWithSignature(id, signingTime, signatureBytes);
-        String signatureJson = "{\"bytes\":\"AQIDBAU=\",\"signingTime\":\"2024-01-15T10:30:00Z\",\"hashAlgorithm\":\"SHA256\"}";
+        String signatureJson = """
+            {"bytes":"AQIDBAU=","signingTime":"2024-01-15T10:30:00Z","hashAlgorithm":"SHA256"}""";
 
         when(provenanceJsonMapper.writeValueAsString(record.signature())).thenReturn(signatureJson);
 
@@ -160,7 +161,7 @@ class ProvenanceServiceTest {
     void verifyProvenanceRecordLogsFailedStatus() {
         UUID id = UUID.randomUUID();
         ProvenanceRecord record = createTestRecord(id);
-        ProvenanceVerificationResult verificationResult = new ProvenanceVerificationResult(false, null, null);
+        ProvenanceVerificationResult verificationResult = new ProvenanceVerificationResult(null, "Test failure");
 
         when(provenanceVerificationService.verify(record)).thenReturn(verificationResult);
 

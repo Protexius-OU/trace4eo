@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:trace4eo}
+    username: ${DB_USER:trace4eo}
+    password: ${DB_PASSWORD:trace4eo}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+
+server:
+  port: ${SERVER_PORT:8080}

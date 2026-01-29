@@ -47,6 +47,18 @@ public class ProvenanceController {
         this.provenanceGraphService = provenanceGraphService;
     }
 
+    @GetMapping
+    public PagedResponse<ProvenanceRecord> listRecords(
+        @RequestParam(value = "page", defaultValue = "0") int page,
+        @RequestParam(value = "size", defaultValue = "20") int size,
+        @RequestParam(value = "dataType", required = false) String dataType,
+        @RequestParam(value = "dataId", required = false) String dataId
+    ) {
+        var records = provenanceService.findAll(page, size, dataType, dataId);
+        var total = provenanceService.count(dataType, dataId);
+        return PagedResponse.of(records, total, page, size);
+    }
+
     @PostMapping
     public void save(@RequestBody ProvenanceRecord provenanceRecord) {
         provenanceService.saveSignature(provenanceRecord);

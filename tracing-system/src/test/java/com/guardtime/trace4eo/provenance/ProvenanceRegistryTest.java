@@ -26,7 +26,7 @@ class ProvenanceRegistryTest {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:17");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18.1");
 
     @Autowired
     private JdbcClient jdbcClient;

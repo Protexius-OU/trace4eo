@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -40,6 +41,14 @@ public class ProvenanceService {
 
     public Optional<ProvenanceRecord> get(UUID id) {
         return provenanceRegistry.get(id);
+    }
+
+    public List<ProvenanceRecord> findAll(int page, int size, String dataType, String dataId) {
+        return provenanceRegistry.findAll(page, size, dataType, dataId);
+    }
+
+    public long count(String dataType, String dataId) {
+        return provenanceRegistry.count(dataType, dataId);
     }
 
     public void saveSignature(ProvenanceRecord provenanceRecord) {

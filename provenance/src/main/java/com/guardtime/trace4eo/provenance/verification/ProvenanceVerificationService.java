@@ -26,7 +26,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class ProvenanceVerificationService {
 
@@ -79,24 +81,61 @@ public class ProvenanceVerificationService {
     }
 
     public ProvenanceVerificationResult verify(ProvenanceRecord provenanceRecord) {
-        ProvenanceVerificationResult filesInfoVerificationResult = verifyFilesInfo(provenanceRecord.manifest(),
+        List<VerificationStep> steps = new ArrayList<>();
+        boolean allPassed = true;
+        ProvenanceVerificationError firstError = null;
+        String firstErrorMessage = null;
+
+        // Step 1: Verify FilesInfo hash
+        ProvenanceVerificationResult filesInfoResult = verifyFilesInfo(provenanceRecord.manifest(),
             provenanceRecord.filesInfo());
-        if (!filesInfoVerificationResult.status()) {
-            return filesInfoVerificationResult;
+        if (filesInfoResult.status()) {
+            steps.add(VerificationStep.success("filesInfo", "Files info hash matches manifest"));
+        } else {
+            steps.add(VerificationStep.failure("filesInfo", "Files info hash verification", filesInfoResult.errorMessage()));
+            allPassed = false;
+            if (firstError == null) {
+                firstError = filesInfoResult.error();
+                firstErrorMessage = filesInfoResult.errorMessage();
+            }
         }
 
-        ProvenanceVerificationResult metadataVerificationResult = verifyMetadata(provenanceRecord.manifest(),
+        // Step 2: Verify Metadata hash
+        ProvenanceVerificationResult metadataResult = verifyMetadata(provenanceRecord.manifest(),
             provenanceRecord.metadata());
-        if (!metadataVerificationResult.status()) {
-            return metadataVerificationResult;
+        if (metadataResult.status()) {
+            steps.add(VerificationStep.success("metadata", "Metadata hash matches manifest"));
+        } else {
+            steps.add(VerificationStep.failure("metadata", "Metadata hash verification", metadataResult.errorMessage()));
+            allPassed = false;
+            if (firstError == null) {
+                firstError = metadataResult.error();
+                firstErrorMessage = metadataResult.errorMessage();
+            }
         }
 
-        ProvenanceVerificationResult filesVerificationResult = verifyFiles(provenanceRecord.filesInfo());
-        if (!filesVerificationResult.status()) {
-            return filesVerificationResult;
+        // Step 3: Verify file content hashes (if available)
+        ProvenanceVerificationResult filesResult = verifyFiles(provenanceRecord.filesInfo());
+        if (filesResult.status()) {
+            if (provenanceRecord.filesInfo().filesContext() != null) {
+                steps.add(VerificationStep.success("fileContents", "All file content hashes verified"));
+            } else {
+                steps.add(VerificationStep.success("fileContents", "File content verification skipped (files not available)"));
+            }
+        } else {
+            steps.add(VerificationStep.failure("fileContents", "File content hash verification", filesResult.errorMessage()));
+            allPassed = false;
+            if (firstError == null) {
+                firstError = filesResult.error();
+                firstErrorMessage = filesResult.errorMessage();
+            }
         }
 
-        return new ProvenanceVerificationResult();
+        if (allPassed) {
+            return new ProvenanceVerificationResult(steps);
+        } else {
+            return new ProvenanceVerificationResult(steps, firstError, firstErrorMessage);
+        }
     }
 
     private ProvenanceVerificationResult verifyFilesInfo(Manifest manifest, FilesInfo filesInfo) {

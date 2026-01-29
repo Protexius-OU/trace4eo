@@ -14,6 +14,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -92,6 +93,68 @@ public class ProvenanceRegistry {
             .param("id", id)
             .query(provenanceRecordRowMapper)
             .optional();
+    }
+
+    public List<ProvenanceRecord> findAll(int page, int size, String dataType, String dataId) {
+        StringBuilder sql = new StringBuilder("""
+            select
+                pr.id,
+                pr.manifest,
+                pr.metadata,
+                pr.files,
+                s.signature
+            from provenance_record pr
+            inner join signature s on pr.id = s.id
+            where 1=1
+            """);
+
+        if (dataType != null && !dataType.isBlank()) {
+            sql.append(" and pr.metadata->>'dataType' ilike :dataType");
+        }
+        if (dataId != null && !dataId.isBlank()) {
+            sql.append(" and pr.metadata->>'dataId' ilike :dataId");
+        }
+
+        sql.append(" order by pr.created_at desc");
+        sql.append(" limit :limit offset :offset");
+
+        var query = jdbcClient.sql(sql.toString())
+            .param("limit", size)
+            .param("offset", page * size);
+
+        if (dataType != null && !dataType.isBlank()) {
+            query = query.param("dataType", "%" + dataType + "%");
+        }
+        if (dataId != null && !dataId.isBlank()) {
+            query = query.param("dataId", "%" + dataId + "%");
+        }
+
+        return query.query(provenanceRecordRowMapper).list();
+    }
+
+    public long count(String dataType, String dataId) {
+        StringBuilder sql = new StringBuilder("""
+            select count(*) from provenance_record pr
+            where 1=1
+            """);
+
+        if (dataType != null && !dataType.isBlank()) {
+            sql.append(" and pr.metadata->>'dataType' ilike :dataType");
+        }
+        if (dataId != null && !dataId.isBlank()) {
+            sql.append(" and pr.metadata->>'dataId' ilike :dataId");
+        }
+
+        var query = jdbcClient.sql(sql.toString());
+
+        if (dataType != null && !dataType.isBlank()) {
+            query = query.param("dataType", "%" + dataType + "%");
+        }
+        if (dataId != null && !dataId.isBlank()) {
+            query = query.param("dataId", "%" + dataId + "%");
+        }
+
+        return query.query(Long.class).single();
     }
 
     public void addVerificationLog(UUID provenanceRecordId, Instant createdAt, boolean status) {

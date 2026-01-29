@@ -15,7 +15,9 @@ import java.io.OutputStream;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.time.Instant;
+import java.util.List;
 
 public class ProvenanceSigningService {
 
@@ -57,10 +59,57 @@ public class ProvenanceSigningService {
             }
             Instant timestamp = rekorEntry.getIntegratedTimeInstant();
             byte[] bundleBytes = new JsonCanonicalizer(bundle.toJson()).getEncodedUTF8();
-            return new ProvenanceSignature(bundleBytes, timestamp, hashAlgorithm);
+
+            SignatureDetails details = extractSignatureDetails(bundle, rekorEntry, timestamp);
+
+            return new ProvenanceSignature(bundleBytes, timestamp, hashAlgorithm, details);
         } catch (Exception e) {
             log.error("Failed to sign provenance signature", e);
             throw new RuntimeException(e);
         }
+    }
+
+    private SignatureDetails extractSignatureDetails(Bundle bundle, RekorEntry rekorEntry, Instant timestamp) {
+        String rekorLogIndex = String.valueOf(rekorEntry.getLogIndex());
+        String signerIdentity = "Unknown";
+        String oidcIssuer = "Unknown";
+        String certificateIssuer = "Unknown";
+
+        try {
+            List<X509Certificate> certChain = bundle.getCertPath().getCertificates()
+                .stream()
+                .filter(c -> c instanceof X509Certificate)
+                .map(c -> (X509Certificate) c)
+                .toList();
+
+            if (!certChain.isEmpty()) {
+                X509Certificate signingCert = certChain.getFirst();
+                certificateIssuer = signingCert.getIssuerX500Principal().getName();
+
+                // Extract SAN (Subject Alternative Name) for email/identity
+                if (signingCert.getSubjectAlternativeNames() != null) {
+                    for (List<?> san : signingCert.getSubjectAlternativeNames()) {
+                        Integer type = (Integer) san.get(0);
+                        if (type == 1) { // RFC822Name (email)
+                            signerIdentity = (String) san.get(1);
+                            break;
+                        } else if (type == 6) { // URI
+                            signerIdentity = (String) san.get(1);
+                        }
+                    }
+                }
+
+                // Extract OIDC issuer from certificate extension (OID 1.3.6.1.4.1.57264.1.1)
+                byte[] oidcIssuerExt = signingCert.getExtensionValue("1.3.6.1.4.1.57264.1.1");
+                if (oidcIssuerExt != null && oidcIssuerExt.length > 4) {
+                    // Skip ASN.1 wrapper bytes
+                    oidcIssuer = new String(oidcIssuerExt, 4, oidcIssuerExt.length - 4, java.nio.charset.StandardCharsets.UTF_8);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to extract certificate details", e);
+        }
+
+        return new SignatureDetails(timestamp, rekorLogIndex, signerIdentity, oidcIssuer, certificateIssuer);
     }
 }
