@@ -27,6 +27,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SigningToolTest {
@@ -60,16 +62,6 @@ class SigningToolTest {
         mockHttpClient = mock(HttpClient.class);
 
         signingTool = new SigningTool(mockSigningService, mockHttpClient);
-    }
-
-    @Test
-    void sign() {
-        String artifactPath = "src/test/resources/test.txt";
-        ProvenanceSignature result = signingTool.sign(Path.of(artifactPath));
-        assertNotNull(result);
-        assertNotNull(result.bytes());
-        assertNotNull(result.signingTime());
-        assertNotNull(result.hashAlgorithm());
     }
 
     @Test
@@ -219,7 +211,7 @@ class SigningToolTest {
         );
 
         assertEquals(2, result.successCount());
-        org.mockito.Mockito.verify(mockHttpClient, org.mockito.Mockito.times(2))
+        verify(mockHttpClient, times(2))
             .send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
     }
 
@@ -245,7 +237,7 @@ class SigningToolTest {
         );
 
         assertEquals(1, result.successCount());
-        org.mockito.Mockito.verify(mockHttpClient, org.mockito.Mockito.times(1))
+        verify(mockHttpClient, times(1))
             .send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
     }
 

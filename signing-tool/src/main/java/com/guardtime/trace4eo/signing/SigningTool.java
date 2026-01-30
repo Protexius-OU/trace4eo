@@ -53,14 +53,6 @@ public class SigningTool {
         this.httpClient = httpClient;
     }
 
-    @Command(name = "sign", description = "Sign input data")
-    public ProvenanceSignature sign(
-        @Option(longName = "file", description = "Path to input file") Path file
-    ) {
-        byte[] inputBytes = resolveInput(file, null, null);
-        return signingService.sign(inputBytes, HashAlgorithm.SHA256);
-    }
-
     @Command(name = "create-provenance-record", description = "Create and sign provenance record")
     public ProvenanceRecord createProvenanceRecord(
         @Option(longName = "files", description = "Files to be included in provenance record") List<Path> files,
