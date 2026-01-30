@@ -10,12 +10,9 @@ import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationServ
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-import org.springframework.shell.core.InteractiveShellRunner;
 import org.springframework.shell.core.command.annotation.Command;
-import org.springframework.shell.core.command.annotation.EnableCommand;
 import org.springframework.shell.core.command.annotation.Option;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,7 +22,7 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
 
-@EnableCommand(VerificationTool.class)
+@Component
 public class VerificationTool {
 
     private static final Logger log = LoggerFactory.getLogger(VerificationTool.class);
@@ -84,11 +81,5 @@ public class VerificationTool {
             return Base64.getDecoder().decode(base64);
         }
         throw new IllegalArgumentException("Input data was missing");
-    }
-
-    public static void main(String[] args) throws Exception {
-        ApplicationContext context = new AnnotationConfigApplicationContext(VerificationTool.class);
-        InteractiveShellRunner shellRunner = context.getBean(InteractiveShellRunner.class);
-        shellRunner.run(args);
     }
 }

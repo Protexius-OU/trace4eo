@@ -12,6 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -32,6 +35,10 @@ class SigningToolTest {
 
     private SigningTool signingTool;
     private ProvenanceSignature testSignature;
+    private ProvenanceSigningService mockSigningService;
+    private HttpClient mockHttpClient;
+    @SuppressWarnings("unchecked")
+    private HttpResponse<String> mockResponse = mock(HttpResponse.class);
 
     @BeforeEach
     void setUp() throws IOException {
@@ -42,7 +49,7 @@ class SigningToolTest {
         );
 
         AtomicInteger callCount = new AtomicInteger(0);
-        ProvenanceSigningService mockSigningService = mock(ProvenanceSigningService.class);
+        mockSigningService = mock(ProvenanceSigningService.class);
         when(mockSigningService.sign(any(byte[].class), any(HashAlgorithm.class)))
             .thenAnswer(invocation -> new ProvenanceSignature(
                 testSignature.bytes(),
@@ -50,7 +57,9 @@ class SigningToolTest {
                 testSignature.hashAlgorithm()
             ));
 
-        signingTool = new SigningTool(mockSigningService);
+        mockHttpClient = mock(HttpClient.class);
+
+        signingTool = new SigningTool(mockSigningService, mockHttpClient);
     }
 
     @Test
@@ -90,7 +99,8 @@ class SigningToolTest {
             "test-type",
             "batch-2024",
             outputPath,
-            "SHA256"
+            "SHA256",
+            null
         );
 
         assertEquals(2, result.totalFiles());
@@ -117,7 +127,8 @@ class SigningToolTest {
             "satellite-image",
             "acquisition-2024",
             outputPath,
-            "SHA256"
+            "SHA256",
+            null
         );
 
         assertEquals(2, result.totalFiles());
@@ -131,7 +142,7 @@ class SigningToolTest {
         Path outputPath = Path.of("/tmp/output.zip");
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-            signingTool.batchSign(List.of(), null, "*", "test", "test", outputPath, "SHA256")
+            signingTool.batchSign(List.of(), null, "*", "test", "test", outputPath, "SHA256", null)
         );
 
         assertTrue(exception.getMessage().contains("No files to sign"));
@@ -153,7 +164,7 @@ class SigningToolTest {
         Path outputPath = tempDir.resolve("output.zip");
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-            signingTool.batchSign(files, null, "*", "test", "test", outputPath, "SHA256")
+            signingTool.batchSign(files, null, "*", "test", "test", outputPath, "SHA256", null)
         );
 
         assertTrue(exception.getMessage().contains("Cannot sign more than 100 files"));
@@ -173,13 +184,92 @@ class SigningToolTest {
             "test",
             "test",
             outputPath,
-            "SHA256"
+            "SHA256",
+            null
         );
 
         assertEquals(2, result.totalFiles());
         assertEquals(1, result.successCount());
         assertEquals(1, result.failureCount());
         assertTrue(result.hasFailures());
+        assertTrue(Files.exists(outputPath));
+    }
+
+    @Test
+    void batchSign_withRegisterUrl_registersRecords(@TempDir Path tempDir) throws IOException, InterruptedException {
+        Path file1 = tempDir.resolve("file1.txt");
+        Path file2 = tempDir.resolve("file2.txt");
+        Files.writeString(file1, "content1");
+        Files.writeString(file2, "content2");
+        Path outputPath = tempDir.resolve("output.zip");
+
+        when(mockResponse.statusCode()).thenReturn(200);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(mockResponse);
+
+        BatchSigningResult result = signingTool.batchSign(
+            List.of(file1, file2),
+            null,
+            "*",
+            "test-type",
+            "batch-2024",
+            outputPath,
+            "SHA256",
+            "http://localhost:8080/api/records"
+        );
+
+        assertEquals(2, result.successCount());
+        org.mockito.Mockito.verify(mockHttpClient, org.mockito.Mockito.times(2))
+            .send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
+    }
+
+    @Test
+    void batchSign_withRegisterUrl_handlesFailure(@TempDir Path tempDir) throws IOException, InterruptedException {
+        Path file1 = tempDir.resolve("file1.txt");
+        Files.writeString(file1, "content1");
+        Path outputPath = tempDir.resolve("output.zip");
+
+        when(mockResponse.statusCode()).thenReturn(500);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(mockResponse);
+
+        BatchSigningResult result = signingTool.batchSign(
+            List.of(file1),
+            null,
+            "*",
+            "test-type",
+            "batch-2024",
+            outputPath,
+            "SHA256",
+            "http://localhost:8080/api/records"
+        );
+
+        assertEquals(1, result.successCount());
+        org.mockito.Mockito.verify(mockHttpClient, org.mockito.Mockito.times(1))
+            .send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
+    }
+
+    @Test
+    void batchSign_withRegisterUrl_handlesException(@TempDir Path tempDir) throws IOException, InterruptedException {
+        Path file1 = tempDir.resolve("file1.txt");
+        Files.writeString(file1, "content1");
+        Path outputPath = tempDir.resolve("output.zip");
+
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenThrow(new IOException("Connection refused"));
+
+        BatchSigningResult result = signingTool.batchSign(
+            List.of(file1),
+            null,
+            "*",
+            "test-type",
+            "batch-2024",
+            outputPath,
+            "SHA256",
+            "http://localhost:8080/api/records"
+        );
+
+        assertEquals(1, result.successCount());
         assertTrue(Files.exists(outputPath));
     }
 }
