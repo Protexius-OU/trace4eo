@@ -4,6 +4,7 @@ The project consists of multiple software components:
 
 * Provenance SDK
 * Tracing system
+* Tracing UI
 * Signing CLI tool
 * Verification CLI tool
 
@@ -13,7 +14,9 @@ The project consists of multiple software components:
 
 ## Running via Docker
 
-TODO instructions
+Currently Postgres DB and frontend are run in Docker containers and backend locally, as the Sigstore signing process needs a callback URL which wouldn't be accessible if it was running inside Docker. 
+
+Use helper scripts `./build-docker.sh` to build and `./start-dev.sh` to run locally.
 
 ## Static code analysis
 
