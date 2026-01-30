@@ -88,3 +88,83 @@ export async function verifyRecord(id: string): Promise<VerificationResult> {
   }
   return response.json()
 }
+
+export type SseEventType = 'oauth_url' | 'complete' | 'error'
+
+export interface SseEvent {
+  type: SseEventType
+  data: unknown
+}
+
+export async function uploadFileWithSse(
+  file: File,
+  dataType: string,
+  dataId: string,
+  predecessors: string[] | undefined,
+  onEvent: (event: SseEvent) => void
+): Promise<void> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('dataType', dataType)
+  formData.append('dataId', dataId)
+  if (predecessors) {
+    predecessors.forEach(id => formData.append('predecessors', id))
+  }
+
+  // Use direct backend URL to bypass Vite proxy buffering for SSE
+  const isDev = window.location.port === '3000'
+  const sseUrl = isDev
+    ? 'http://localhost:8080/api/provenance/upload/stream'
+    : `${API_BASE}/upload/stream`
+  const response = await fetch(sseUrl, {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!response.ok) {
+    throw new Error(`Upload failed: ${response.statusText}`)
+  }
+
+  const reader = response.body?.getReader()
+  if (!reader) {
+    throw new Error('No response body')
+  }
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let currentEventType: SseEventType | null = null
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+
+    // Process complete events (separated by double newlines)
+    const events = buffer.split('\n\n')
+    buffer = events.pop() || ''
+
+    for (const eventBlock of events) {
+      if (!eventBlock.trim()) continue
+
+      const lines = eventBlock.split('\n')
+
+      for (const line of lines) {
+        if (line.startsWith('event:')) {
+          currentEventType = line.slice(6).trim() as SseEventType
+        } else if (line.startsWith('data:')) {
+          const dataStr = line.slice(5).trim()
+          if (currentEventType && dataStr) {
+            try {
+              const data = JSON.parse(dataStr)
+              onEvent({ type: currentEventType, data })
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
+      }
+      currentEventType = null
+    }
+  }
+}

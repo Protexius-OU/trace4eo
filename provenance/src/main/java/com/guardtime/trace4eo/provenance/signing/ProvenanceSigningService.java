@@ -5,7 +5,10 @@ import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import dev.sigstore.KeylessSigner;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
+import dev.sigstore.oidc.client.OidcClients;
+import dev.sigstore.oidc.client.WebOidcClient;
 import dev.sigstore.rekor.client.RekorEntry;
+import dev.sigstore.tuf.SigstoreTufClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +26,11 @@ public class ProvenanceSigningService {
 
     private static final Logger log = LoggerFactory.getLogger(ProvenanceSigningService.class);
 
+    @FunctionalInterface
+    public interface OAuthUrlCallback {
+        void onOAuthUrl(String url);
+    }
+
     private final KeylessSigner signer;
 
     public ProvenanceSigningService() {
@@ -35,10 +43,18 @@ public class ProvenanceSigningService {
     }
 
     public ProvenanceSignature sign(byte[] bytes, HashAlgorithm hashAlgorithm) {
-        return sign(new ByteArrayInputStream(bytes), hashAlgorithm);
+        return sign(new ByteArrayInputStream(bytes), hashAlgorithm, null);
+    }
+
+    public ProvenanceSignature sign(byte[] bytes, HashAlgorithm hashAlgorithm, OAuthUrlCallback callback) {
+        return sign(new ByteArrayInputStream(bytes), hashAlgorithm, callback);
     }
 
     public ProvenanceSignature sign(InputStream inputStream, HashAlgorithm hashAlgorithm) {
+        return sign(inputStream, hashAlgorithm, null);
+    }
+
+    public ProvenanceSignature sign(InputStream inputStream, HashAlgorithm hashAlgorithm, OAuthUrlCallback callback) {
         MessageDigest md;
         try {
             md = MessageDigest.getInstance(hashAlgorithm.name());
@@ -48,7 +64,8 @@ public class ProvenanceSigningService {
         }
         try (DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)) {
             digestInputStream.transferTo(OutputStream.nullOutputStream());
-            Bundle bundle = signer.sign(md.digest());
+            KeylessSigner signerToUse = callback != null ? createSignerWithCallback(callback) : signer;
+            Bundle bundle = signerToUse.sign(md.digest());
             Bundle.MessageSignature messageSignature = bundle.getMessageSignature().orElse(null);
             if (messageSignature == null) {
                 throw new IllegalStateException("Signature is null");
@@ -65,6 +82,30 @@ public class ProvenanceSigningService {
             return new ProvenanceSignature(bundleBytes, timestamp, hashAlgorithm, details);
         } catch (Exception e) {
             log.error("Failed to sign provenance signature", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private KeylessSigner createSignerWithCallback(OAuthUrlCallback callback) {
+        try {
+            var tufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
+            tufClient.update();
+
+            var signingConfig = tufClient.getSigstoreSigningConfig();
+            var oidcProviders = signingConfig.getOidcProviders();
+            var oidcService = oidcProviders.getFirst();
+
+            WebOidcClient webClient = WebOidcClient.builder()
+                .setIssuer(oidcService)
+                .setBrowser(callback::onOAuthUrl)
+                .build();
+
+            return KeylessSigner.builder()
+                .sigstorePublicDefaults()
+                .forceCredentialProviders(OidcClients.of(webClient))
+                .build();
+        } catch (Exception e) {
+            log.error("Failed to create signer with OAuth callback", e);
             throw new RuntimeException(e);
         }
     }

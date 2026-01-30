@@ -35,7 +35,7 @@ class ProvenanceRegistryTest {
 
     @BeforeEach
     void setUp() {
-        provenanceRegistry = new ProvenanceRegistry(jdbcClient);
+        provenanceRegistry = new ProvenanceRegistry(jdbcClient, new ProvenanceJsonMapper());
     }
 
     @Test

@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { uploadFile, fetchRecords } from '../api/provenanceApi'
+import { uploadFileWithSse, fetchRecords } from '../api/provenanceApi'
 import type { ProvenanceRecord } from '../types/provenance'
+import OAuthModal from '../components/OAuthModal'
+
+type UploadStatus = 'idle' | 'uploading' | 'authenticating' | 'complete'
 
 export default function UploadPage() {
   const navigate = useNavigate()
@@ -10,7 +13,8 @@ export default function UploadPage() {
   const [dataId, setDataId] = useState('')
   const [selectedPredecessors, setSelectedPredecessors] = useState<string[]>([])
   const [availableRecords, setAvailableRecords] = useState<ProvenanceRecord[]>([])
-  const [isUploading, setIsUploading] = useState(false)
+  const [status, setStatus] = useState<UploadStatus>('idle')
+  const [oauthUrl, setOauthUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // TODO: Remove this dropdown once proper predecessor selection UI is implemented
@@ -29,16 +33,37 @@ export default function UploadPage() {
     e.preventDefault()
     if (!file || !dataType || !dataId) return
 
-    setIsUploading(true)
+    setStatus('uploading')
     setError(null)
+    setOauthUrl(null)
 
     try {
-      const record = await uploadFile(file, dataType, dataId, selectedPredecessors.length > 0 ? selectedPredecessors : undefined)
-      navigate(`/records/${record.id}/graph`)
+      await uploadFileWithSse(
+        file,
+        dataType,
+        dataId,
+        selectedPredecessors.length > 0 ? selectedPredecessors : undefined,
+        (event) => {
+          if (event.type === 'oauth_url') {
+            const data = event.data as { url: string }
+            setOauthUrl(data.url)
+            setStatus('authenticating')
+          } else if (event.type === 'complete') {
+            const record = event.data as ProvenanceRecord
+            setStatus('complete')
+            navigate(`/records/${record.id}/graph`)
+          } else if (event.type === 'error') {
+            const data = event.data as { message: string }
+            setError(data.message)
+            setStatus('idle')
+            setOauthUrl(null)
+          }
+        }
+      )
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed')
-    } finally {
-      setIsUploading(false)
+      setStatus('idle')
+      setOauthUrl(null)
     }
   }
 
@@ -114,13 +139,23 @@ export default function UploadPage() {
           <button
             type="submit"
             className="btn btn-primary"
-            disabled={isUploading || !file || !dataType || !dataId}
+            disabled={status !== 'idle' || !file || !dataType || !dataId}
             style={{ marginTop: '1rem' }}
           >
-            {isUploading ? 'Uploading...' : 'Upload & Sign'}
+            {status === 'uploading' ? 'Uploading...' : status === 'authenticating' ? 'Authenticating...' : 'Upload & Sign'}
           </button>
         </form>
       </div>
+
+      {oauthUrl && (
+        <OAuthModal
+          url={oauthUrl}
+          onClose={() => {
+            setOauthUrl(null)
+            setStatus('idle')
+          }}
+        />
+      )}
     </div>
   )
 }

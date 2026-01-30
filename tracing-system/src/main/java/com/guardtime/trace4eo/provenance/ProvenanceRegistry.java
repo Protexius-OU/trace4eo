@@ -6,12 +6,12 @@ import com.guardtime.trace4eo.provenance.record.Metadata;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
-import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
@@ -22,12 +22,13 @@ import java.util.UUID;
 public class ProvenanceRegistry {
 
     private static final Logger log = LoggerFactory.getLogger(ProvenanceRegistry.class);
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final JdbcClient jdbcClient;
+    private final ProvenanceJsonMapper jsonMapper;
 
-    public ProvenanceRegistry(JdbcClient jdbcClient) {
+    public ProvenanceRegistry(JdbcClient jdbcClient, ProvenanceJsonMapper jsonMapper) {
         this.jdbcClient = jdbcClient;
+        this.jsonMapper = jsonMapper;
     }
 
     public void addSignature(
@@ -91,7 +92,7 @@ public class ProvenanceRegistry {
                 where pr.id = :id
                 """)
             .param("id", id)
-            .query(provenanceRecordRowMapper)
+            .query(this::mapRow)
             .optional();
     }
 
@@ -129,7 +130,7 @@ public class ProvenanceRegistry {
             query = query.param("dataId", "%" + dataId + "%");
         }
 
-        return query.query(provenanceRecordRowMapper).list();
+        return query.query(this::mapRow).list();
     }
 
     public long count(String dataType, String dataId) {
@@ -172,15 +173,15 @@ public class ProvenanceRegistry {
         }
     }
 
-    private final RowMapper<ProvenanceRecord> provenanceRecordRowMapper = (rs, rowNum) -> {
-        Manifest manifest = OBJECT_MAPPER.readValue(rs.getString("manifest"), Manifest.class);
-        Metadata metadata = OBJECT_MAPPER.readValue(rs.getString("metadata"), Metadata.class);
+    private ProvenanceRecord mapRow(ResultSet rs, int rowNum) throws SQLException {
+        Manifest manifest = jsonMapper.readValue(rs.getString("manifest"), Manifest.class);
+        Metadata metadata = jsonMapper.readValue(rs.getString("metadata"), Metadata.class);
         String filesJson = rs.getString("files");
         FilesInfo filesInfo = filesJson != null
-            ? OBJECT_MAPPER.readValue(filesJson, FilesInfo.class)
+            ? jsonMapper.readValue(filesJson, FilesInfo.class)
             : null;
         String signatureJson = new String(rs.getBytes("signature"), StandardCharsets.UTF_8);
-        ProvenanceSignature signature = OBJECT_MAPPER.readValue(signatureJson, ProvenanceSignature.class);
+        ProvenanceSignature signature = jsonMapper.readValue(signatureJson, ProvenanceSignature.class);
         return new ProvenanceRecordImpl(
             UUID.fromString(rs.getString("id")),
             metadata,
@@ -188,5 +189,5 @@ public class ProvenanceRegistry {
             manifest,
             signature
         );
-    };
+    }
 }
