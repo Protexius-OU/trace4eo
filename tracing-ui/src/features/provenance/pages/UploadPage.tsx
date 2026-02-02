@@ -19,6 +19,7 @@ export default function UploadPage() {
 
   // TODO: Remove this dropdown once proper predecessor selection UI is implemented
   useEffect(() => {
+    // TODO hardcoded 100
     fetchRecords(0, 100).then(response => {
       setAvailableRecords(response.content)
     }).catch(console.error)

@@ -262,25 +262,6 @@ tr:hover {
   padding: 1rem;
 }
 
-.graph-info {
-  font-size: 0.875rem;
-  color: #666;
-  margin-bottom: 0.5rem;
-}
-
-.graph-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
-}
-
-.legend-item {
-  display: inline-flex;
-  align-items: center;
-}
-
 .graph-container {
   background: #fafafa;
   border-radius: 4px;

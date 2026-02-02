@@ -18,6 +18,20 @@ interface SimLink {
   target: SimNode | string
 }
 
+const BOX_WIDTH = 140
+const BOX_HEIGHT = 70
+
+function truncate(str: string | null | undefined, maxLen: number): string {
+  if (!str) return ''
+  return str.length > maxLen ? str.substring(0, maxLen - 1) + '...' : str
+}
+
+function getSignerDomain(signerIdentity: string | null): string {
+  if (!signerIdentity) return '-'
+  const domain = signerIdentity.split('@')[1]?.split('.')[0]
+  return domain ? domain.charAt(0).toUpperCase() + domain.slice(1) : '-'
+}
+
 export default function ProvenanceGraphViewer({ graph }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -56,7 +70,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     svg.append('defs').append('marker')
       .attr('id', 'arrowhead')
       .attr('viewBox', '-0 -5 10 10')
-      .attr('refX', 20)
+      .attr('refX', BOX_WIDTH / 2 + 10)
       .attr('refY', 0)
       .attr('orient', 'auto')
       .attr('markerWidth', 6)
@@ -86,20 +100,49 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
       const color = typeColors(d.dataType)
       const strokeColor = d3.color(color)?.darker(0.5)?.toString() ?? color
 
-      el.append('circle')
-        .attr('r', 12 + Math.min(d.predecessorCount, 10))
+      // Add rectangle background
+      el.append('rect')
+        .attr('x', -BOX_WIDTH / 2)
+        .attr('y', -BOX_HEIGHT / 2)
+        .attr('width', BOX_WIDTH)
+        .attr('height', BOX_HEIGHT)
+        .attr('rx', 6)
+        .attr('ry', 6)
         .attr('fill', color)
         .attr('stroke', strokeColor)
         .attr('stroke-width', 2)
         .style('cursor', 'pointer')
-    })
 
-    node.append('text')
-      .attr('dy', d => 22 + Math.min(d.predecessorCount, 10))
-      .attr('text-anchor', 'middle')
-      .attr('font-size', '10px')
-      .attr('fill', '#333')
-      .text(d => truncate(d.dataType, 12))
+      // Add text content using foreignObject for better text wrapping
+      const fo = el.append('foreignObject')
+        .attr('x', -BOX_WIDTH / 2 + 8)
+        .attr('y', -BOX_HEIGHT / 2 + 6)
+        .attr('width', BOX_WIDTH - 16)
+        .attr('height', BOX_HEIGHT - 12)
+        .style('pointer-events', 'none')
+
+      const div = fo.append('xhtml:div')
+        .attr('class', 'graph-node-content')
+        .style('font-size', '11px')
+        .style('line-height', '1.3')
+        .style('color', '#fff')
+        .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
+
+      // Data ID
+      div.append('xhtml:div')
+        .style('font-weight', '600')
+        .style('white-space', 'nowrap')
+        .style('overflow', 'hidden')
+        .style('text-overflow', 'ellipsis')
+        .text(truncate(d.dataId, 14) || 'N/A')
+
+      // Signer domain
+      div.append('xhtml:div')
+        .style('font-size', '10px')
+        .style('opacity', '0.9')
+        .style('margin-top', '2px')
+        .text(getSignerDomain(d.signerIdentity))
+    })
 
     node.on('mouseenter', function(event, d) {
       // Pin node in place while hovering to prevent jumping
@@ -115,10 +158,11 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     })
 
     const simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink<SimNode, SimLink>(links).id(d => d.id).distance(100))
+      .force('link', d3.forceLink<SimNode, SimLink>(links).id(d => d.id).distance(200))
       .force('charge', d3.forceManyBody().strength(-400))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('y', d3.forceY<SimNode>().y(d => 100 + d.depth * 120).strength(0.3))
+      .force('x', d3.forceX<SimNode>().x(d => 100 + d.depth * 180).strength(0.5))
+      .force('y', d3.forceY<SimNode>().y(height / 2).strength(0.05))
+      .force('collide', d3.forceCollide().radius(BOX_HEIGHT / 2 + 20))
       .on('tick', () => {
         link
           .attr('x1', d => (d.source as SimNode).x ?? 0)
@@ -152,34 +196,46 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     }
   }, [graph, typeColors])
 
-  const types = [...new Set(graph.nodes.map(n => n.dataType))].sort()
-
-  const hasMissingPredecessors = graph.metadata.missingPredecessors.length > 0
+  // Sort types by their minimum depth in the graph (following provenance order)
+  const types = useMemo(() => {
+    const typeMinDepth = new Map<string, number>()
+    for (const node of graph.nodes) {
+      const current = typeMinDepth.get(node.dataType)
+      if (current === undefined || node.depth < current) {
+        typeMinDepth.set(node.dataType, node.depth)
+      }
+    }
+    return [...typeMinDepth.entries()]
+      .sort((a, b) => a[1] - b[1])
+      .map(([type]) => type)
+  }, [graph.nodes])
 
   return (
     <div className="graph-wrapper">
-      <div className="graph-info">
-        {graph.metadata.totalNodes} {graph.metadata.totalNodes === 1 ? 'record' : 'records'} in chain
-        {hasMissingPredecessors && (
-          <span style={{ marginLeft: '1rem', color: '#666' }}>
-            ({graph.metadata.missingPredecessors.length} predecessors not yet loaded)
-          </span>
-        )}
-      </div>
-
-      <div className="graph-legend">
-        {types.map(type => (
-          <span key={type} className="legend-item">
-            <svg width="16" height="16" style={{ verticalAlign: 'middle', marginRight: '4px' }}>
-              <circle cx="8" cy="8" r="6" fill={typeColors(type)} />
-            </svg>
-            {type || 'Unknown'}
-          </span>
-        ))}
-      </div>
-
       <div ref={containerRef} className="graph-container" style={{ height: '600px', position: 'relative' }}>
         <svg ref={svgRef} width="100%" height="100%" />
+
+        <div style={{
+          position: 'absolute',
+          bottom: '12px',
+          right: '12px',
+          background: 'rgba(255, 255, 255, 0.9)',
+          borderRadius: '4px',
+          padding: '8px 12px',
+          fontSize: '0.8rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+        }}>
+          {types.map(type => (
+            <span key={type ?? 'unknown'} style={{ display: 'flex', alignItems: 'center' }}>
+              <svg width="18" height="14" style={{ marginRight: '6px', flexShrink: 0 }}>
+                <rect x="1" y="1" width="16" height="12" rx="2" ry="2" fill={typeColors(type)} />
+              </svg>
+              {type?.trim() || 'Unknown'}
+            </span>
+          ))}
+        </div>
 
         {tooltip && (
           <div
@@ -208,9 +264,4 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
       </div>
     </div>
   )
-}
-
-function truncate(str: string | null | undefined, maxLen: number): string {
-  if (!str) return ''
-  return str.length > maxLen ? str.substring(0, maxLen - 1) + '...' : str
 }

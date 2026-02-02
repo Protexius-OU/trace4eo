@@ -28,6 +28,7 @@ export interface GraphNode {
   signingTime: string
   depth: number
   predecessorCount: number
+  signerIdentity: string | null
 }
 
 export interface GraphEdge {

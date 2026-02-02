@@ -74,13 +74,19 @@ public class ProvenanceGraphService {
                 predecessors = Collections.emptyList();
             }
 
+            String signerIdentity = null;
+            if (record.signature().details() != null) {
+                signerIdentity = record.signature().details().signerIdentity();
+            }
+
             GraphNode node = new GraphNode(
                 record.id(),
                 record.metadata().dataId(),
                 record.metadata().dataType(),
                 record.signature().signingTime(),
                 item.depth(),
-                predecessors.size()
+                predecessors.size(),
+                signerIdentity
             );
             nodes.add(node);
 

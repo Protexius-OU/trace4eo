@@ -10,7 +10,8 @@ public record GraphNode(
     String dataType,
     Instant signingTime,
     int depth,
-    int predecessorCount
+    int predecessorCount,
+    String signerIdentity
 ) {
     public GraphNode {
         Objects.requireNonNull(id, "Node ID must be set.");
