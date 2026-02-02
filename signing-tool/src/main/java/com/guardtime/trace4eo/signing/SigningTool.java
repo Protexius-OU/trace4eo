@@ -210,22 +210,4 @@ public class SigningTool {
             }
         }
     }
-
-    private byte[] resolveInput(Path file, String hex, String base64) {
-        if (file != null) {
-            try {
-                return Files.readAllBytes(file);
-            } catch (IOException e) {
-                log.warn("Failed to read file {}", file, e);
-                throw new RuntimeException(e);
-            }
-        }
-        if (hex != null) {
-            return HexFormat.of().parseHex(hex);
-        }
-        if (base64 != null) {
-            return Base64.getDecoder().decode(base64);
-        }
-        throw new IllegalArgumentException("Input data was missing");
-    }
 }

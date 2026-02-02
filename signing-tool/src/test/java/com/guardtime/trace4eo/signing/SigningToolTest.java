@@ -43,7 +43,7 @@ class SigningToolTest {
     private HttpResponse<String> mockResponse = mock(HttpResponse.class);
 
     @BeforeEach
-    void setUp() throws IOException {
+    void setUp() {
         ProvenanceJsonMapper mapper = new ProvenanceJsonMapper();
         testSignature = mapper.readValue(
             Path.of("src/test/resources/signature.json").toFile(),

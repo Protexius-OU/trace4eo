@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -144,7 +145,7 @@ public class ProvenanceSigningService {
                 byte[] oidcIssuerExt = signingCert.getExtensionValue("1.3.6.1.4.1.57264.1.1");
                 if (oidcIssuerExt != null && oidcIssuerExt.length > 4) {
                     // Skip ASN.1 wrapper bytes
-                    oidcIssuer = new String(oidcIssuerExt, 4, oidcIssuerExt.length - 4, java.nio.charset.StandardCharsets.UTF_8);
+                    oidcIssuer = new String(oidcIssuerExt, 4, oidcIssuerExt.length - 4, StandardCharsets.UTF_8);
                 }
             }
         } catch (Exception e) {
