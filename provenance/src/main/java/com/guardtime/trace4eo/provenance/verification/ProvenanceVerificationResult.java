@@ -20,7 +20,4 @@ public record ProvenanceVerificationResult(
         this(steps.stream().allMatch(VerificationStep::status), null, null, steps);
     }
 
-    public ProvenanceVerificationResult(List<VerificationStep> steps, ProvenanceVerificationError error, String errorMessage) {
-        this(false, error, errorMessage, steps);
-    }
 }
