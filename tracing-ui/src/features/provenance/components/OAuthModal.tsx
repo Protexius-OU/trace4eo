@@ -1,3 +1,5 @@
+import './Modal.css'
+
 interface Props {
   url: string
   onClose?: () => void

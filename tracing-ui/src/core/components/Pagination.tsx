@@ -1,3 +1,5 @@
+import './Pagination.css'
+
 interface Props {
   page: number
   totalPages: number

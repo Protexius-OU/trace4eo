@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import './Modal.css'
 import type { GraphNode } from '../types/provenance'
 
 interface Props {

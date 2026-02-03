@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import './ProvenanceGraphViewer.css'
 import * as d3 from 'd3'
 import type { ProvenanceGraph, GraphNode, DisplayNode, GroupNode } from '../types/provenance'
 import { buildDisplayGraph } from '../utils/graphCollapsing'
+import { getSignerDomain } from '../utils/signerIdentity'
 import PredecessorListModal from './PredecessorListModal'
 
 interface Props {
@@ -26,12 +28,6 @@ const BOX_HEIGHT = 70
 function truncate(str: string | null | undefined, maxLen: number): string {
   if (!str) return ''
   return str.length > maxLen ? str.substring(0, maxLen - 1) + '...' : str
-}
-
-function getSignerDomain(signerIdentity: string | null): string {
-  if (!signerIdentity) return '-'
-  const domain = signerIdentity.split('@')[1]?.split('.')[0]
-  return domain ? domain.charAt(0).toUpperCase() + domain.slice(1) : '-'
 }
 
 export default function ProvenanceGraphViewer({ graph }: Props) {
@@ -178,7 +174,6 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
           .style('pointer-events', 'none')
 
         const div = fo.append('xhtml:div')
-          .attr('class', 'graph-node-content')
           .style('font-size', '11px')
           .style('line-height', '1.3')
           .style('color', '#fff')

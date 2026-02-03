@@ -56,31 +56,6 @@ export async function downloadZip(id: string): Promise<void> {
   window.URL.revokeObjectURL(url)
 }
 
-export async function uploadFile(
-  file: File,
-  dataType: string,
-  dataId: string,
-  predecessors?: string[]
-): Promise<ProvenanceRecord> {
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('dataType', dataType)
-  formData.append('dataId', dataId)
-  if (predecessors) {
-    predecessors.forEach(id => formData.append('predecessors', id))
-  }
-
-  const response = await fetch(`${API_BASE}/upload`, {
-    method: 'POST',
-    body: formData,
-  })
-
-  if (!response.ok) {
-    throw new Error(`Upload failed: ${response.statusText}`)
-  }
-  return response.json()
-}
-
 export async function verifyRecord(id: string): Promise<VerificationResult> {
   const response = await fetch(`${API_BASE}/${id}/verify`, { method: 'POST' })
   if (!response.ok) {

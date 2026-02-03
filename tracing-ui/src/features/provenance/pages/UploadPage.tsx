@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import './UploadPage.css'
 import { useNavigate, Link } from 'react-router-dom'
 import { uploadFileWithSse, fetchRecords } from '../api/provenanceApi'
 import type { ProvenanceRecord } from '../types/provenance'

@@ -1,7 +1,9 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
+import './RecordTable.css'
 import { Link } from 'react-router-dom'
 import type { ProvenanceRecord } from '../types/provenance'
 import { downloadZip } from '../api/provenanceApi'
+import { getSignerDomain } from '../utils/signerIdentity'
 
 interface Props {
   records: ProvenanceRecord[]
@@ -121,11 +123,8 @@ export default function RecordTable({ records }: Props) {
     return record.signature?.details?.signerIdentity ?? null
   }
 
-  const getSignerDomain = (record: ProvenanceRecord): string => {
-    const email = getSignerEmail(record)
-    if (!email) return '-'
-    const domain = email.split('@')[1]?.split('.')[0]
-    return domain ? domain.charAt(0).toUpperCase() + domain.slice(1) : '-'
+  const getRecordSignerDomain = (record: ProvenanceRecord): string => {
+    return getSignerDomain(getSignerEmail(record))
   }
 
   // Extract unique values for filters
@@ -138,7 +137,7 @@ export default function RecordTable({ records }: Props) {
     [records]
   )
   const uniqueSigners = useMemo(() =>
-    [...new Set(records.map(r => getSignerDomain(r)))].sort(),
+    [...new Set(records.map(r => getRecordSignerDomain(r)))].sort(),
     [records]
   )
 
@@ -181,7 +180,7 @@ export default function RecordTable({ records }: Props) {
     records.filter(r =>
       selectedTypes.has(r.metadata.dataType) &&
       selectedDataIds.has(r.metadata.dataId) &&
-      selectedSigners.has(getSignerDomain(r))
+      selectedSigners.has(getRecordSignerDomain(r))
     ),
     [records, selectedTypes, selectedDataIds, selectedSigners]
   )
@@ -292,7 +291,7 @@ export default function RecordTable({ records }: Props) {
                 </td>
                 <td>
                   <Tooltip text={getSignerEmail(record)}>
-                    {getSignerDomain(record)}
+                    {getRecordSignerDomain(record)}
                   </Tooltip>
                 </td>
                 <td>{record.metadata.predecessors?.length ?? 0}</td>
