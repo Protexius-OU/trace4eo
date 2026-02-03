@@ -89,36 +89,44 @@ public class ProvenanceVerificationService {
         if (filesInfoResult.status()) {
             steps.add(VerificationStep.success(VerificationStepName.FILES_INFO, "Files info hash matches manifest"));
         } else {
-            steps.add(VerificationStep.failure(VerificationStepName.FILES_INFO, "Files info hash verification", filesInfoResult.errorMessage()));
+            steps.add(VerificationStep.failure(VerificationStepName.FILES_INFO,
+                "Files info hash verification", filesInfoResult.errorMessage()));
         }
 
         // Step 2: Verify Metadata hash
         ProvenanceVerificationResult metadataResult = verifyMetadata(provenanceRecord.manifest(),
             provenanceRecord.metadata());
         if (metadataResult.status()) {
-            steps.add(VerificationStep.success(VerificationStepName.METADATA, "Metadata hash matches manifest"));
+            steps.add(VerificationStep.success(VerificationStepName.METADATA,
+                "Metadata hash matches manifest"));
         } else {
-            steps.add(VerificationStep.failure(VerificationStepName.METADATA, "Metadata hash verification", metadataResult.errorMessage()));
+            steps.add(VerificationStep.failure(VerificationStepName.METADATA,
+                "Metadata hash verification", metadataResult.errorMessage()));
         }
 
         // Step 3: Verify file content hashes (if available)
         ProvenanceVerificationResult filesResult = verifyFiles(provenanceRecord.filesInfo());
         if (filesResult.status()) {
             if (provenanceRecord.filesInfo().filesContext() != null) {
-                steps.add(VerificationStep.success(VerificationStepName.FILE_CONTENTS, "All file content hashes verified"));
+                steps.add(VerificationStep.success(VerificationStepName.FILE_CONTENTS,
+                    "All file content hashes verified"));
             } else {
-                steps.add(VerificationStep.success(VerificationStepName.FILE_CONTENTS, "File content verification skipped (files not available)"));
+                steps.add(VerificationStep.success(VerificationStepName.FILE_CONTENTS,
+                    "File content verification skipped (files not available)"));
             }
         } else {
-            steps.add(VerificationStep.failure(VerificationStepName.FILE_CONTENTS, "File content hash verification", filesResult.errorMessage()));
+            steps.add(VerificationStep.failure(VerificationStepName.FILE_CONTENTS,
+                "File content hash verification", filesResult.errorMessage()));
         }
 
         // Step 4: Verify signature against manifest
         ProvenanceVerificationResult signatureResult = verifySignature(provenanceRecord);
         if (signatureResult.status()) {
-            steps.add(VerificationStep.success(VerificationStepName.SIGNATURE, "Signature verified against manifest"));
+            steps.add(VerificationStep.success(VerificationStepName.SIGNATURE,
+                "Signature verified against manifest"));
         } else {
-            steps.add(VerificationStep.failure(VerificationStepName.SIGNATURE, "Signature verification", signatureResult.errorMessage()));
+            steps.add(VerificationStep.failure(VerificationStepName.SIGNATURE,
+                "Signature verification", signatureResult.errorMessage()));
         }
 
         return new ProvenanceVerificationResult(steps);
@@ -127,7 +135,9 @@ public class ProvenanceVerificationService {
     private ProvenanceVerificationResult verifySignature(ProvenanceRecord provenanceRecord) {
         byte[] manifestBytes;
         try {
-            manifestBytes = new JsonCanonicalizer(new ProvenanceJsonMapper().writeValueAsBytes(provenanceRecord.manifest())).getEncodedUTF8();
+            byte[] jsonBytes = new ProvenanceJsonMapper()
+                .writeValueAsBytes(provenanceRecord.manifest());
+            manifestBytes = new JsonCanonicalizer(jsonBytes).getEncodedUTF8();
         } catch (IOException e) {
             log.warn("Failed to canonicalize Manifest for signature verification", e);
             throw new IllegalStateException(e);

@@ -14,9 +14,17 @@ The project consists of multiple software components:
 
 ## Running via Docker
 
-Currently Postgres DB and frontend are run in Docker containers and backend locally, as the Sigstore signing process needs a callback URL which wouldn't be accessible if it was running inside Docker. 
+Currently Postgres DB and frontend are run in Docker containers and backend locally, as the Sigstore signing process needs a callback URL which wouldn't be accessible if it was running inside Docker.
 
-Use helper scripts `./build-docker.sh` to build and `./start-dev.sh` to run locally.
+Use `./build-dev.sh` to build the frontend and Docker images, then `./start-dev.sh` to start the database and frontend containers and run the backend locally.
+
+### Building a container image for the tracing system
+
+```bash
+./gradlew :tracing-system:bootBuildImage
+```
+
+This uses Spring Boot's built-in Buildpacks support to produce an OCI image.
 
 ## Static code analysis
 
@@ -25,18 +33,12 @@ Use helper scripts `./build-docker.sh` to build and `./start-dev.sh` to run loca
 Checkstyle is used to maintain a consistent code style.
 Checkstyle is configured to run automatically in Gradle compile phase.
 
-### JaCoCo (https://www.eclemma.org/jacoco/)
-
-Code test coverage can be measured by running `./gradlew jacocoTestReport`.
-
-Report is generated to `build/reports/jacoco/` directory.
-
 ### SpotBugs (https://spotbugs.github.io/)
 
 SpotBugs analyzes bytecode to find common bugs and code problems. This is done automatically when
 running `./gradlew build`
 
-XML and HTML reports can be found in `build/reports/spotbugs/` directory.
+XML and HTML reports can be found in each module's `build/reports/spotbugs/` directory.
 
 ### OpenRewrite (https://docs.openrewrite.org/)
 

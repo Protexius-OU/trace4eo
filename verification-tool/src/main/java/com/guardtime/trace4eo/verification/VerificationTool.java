@@ -3,11 +3,12 @@ package com.guardtime.trace4eo.verification;
 import com.guardtime.trace4eo.provenance.Container;
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
+import com.guardtime.trace4eo.provenance.io.ContainerReader;
 import com.guardtime.trace4eo.provenance.io.json.JsonContainerReader;
+import com.guardtime.trace4eo.provenance.io.zip.ZipContainerReader;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationResult;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationService;
-import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.shell.core.command.annotation.Command;
@@ -42,24 +43,22 @@ public class VerificationTool {
     public List<ProvenanceVerificationResult> verify(
         @Option(longName = "file", description = "Path to provenance record") Path provenanceRecordPath
     ) {
-        ProvenanceJsonMapper provenanceJsonMapper = new ProvenanceJsonMapper();
-        JsonContainerReader reader = new JsonContainerReader(provenanceJsonMapper);
-        Container container = reader.read(provenanceRecordPath);
-        ProvenanceVerificationService verificationService = new ProvenanceVerificationService();
-        List<ProvenanceVerificationResult> results = new ArrayList<>();
-        for (ProvenanceRecord provenanceRecord : container.provenanceRecords()) {
-            ProvenanceVerificationResult result = verificationService.verify(provenanceRecord);
-            results.add(result);
-            try {
-                byte[] manifestBytes = new JsonCanonicalizer(provenanceJsonMapper.writeValueAsBytes(provenanceRecord.manifest())).getEncodedUTF8();
-                ProvenanceVerificationResult manifestResult = verificationService.verify(provenanceRecord.signature(), manifestBytes);
-                results.add(manifestResult);
-            } catch (IOException e) {
-                log.error("Failed to canonicalize manifest", e);
-                throw new RuntimeException(e);
+        try {
+            ProvenanceJsonMapper provenanceJsonMapper = new ProvenanceJsonMapper();
+            ContainerReader reader = provenanceRecordPath.toString().endsWith(".zip")
+                ? new ZipContainerReader(provenanceJsonMapper)
+                : new JsonContainerReader(provenanceJsonMapper);
+            Container container = reader.read(provenanceRecordPath);
+            ProvenanceVerificationService verificationService = new ProvenanceVerificationService();
+            List<ProvenanceVerificationResult> results = new ArrayList<>();
+            for (ProvenanceRecord provenanceRecord : container.provenanceRecords()) {
+                results.add(verificationService.verify(provenanceRecord));
             }
+            return results;
+        } catch (IOException e) {
+            log.error("Failed to read container", e);
+            throw new RuntimeException(e);
         }
-        return results;
     }
 
     private byte[] resolveInput(Path filePath, String hex, String base64) {

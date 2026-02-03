@@ -1,9 +1,16 @@
 package com.guardtime.trace4eo.verification;
 
-import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationError;
+import com.guardtime.trace4eo.provenance.Container;
+import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
+import com.guardtime.trace4eo.provenance.io.json.JsonContainerReader;
+import com.guardtime.trace4eo.provenance.io.zip.ZipContainerWriter;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationResult;
+import com.guardtime.trace4eo.provenance.verification.VerificationStepName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -38,36 +45,53 @@ class VerificationToolTest {
     void verifyProvenanceRecord() {
         VerificationTool verificationTool = new VerificationTool();
         List<ProvenanceVerificationResult> results = verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE));
-        assertEquals(2, results.size());
-        for (ProvenanceVerificationResult result : results) {
-            assertTrue(result.status(), () -> String.format("Verification failed: %s - %s", result.error(), result.errorMessage()));
-        }
+        assertEquals(1, results.size());
+        ProvenanceVerificationResult result = results.getFirst();
+        assertTrue(result.status(), () -> String.format(
+            "Verification failed: %s - %s", result.error(), result.errorMessage()));
+    }
+
+    @Test
+    void verifyProvenanceRecordZip(@TempDir Path tempDir) throws IOException {
+        ProvenanceJsonMapper mapper = new ProvenanceJsonMapper();
+        Container container = new JsonContainerReader(mapper)
+            .read(Path.of(PROVENANCE_RECORD_FILE));
+        Path zipPath = tempDir.resolve("provenance-record.zip");
+        new ZipContainerWriter(mapper)
+            .writeTo(container, Files.newOutputStream(zipPath));
+
+        VerificationTool verificationTool = new VerificationTool();
+        List<ProvenanceVerificationResult> results = verificationTool.verify(zipPath);
+        assertEquals(1, results.size());
+        ProvenanceVerificationResult result = results.getFirst();
+        assertTrue(result.status(), () -> String.format(
+            "Verification failed: %s - %s", result.error(), result.errorMessage()));
     }
 
     @Test
     void verifyProvenanceRecordWithInvalidSignature() {
         VerificationTool verificationTool = new VerificationTool();
-        List<ProvenanceVerificationResult> results = verificationTool.verify(Path.of(INVALID_SIGNATURE_PROVENANCE_RECORD_FILE));
-        assertEquals(2, results.size());
-
-        long signatureFailureCount = results.stream()
-            .filter(r -> r.error() == ProvenanceVerificationError.SIGNATURE_VERIFICATION_FAILED)
-            .count();
-        assertEquals(1, signatureFailureCount,
-            String.format("Expected exactly one result with %s error", ProvenanceVerificationError.SIGNATURE_VERIFICATION_FAILED));
+        List<ProvenanceVerificationResult> results = verificationTool.verify(
+            Path.of(INVALID_SIGNATURE_PROVENANCE_RECORD_FILE));
+        assertEquals(1, results.size());
+        assertFalse(results.getFirst().status());
+        assertTrue(results.getFirst().steps().stream()
+            .anyMatch(s -> s.name() == VerificationStepName.SIGNATURE
+                && !s.status()),
+            "Expected a failed SIGNATURE verification step");
     }
 
     @Test
     void verifyProvenanceRecordWithInvalidContents() {
         VerificationTool verificationTool = new VerificationTool();
-        List<ProvenanceVerificationResult> results = verificationTool.verify(Path.of(INVALID_CONTENTS_PROVENANCE_RECORD_FILE));
-        assertEquals(2, results.size());
-
-        long hashMismatchCount = results.stream()
-            .filter(r -> r.error() == ProvenanceVerificationError.HASH_MISMATCH)
-            .count();
-        assertEquals(1, hashMismatchCount,
-            String.format("Expected exactly one result with %s error", ProvenanceVerificationError.HASH_MISMATCH));
+        List<ProvenanceVerificationResult> results = verificationTool.verify(
+            Path.of(INVALID_CONTENTS_PROVENANCE_RECORD_FILE));
+        assertEquals(1, results.size());
+        assertFalse(results.getFirst().status());
+        assertTrue(results.getFirst().steps().stream()
+            .anyMatch(s -> s.name() == VerificationStepName.FILES_INFO
+                && !s.status()),
+            "Expected a failed FILES_INFO verification step");
     }
 
 }
