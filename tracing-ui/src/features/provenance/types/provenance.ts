@@ -36,6 +36,18 @@ export interface GraphEdge {
   targetId: string
 }
 
+export interface GroupNode {
+  id: string            // "group::{parentNodeId}"
+  parentNodeId: string
+  hiddenNodeIds: string[]
+  dataType: string
+  depth: number
+  count: number
+  isGroup: true
+}
+
+export type DisplayNode = (GraphNode & { isGroup?: false }) | GroupNode
+
 export interface GraphMetadata {
   totalNodes: number
   maxDepth: number

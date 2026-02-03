@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as d3 from 'd3'
-import type { ProvenanceGraph, GraphNode } from '../types/provenance'
+import type { ProvenanceGraph, GraphNode, DisplayNode, GroupNode } from '../types/provenance'
+import { buildDisplayGraph } from '../utils/graphCollapsing'
+import PredecessorListModal from './PredecessorListModal'
 
 interface Props {
   graph: ProvenanceGraph
 }
 
-interface SimNode extends GraphNode {
+type SimNode = DisplayNode & {
   x?: number
   y?: number
   fx?: number | null
@@ -35,7 +37,19 @@ function getSignerDomain(signerIdentity: string | null): string {
 export default function ProvenanceGraphViewer({ graph }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-  const [tooltip, setTooltip] = useState<{ node: GraphNode; x: number; y: number } | null>(null)
+  const [tooltip, setTooltip] = useState<{ node: DisplayNode; x: number; y: number } | null>(null)
+  const [expandedGroups] = useState<Set<string>>(() => new Set())
+  const [selectedGroup, setSelectedGroup] = useState<GroupNode | null>(null)
+
+  // Reset selected group when graph changes
+  useEffect(() => {
+    setSelectedGroup(null)
+  }, [graph])
+
+  const displayGraph = useMemo(
+    () => buildDisplayGraph(graph, expandedGroups),
+    [graph, expandedGroups]
+  )
 
   const typeColors = useMemo(() => d3.scaleOrdinal(d3.schemeCategory10), [])
 
@@ -50,12 +64,12 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
 
     svg.attr('viewBox', `0 0 ${width} ${height}`)
 
-    const links: SimLink[] = graph.edges.map(e => ({
+    const links: SimLink[] = displayGraph.edges.map(e => ({
       source: e.sourceId,
       target: e.targetId
     }))
 
-    const nodes: SimNode[] = graph.nodes.map(n => ({ ...n }))
+    const nodes: SimNode[] = displayGraph.nodes.map(n => ({ ...n }))
 
     const g = svg.append('g')
 
@@ -67,7 +81,9 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
 
     svg.call(zoom)
 
-    svg.append('defs').append('marker')
+    const defs = svg.append('defs')
+
+    defs.append('marker')
       .attr('id', 'arrowhead')
       .attr('viewBox', '-0 -5 10 10')
       .attr('refX', BOX_WIDTH / 2 + 10)
@@ -97,70 +113,117 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
 
     node.each(function(d) {
       const el = d3.select(this)
-      const color = typeColors(d.dataType)
-      const strokeColor = d3.color(color)?.darker(0.5)?.toString() ?? color
 
-      // Add rectangle background
-      el.append('rect')
-        .attr('x', -BOX_WIDTH / 2)
-        .attr('y', -BOX_HEIGHT / 2)
-        .attr('width', BOX_WIDTH)
-        .attr('height', BOX_HEIGHT)
-        .attr('rx', 6)
-        .attr('ry', 6)
-        .attr('fill', color)
-        .attr('stroke', strokeColor)
-        .attr('stroke-width', 2)
-        .style('cursor', 'pointer')
+      if (d.isGroup) {
+        // Group node rendering — same box style, colored by type
+        const color = typeColors(d.dataType)
+        const strokeColor = d3.color(color)?.darker(0.5)?.toString() ?? color
 
-      // Add text content using foreignObject for better text wrapping
-      const fo = el.append('foreignObject')
-        .attr('x', -BOX_WIDTH / 2 + 8)
-        .attr('y', -BOX_HEIGHT / 2 + 6)
-        .attr('width', BOX_WIDTH - 16)
-        .attr('height', BOX_HEIGHT - 12)
-        .style('pointer-events', 'none')
+        el.append('rect')
+          .attr('x', -BOX_WIDTH / 2)
+          .attr('y', -BOX_HEIGHT / 2)
+          .attr('width', BOX_WIDTH)
+          .attr('height', BOX_HEIGHT)
+          .attr('rx', 6)
+          .attr('ry', 6)
+          .attr('fill', color)
+          .attr('stroke', strokeColor)
+          .attr('stroke-width', 2)
+          .style('cursor', 'pointer')
 
-      const div = fo.append('xhtml:div')
-        .attr('class', 'graph-node-content')
-        .style('font-size', '11px')
-        .style('line-height', '1.3')
-        .style('color', '#fff')
-        .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
+        const fo = el.append('foreignObject')
+          .attr('x', -BOX_WIDTH / 2 + 8)
+          .attr('y', -BOX_HEIGHT / 2 + 6)
+          .attr('width', BOX_WIDTH - 16)
+          .attr('height', BOX_HEIGHT - 12)
+          .style('pointer-events', 'none')
 
-      // Data ID
-      div.append('xhtml:div')
-        .style('font-weight', '600')
-        .style('white-space', 'nowrap')
-        .style('overflow', 'hidden')
-        .style('text-overflow', 'ellipsis')
-        .text(truncate(d.dataId, 14) || 'N/A')
+        const div = fo.append('xhtml:div')
+          .style('font-size', '11px')
+          .style('line-height', '1.3')
+          .style('color', '#fff')
+          .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
 
-      // Signer domain
-      div.append('xhtml:div')
-        .style('font-size', '10px')
-        .style('opacity', '0.9')
-        .style('margin-top', '2px')
-        .text(getSignerDomain(d.signerIdentity))
+        div.append('xhtml:div')
+          .style('font-weight', '600')
+          .text(`${d.count} records`)
+
+        div.append('xhtml:div')
+          .style('font-size', '10px')
+          .style('opacity', '0.9')
+          .style('margin-top', '2px')
+          .text('Click to view')
+      } else {
+        // Regular node rendering
+        const color = typeColors(d.dataType)
+        const strokeColor = d3.color(color)?.darker(0.5)?.toString() ?? color
+
+        el.append('rect')
+          .attr('x', -BOX_WIDTH / 2)
+          .attr('y', -BOX_HEIGHT / 2)
+          .attr('width', BOX_WIDTH)
+          .attr('height', BOX_HEIGHT)
+          .attr('rx', 6)
+          .attr('ry', 6)
+          .attr('fill', color)
+          .attr('stroke', strokeColor)
+          .attr('stroke-width', 2)
+          .style('cursor', 'pointer')
+
+        const fo = el.append('foreignObject')
+          .attr('x', -BOX_WIDTH / 2 + 8)
+          .attr('y', -BOX_HEIGHT / 2 + 6)
+          .attr('width', BOX_WIDTH - 16)
+          .attr('height', BOX_HEIGHT - 12)
+          .style('pointer-events', 'none')
+
+        const div = fo.append('xhtml:div')
+          .attr('class', 'graph-node-content')
+          .style('font-size', '11px')
+          .style('line-height', '1.3')
+          .style('color', '#fff')
+          .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
+
+        div.append('xhtml:div')
+          .style('font-weight', '600')
+          .style('white-space', 'nowrap')
+          .style('overflow', 'hidden')
+          .style('text-overflow', 'ellipsis')
+          .text(truncate(d.dataId, 14) || 'N/A')
+
+        div.append('xhtml:div')
+          .style('font-size', '10px')
+          .style('opacity', '0.9')
+          .style('margin-top', '2px')
+          .text(getSignerDomain(d.signerIdentity))
+      }
     })
 
     node.on('mouseenter', function(event, d) {
-      // Pin node in place while hovering to prevent jumping
       d.fx = d.x
       d.fy = d.y
       setTooltip({ node: d, x: event.pageX + 15, y: event.pageY + 15 })
     })
     .on('mouseleave', (_event, d) => {
-      // Unpin node when mouse leaves
       d.fx = null
       d.fy = null
       setTooltip(null)
     })
+    .on('click', (_event, d) => {
+      if (d.isGroup) {
+        setSelectedGroup(d)
+      }
+    })
+
+    const maxDepth = Math.max(...nodes.map(n => n.depth), 0)
+    const spacing = 180
+    const graphWidth = maxDepth * spacing
+    const offsetX = (width + graphWidth) / 2
 
     const simulation = d3.forceSimulation(nodes)
       .force('link', d3.forceLink<SimNode, SimLink>(links).id(d => d.id).distance(200))
       .force('charge', d3.forceManyBody().strength(-400))
-      .force('x', d3.forceX<SimNode>().x(d => 100 + d.depth * 180).strength(0.5))
+      .force('x', d3.forceX<SimNode>().x(d => offsetX - d.depth * spacing).strength(0.5))
       .force('y', d3.forceY<SimNode>().y(height / 2).strength(0.05))
       .force('collide', d3.forceCollide().radius(BOX_HEIGHT / 2 + 20))
       .on('tick', () => {
@@ -194,7 +257,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     return () => {
       simulation.stop()
     }
-  }, [graph, typeColors])
+  }, [displayGraph, typeColors])
 
   // Sort types by their minimum depth in the graph (following provenance order)
   const types = useMemo(() => {
@@ -254,14 +317,30 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
               pointerEvents: 'none',
             }}
           >
-            <div style={{ fontWeight: 600, marginBottom: '4px' }}>{tooltip.node.dataType || 'Unknown'}</div>
-            <div><span style={{ color: '#666' }}>ID:</span> <span style={{ fontFamily: 'monospace', fontSize: '10px' }}>{tooltip.node.id}</span></div>
-            <div><span style={{ color: '#666' }}>Data ID:</span> {tooltip.node.dataId || 'N/A'}</div>
-            <div><span style={{ color: '#666' }}>Signed:</span> {tooltip.node.signingTime ? new Date(tooltip.node.signingTime).toLocaleString() : 'N/A'}</div>
-            <div><span style={{ color: '#666' }}>Predecessors:</span> {tooltip.node.predecessorCount}</div>
+            {tooltip.node.isGroup ? (
+              <>
+                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Grouped Predecessors</div>
+                <div><span style={{ color: '#666' }}>Hidden:</span> {(tooltip.node as GroupNode).count} predecessors</div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontWeight: 600, marginBottom: '4px' }}>{(tooltip.node as GraphNode).dataType || 'Unknown'}</div>
+                <div><span style={{ color: '#666' }}>ID:</span> <span style={{ fontFamily: 'monospace', fontSize: '10px' }}>{tooltip.node.id}</span></div>
+                <div><span style={{ color: '#666' }}>Data ID:</span> {(tooltip.node as GraphNode).dataId || 'N/A'}</div>
+                <div><span style={{ color: '#666' }}>Signed:</span> {(tooltip.node as GraphNode).signingTime ? new Date((tooltip.node as GraphNode).signingTime).toLocaleString() : 'N/A'}</div>
+                <div><span style={{ color: '#666' }}>Predecessors:</span> {(tooltip.node as GraphNode).predecessorCount}</div>
+              </>
+            )}
           </div>
         )}
       </div>
+
+      {selectedGroup && (
+        <PredecessorListModal
+          nodes={graph.nodes.filter(n => selectedGroup.hiddenNodeIds.includes(n.id))}
+          onClose={() => setSelectedGroup(null)}
+        />
+      )}
     </div>
   )
 }

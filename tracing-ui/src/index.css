@@ -410,6 +410,11 @@ tr:hover {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
+.modal-content.modal-content-wide {
+  max-width: 750px;
+  text-align: left;
+}
+
 .modal-content h2 {
   margin: 1rem 0 0.5rem;
   color: #1a1a2e;
