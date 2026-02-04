@@ -2,6 +2,7 @@ package com.guardtime.trace4eo.provenance.signing;
 
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -12,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+@Disabled("Requires interactive Sigstore OIDC authentication")
 class ProvenanceSigningServiceTest {
 
     private final ProvenanceSigningService provenanceSigningService = new ProvenanceSigningService();

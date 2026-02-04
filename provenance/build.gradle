@@ -43,6 +43,7 @@ testing {
     }
 }
 
+
 dependencyCheck {
     outputDirectory = layout.buildDirectory.dir("reports/dependency-check").get()
     formats = ["XML", "HTML"]

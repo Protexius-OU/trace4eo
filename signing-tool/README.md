@@ -59,16 +59,16 @@ Sign multiple files, creating one provenance record per file and packaging them 
 
 **Options:**
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--files` | Explicit list of files to sign | None |
-| `--directory` | Directory containing files to sign | None |
-| `--pattern` | Glob pattern for files in directory | `*` |
-| `--provenance-record-type` | Type of provenance record | Required |
-| `--data-id` | Base data ID (files get `<data-id>/<filename>`) | Required |
-| `--output` | Output ZIP file path | Required |
-| `--hash-algorithm` | Hash algorithm to use | SHA256 |
-| `--register-url` | URL to POST provenance records for registration | None |
+| Option                     | Description                                        | Default  |
+|----------------------------|----------------------------------------------------|----------|
+| `--files`                  | Explicit list of files to sign                     | None     |
+| `--directory`              | Directory containing files to sign                 | None     |
+| `--pattern`                | Glob pattern for files in directory                | `*`      |
+| `--provenance-record-type` | Type of provenance record                          | Required |
+| `--data-id`                | Base data ID (files get `<data-id>/<filename>`)    | Required |
+| `--output`                 | Output ZIP file path                               | Required |
+| `--hash-algorithm`         | Hash algorithm to use                              | SHA256   |
+| `--register-url`           | Tracing backend URL to register provenance records | None     |
 
 **Examples:**
 
