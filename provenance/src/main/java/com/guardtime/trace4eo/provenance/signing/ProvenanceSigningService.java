@@ -6,6 +6,7 @@ import dev.sigstore.KeylessSigner;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import dev.sigstore.oidc.client.OidcClients;
+import dev.sigstore.oidc.client.TokenStringOidcClient;
 import dev.sigstore.oidc.client.WebOidcClient;
 import dev.sigstore.rekor.client.RekorEntry;
 import dev.sigstore.tuf.SigstoreTufClient;
@@ -36,7 +37,13 @@ public class ProvenanceSigningService {
 
     public ProvenanceSigningService() {
         try {
-            this.signer = KeylessSigner.builder().sigstorePublicDefaults().build();
+            var builder = KeylessSigner.builder().sigstorePublicDefaults();
+            String ciToken = System.getenv("SIGSTORE_ID_TOKEN");
+            if (ciToken != null && !ciToken.isBlank()) {
+                log.info("Using SIGSTORE_ID_TOKEN from environment");
+                builder.forceCredentialProviders(OidcClients.of(TokenStringOidcClient.from(ciToken)));
+            }
+            this.signer = builder.build();
         } catch (Exception e) {
             log.error("Failed to initialize provenance signing service", e);
             throw new RuntimeException(e);
