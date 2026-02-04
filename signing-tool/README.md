@@ -8,12 +8,24 @@ A CLI tool for creating and signing provenance records using Sigstore.
 ./gradlew :signing-tool:build
 ```
 
-## Running
-
-Commands are passed via `--args`:
+Build a standalone fat JAR:
 
 ```bash
-./gradlew :signing-tool:run --args="<command> <options>"
+./gradlew :signing-tool:bootJar
+```
+
+## Running
+
+Via Gradle:
+
+```bash
+./gradlew :signing-tool:bootRun --args="<command> <options>"
+```
+
+Or as a standalone JAR:
+
+```bash
+java -jar signing-tool/build/libs/signing-tool-0.1.0-SNAPSHOT.jar <command> <options>
 ```
 
 ## Commands
