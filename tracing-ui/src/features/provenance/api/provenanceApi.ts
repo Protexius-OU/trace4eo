@@ -1,3 +1,4 @@
+import { authFetch } from '../../../core/auth/authFetch'
 import type { ProvenanceRecord, ProvenanceGraph, PagedResponse, RecordFilters, VerificationResult } from '../types/provenance'
 
 const API_BASE = '/api/provenance'
@@ -17,7 +18,7 @@ export async function fetchRecords(
   if (filters.fromDate) params.set('fromDate', filters.fromDate)
   if (filters.toDate) params.set('toDate', filters.toDate)
 
-  const response = await fetch(`${API_BASE}?${params}`)
+  const response = await authFetch(`${API_BASE}?${params}`)
   if (!response.ok) {
     throw new Error(`Failed to fetch records: ${response.statusText}`)
   }
@@ -25,7 +26,7 @@ export async function fetchRecords(
 }
 
 export async function fetchRecord(id: string): Promise<ProvenanceRecord> {
-  const response = await fetch(`${API_BASE}/${id}`)
+  const response = await authFetch(`${API_BASE}/${id}`)
   if (!response.ok) {
     throw new Error(`Failed to fetch record: ${response.statusText}`)
   }
@@ -33,7 +34,7 @@ export async function fetchRecord(id: string): Promise<ProvenanceRecord> {
 }
 
 export async function fetchGraph(id: string): Promise<ProvenanceGraph> {
-  const response = await fetch(`${API_BASE}/${id}/graph`)
+  const response = await authFetch(`${API_BASE}/${id}/graph`)
   if (!response.ok) {
     throw new Error(`Failed to fetch graph: ${response.statusText}`)
   }
@@ -41,7 +42,7 @@ export async function fetchGraph(id: string): Promise<ProvenanceGraph> {
 }
 
 export async function downloadZip(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/${id}/zip`)
+  const response = await authFetch(`${API_BASE}/${id}/zip`)
   if (!response.ok) {
     throw new Error(`Download failed: ${response.statusText}`)
   }
@@ -57,27 +58,19 @@ export async function downloadZip(id: string): Promise<void> {
 }
 
 export async function verifyRecord(id: string): Promise<VerificationResult> {
-  const response = await fetch(`${API_BASE}/${id}/verify`, { method: 'POST' })
+  const response = await authFetch(`${API_BASE}/${id}/verify`, { method: 'POST' })
   if (!response.ok) {
     throw new Error(`Verification failed: ${response.statusText}`)
   }
   return response.json()
 }
 
-export type SseEventType = 'oauth_url' | 'complete' | 'error'
-
-export interface SseEvent {
-  type: SseEventType
-  data: unknown
-}
-
-export async function uploadFileWithSse(
+export async function uploadFile(
   file: File,
   dataType: string,
   dataId: string,
-  predecessors: string[] | undefined,
-  onEvent: (event: SseEvent) => void
-): Promise<void> {
+  predecessors?: string[]
+): Promise<ProvenanceRecord> {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('dataType', dataType)
@@ -86,60 +79,13 @@ export async function uploadFileWithSse(
     predecessors.forEach(id => formData.append('predecessors', id))
   }
 
-  // Use direct backend URL to bypass Vite proxy buffering for SSE
-  const isDev = window.location.port === '3000'
-  const sseUrl = isDev
-    ? 'http://localhost:8080/api/provenance/upload/stream'
-    : `${API_BASE}/upload/stream`
-  const response = await fetch(sseUrl, {
+  const response = await authFetch(`${API_BASE}/upload`, {
     method: 'POST',
     body: formData,
   })
-
   if (!response.ok) {
-    throw new Error(`Upload failed: ${response.statusText}`)
+    const text = await response.text()
+    throw new Error(text || `Upload failed: ${response.statusText}`)
   }
-
-  const reader = response.body?.getReader()
-  if (!reader) {
-    throw new Error('No response body')
-  }
-
-  const decoder = new TextDecoder()
-  let buffer = ''
-  let currentEventType: SseEventType | null = null
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
-    buffer += decoder.decode(value, { stream: true })
-
-    // Process complete events (separated by double newlines)
-    const events = buffer.split('\n\n')
-    buffer = events.pop() || ''
-
-    for (const eventBlock of events) {
-      if (!eventBlock.trim()) continue
-
-      const lines = eventBlock.split('\n')
-
-      for (const line of lines) {
-        if (line.startsWith('event:')) {
-          currentEventType = line.slice(6).trim() as SseEventType
-        } else if (line.startsWith('data:')) {
-          const dataStr = line.slice(5).trim()
-          if (currentEventType && dataStr) {
-            try {
-              const data = JSON.parse(dataStr)
-              onEvent({ type: currentEventType, data })
-            } catch {
-              // Ignore parse errors
-            }
-          }
-        }
-      }
-      currentEventType = null
-    }
-  }
+  return response.json()
 }

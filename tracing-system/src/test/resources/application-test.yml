@@ -1,0 +1,5 @@
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration
+      - org.springframework.boot.security.oauth2.server.resource.autoconfigure.servlet.OAuth2ResourceServerAutoConfiguration

@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -52,7 +53,7 @@ class SigningToolTest {
 
         AtomicInteger callCount = new AtomicInteger(0);
         mockSigningService = mock(ProvenanceSigningService.class);
-        when(mockSigningService.sign(any(byte[].class), any(HashAlgorithm.class)))
+        when(mockSigningService.sign(any(byte[].class), any(HashAlgorithm.class), anyString()))
             .thenAnswer(invocation -> new ProvenanceSignature(
                 testSignature.bytes(),
                 testSignature.signingTime().plusSeconds(callCount.getAndIncrement()),
@@ -67,7 +68,9 @@ class SigningToolTest {
     @Test
     void createProvenanceRecord() throws IOException {
         List<Path> files = List.of(Path.of("src/test/resources/test.txt"));
-        ProvenanceRecord result = signingTool.createProvenanceRecord(files, "test", "test", List.of(), "SHA256");
+        ProvenanceRecord result = signingTool.createProvenanceRecord(
+            files, "test", "test", List.of(), "SHA256"
+        );
         assertNotNull(result);
         assertNotNull(result.id());
         assertNotNull(result.filesInfo());
@@ -92,7 +95,8 @@ class SigningToolTest {
             "batch-2024",
             outputPath,
             "SHA256",
-            null
+            null,
+            null, "trace4eo", null, null
         );
 
         assertEquals(2, result.totalFiles());
@@ -120,7 +124,8 @@ class SigningToolTest {
             "acquisition-2024",
             outputPath,
             "SHA256",
-            null
+            null,
+            null, "trace4eo", null, null
         );
 
         assertEquals(2, result.totalFiles());
@@ -134,7 +139,10 @@ class SigningToolTest {
         Path outputPath = Path.of("/tmp/output.zip");
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-            signingTool.batchSign(List.of(), null, "*", "test", "test", outputPath, "SHA256", null)
+            signingTool.batchSign(
+                List.of(), null, "*", "test", "test", outputPath, "SHA256", null,
+                null, "trace4eo", null, null
+            )
         );
 
         assertTrue(exception.getMessage().contains("No files to sign"));
@@ -156,7 +164,10 @@ class SigningToolTest {
         Path outputPath = tempDir.resolve("output.zip");
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-            signingTool.batchSign(files, null, "*", "test", "test", outputPath, "SHA256", null)
+            signingTool.batchSign(
+                files, null, "*", "test", "test", outputPath, "SHA256", null,
+                null, "trace4eo", null, null
+            )
         );
 
         assertTrue(exception.getMessage().contains("Cannot sign more than 100 files"));
@@ -177,7 +188,8 @@ class SigningToolTest {
             "test",
             outputPath,
             "SHA256",
-            null
+            null,
+            null, "trace4eo", null, null
         );
 
         assertEquals(2, result.totalFiles());
@@ -207,7 +219,8 @@ class SigningToolTest {
             "batch-2024",
             outputPath,
             "SHA256",
-            "http://localhost:8080/api/records"
+            "http://localhost:8080/api/records",
+            null, "trace4eo", null, null
         );
 
         assertEquals(2, result.successCount());
@@ -233,7 +246,8 @@ class SigningToolTest {
             "batch-2024",
             outputPath,
             "SHA256",
-            "http://localhost:8080/api/records"
+            "http://localhost:8080/api/records",
+            null, "trace4eo", null, null
         );
 
         assertEquals(1, result.successCount());
@@ -258,7 +272,8 @@ class SigningToolTest {
             "batch-2024",
             outputPath,
             "SHA256",
-            "http://localhost:8080/api/records"
+            "http://localhost:8080/api/records",
+            null, "trace4eo", null, null
         );
 
         assertEquals(1, result.successCount());

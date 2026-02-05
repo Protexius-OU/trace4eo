@@ -1,0 +1,102 @@
+{
+  "realm": "trace4eo",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "clients": [
+    {
+      "clientId": "trace4eo-ui",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "webOrigins": [
+        "http://localhost:3000",
+        "http://localhost:8080"
+      ],
+      "redirectUris": [
+        "http://localhost:3000/*",
+        "http://localhost:8080/*"
+      ],
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "true"
+      }
+    }
+  ],
+  "identityProviders": [
+    {
+      "alias": "google",
+      "providerId": "google",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": true,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "REPLACE_WITH_GOOGLE_CLIENT_ID",
+        "clientSecret": "REPLACE_WITH_GOOGLE_CLIENT_SECRET",
+        "defaultScope": "openid email profile",
+        "syncMode": "FORCE"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "google-signer-role",
+      "identityProviderAlias": "google",
+      "identityProviderMapper": "hardcoded-role-idp-mapper",
+      "config": {
+        "role": "signer"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "testuser",
+      "email": "testuser@trace4eo.local",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "testpassword",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-trace4eo",
+        "signer"
+      ]
+    },
+    {
+      "username": "admin",
+      "email": "admin@trace4eo.local",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminpassword",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-trace4eo",
+        "signer",
+        "admin"
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "signer",
+        "description": "Can upload and sign provenance records"
+      },
+      {
+        "name": "admin",
+        "description": "Full administrative access"
+      }
+    ]
+  }
+}
