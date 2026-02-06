@@ -24,29 +24,51 @@
       }
     }
   ],
+  "clientScopeMappings": {
+    "broker": [
+      {
+        "client": "trace4eo-ui",
+        "roles": ["read-token"]
+      }
+    ]
+  },
   "identityProviders": [
     {
-      "alias": "google",
-      "providerId": "google",
+      "alias": "sigstore",
+      "providerId": "oidc",
       "enabled": true,
       "trustEmail": true,
       "storeToken": true,
       "firstBrokerLoginFlowAlias": "first broker login",
       "config": {
-        "clientId": "REPLACE_WITH_GOOGLE_CLIENT_ID",
-        "clientSecret": "REPLACE_WITH_GOOGLE_CLIENT_SECRET",
-        "defaultScope": "openid email profile",
+        "clientId": "sigstore",
+        "clientAuthMethod": "none",
+        "authorizationUrl": "https://oauth2.sigstore.dev/auth/auth",
+        "tokenUrl": "https://oauth2.sigstore.dev/auth/token",
+        "jwksUrl": "https://oauth2.sigstore.dev/auth/keys",
+        "issuer": "https://oauth2.sigstore.dev/auth",
+        "defaultScope": "openid email",
+        "pkceEnabled": "true",
+        "pkceMethod": "S256",
         "syncMode": "FORCE"
       }
     }
   ],
   "identityProviderMappers": [
     {
-      "name": "google-signer-role",
-      "identityProviderAlias": "google",
-      "identityProviderMapper": "hardcoded-role-idp-mapper",
+      "name": "sigstore-signer-role",
+      "identityProviderAlias": "sigstore",
+      "identityProviderMapper": "oidc-hardcoded-role-idp-mapper",
       "config": {
         "role": "signer"
+      }
+    },
+    {
+      "name": "sigstore-broker-read-token",
+      "identityProviderAlias": "sigstore",
+      "identityProviderMapper": "oidc-hardcoded-role-idp-mapper",
+      "config": {
+        "role": "broker.read-token"
       }
     }
   ],

@@ -36,7 +36,7 @@ export default function App() {
             <span className="logo">Trace4EO</span>
           </nav>
         </header>
-        <main className="main">
+        <main className="main login">
           <h1>Welcome to Trace4EO</h1>
           <p>Please sign in to continue.</p>
           <button className="btn btn-primary" onClick={() => auth.signinRedirect()}>
@@ -53,10 +53,16 @@ export default function App() {
         <nav>
           <Link to="/" className="logo">Trace4EO</Link>
           <Link to="/upload" className="nav-link">Upload</Link>
-          <span className="nav-user">{auth.user?.profile.email}</span>
-          <button className="btn btn-secondary btn-sm" onClick={() => auth.signoutRedirect()}>
-            Sign Out
-          </button>
+          <div className="nav-right">
+            <span className="nav-user">{auth.user?.profile.email}</span>
+            <button className="btn-icon" onClick={() => auth.signoutRedirect()} title="Sign Out">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          </div>
         </nav>
       </header>
       <main className="main">

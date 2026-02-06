@@ -6,7 +6,6 @@ import dev.sigstore.KeylessSigner;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import dev.sigstore.oidc.client.OidcClients;
-import dev.sigstore.oidc.client.TokenStringOidcClient;
 import dev.sigstore.rekor.client.RekorEntry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +79,7 @@ public class ProvenanceSigningService {
         try {
             return KeylessSigner.builder()
                 .sigstorePublicDefaults()
-                .forceCredentialProviders(OidcClients.of(TokenStringOidcClient.from(oidcToken)))
+                .forceCredentialProviders(OidcClients.of(new EmailOidcClient(oidcToken)))
                 .build();
         } catch (Exception e) {
             log.error("Failed to build signer", e);

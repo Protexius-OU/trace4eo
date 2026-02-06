@@ -7,12 +7,15 @@ import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Instant;
+import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -29,46 +32,138 @@ class KeycloakBrokerTokenServiceTest {
         service = new KeycloakBrokerTokenService("http://localhost:8180", "trace4eo", mockHttpClient);
     }
 
+    /** Creates a fake JWT with the given exp claim (seconds since epoch). */
+    private static String fakeJwt(long expSeconds) {
+        String header = Base64.getUrlEncoder().withoutPadding()
+            .encodeToString("{\"alg\":\"RS256\"}".getBytes());
+        String payload = Base64.getUrlEncoder().withoutPadding()
+            .encodeToString(("{\"exp\":" + expSeconds + ",\"email\":\"test@example.com\",\"iss\":\"https://oauth2.sigstore.dev/auth\"}").getBytes());
+        return header + "." + payload + ".fakesig";
+    }
+
+    private static String validJwt() {
+        return fakeJwt(Instant.now().plusSeconds(3600).getEpochSecond());
+    }
+
+    private static String expiredJwt() {
+        return fakeJwt(Instant.now().minusSeconds(60).getEpochSecond());
+    }
+
     @Test
-    void getGoogleIdToken_success() throws Exception {
+    void getSigstoreIdToken_validToken_returnsDirectly() throws Exception {
+        String jwt = validJwt();
         String tokenResponse = """
             {
-                "access_token": "google-access-token",
-                "id_token": "google-id-token-jwt",
-                "token_type": "Bearer",
-                "expires_in": 3600
+                "access_token": "dex-access-token",
+                "id_token": "%s",
+                "token_type": "Bearer"
             }
-            """;
+            """.formatted(jwt);
         when(mockResponse.statusCode()).thenReturn(200);
         when(mockResponse.body()).thenReturn(tokenResponse);
         when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenReturn(mockResponse);
 
-        String result = service.getGoogleIdToken("keycloak-access-token");
+        String result = service.getSigstoreIdToken("keycloak-access-token");
 
-        assertEquals("google-id-token-jwt", result);
-        verify(mockHttpClient).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
+        assertEquals(jwt, result);
+        // Only one HTTP call (to Keycloak broker), no refresh
+        verify(mockHttpClient, times(1)).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
     }
 
     @Test
-    void getGoogleIdToken_non200Status_throwsException() throws Exception {
+    @SuppressWarnings("unchecked")
+    void getSigstoreIdToken_expiredToken_refreshesViaDex() throws Exception {
+        String expiredToken = expiredJwt();
+        String freshToken = validJwt();
+        String brokerResponse = """
+            {
+                "access_token": "dex-access-token",
+                "id_token": "%s",
+                "refresh_token": "dex-refresh-token",
+                "token_type": "Bearer"
+            }
+            """.formatted(expiredToken);
+        String dexRefreshResponse = """
+            {
+                "access_token": "new-access-token",
+                "id_token": "%s",
+                "token_type": "Bearer"
+            }
+            """.formatted(freshToken);
+
+        HttpResponse<String> dexResponse = mock(HttpResponse.class);
+        when(dexResponse.statusCode()).thenReturn(200);
+        when(dexResponse.body()).thenReturn(dexRefreshResponse);
+
+        when(mockResponse.statusCode()).thenReturn(200);
+        when(mockResponse.body()).thenReturn(brokerResponse);
+
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(mockResponse)   // first call: Keycloak broker
+            .thenReturn(dexResponse);   // second call: Dex refresh
+
+        String result = service.getSigstoreIdToken("keycloak-access-token");
+
+        assertEquals(freshToken, result);
+        verify(mockHttpClient, times(2)).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
+    }
+
+    @Test
+    void getSigstoreIdToken_expiredToken_noRefreshToken_throwsException() throws Exception {
+        String expiredToken = expiredJwt();
+        String brokerResponse = """
+            {
+                "access_token": "dex-access-token",
+                "id_token": "%s",
+                "token_type": "Bearer"
+            }
+            """.formatted(expiredToken);
+        when(mockResponse.statusCode()).thenReturn(200);
+        when(mockResponse.body()).thenReturn(brokerResponse);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(mockResponse);
+
+        RuntimeException exception = assertThrows(RuntimeException.class, () ->
+            service.getSigstoreIdToken("keycloak-access-token")
+        );
+
+        assertTrue(exception.getMessage().contains("no refresh token available"));
+    }
+
+    @Test
+    void getSigstoreIdToken_non200Status_throwsException() throws Exception {
         when(mockResponse.statusCode()).thenReturn(401);
         when(mockResponse.body()).thenReturn("Unauthorized");
         when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenReturn(mockResponse);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () ->
-            service.getGoogleIdToken("invalid-token")
+            service.getSigstoreIdToken("invalid-token")
         );
 
         assertTrue(exception.getMessage().contains("HTTP 401"));
     }
 
     @Test
-    void getGoogleIdToken_noIdTokenInResponse_throwsException() throws Exception {
+    void getSigstoreIdToken_forbidden_throwsBrokerTokenException() throws Exception {
+        when(mockResponse.statusCode()).thenReturn(403);
+        when(mockResponse.body()).thenReturn("Forbidden");
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(mockResponse);
+
+        BrokerTokenException exception = assertThrows(BrokerTokenException.class, () ->
+            service.getSigstoreIdToken("keycloak-access-token")
+        );
+
+        assertTrue(exception.getMessage().contains("Sigstore-supported provider"));
+    }
+
+    @Test
+    void getSigstoreIdToken_noIdTokenInResponse_throwsException() throws Exception {
         String tokenResponse = """
             {
-                "access_token": "google-access-token",
+                "access_token": "dex-access-token",
                 "token_type": "Bearer"
             }
             """;
@@ -78,21 +173,21 @@ class KeycloakBrokerTokenServiceTest {
             .thenReturn(mockResponse);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () ->
-            service.getGoogleIdToken("keycloak-access-token")
+            service.getSigstoreIdToken("keycloak-access-token")
         );
 
-        assertTrue(exception.getMessage().contains("No Google ID token found"));
+        assertTrue(exception.getMessage().contains("No Sigstore ID token found"));
     }
 
     @Test
-    void getGoogleIdToken_networkError_throwsException() throws Exception {
+    void getSigstoreIdToken_networkError_throwsException() throws Exception {
         when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenThrow(new IOException("Connection refused"));
 
         RuntimeException exception = assertThrows(RuntimeException.class, () ->
-            service.getGoogleIdToken("keycloak-access-token")
+            service.getSigstoreIdToken("keycloak-access-token")
         );
 
-        assertTrue(exception.getMessage().contains("Failed to retrieve Google ID token"));
+        assertTrue(exception.getMessage().contains("Failed to retrieve Sigstore ID token"));
     }
 }

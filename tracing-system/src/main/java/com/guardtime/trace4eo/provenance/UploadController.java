@@ -70,8 +70,8 @@ public class UploadController {
             (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
         String keycloakAccessToken = authentication.getToken().getTokenValue();
 
-        // Retrieve Google ID token from Keycloak broker
-        String googleIdToken = brokerTokenService.getGoogleIdToken(keycloakAccessToken);
+        // Retrieve Sigstore ID token from Keycloak broker
+        String sigstoreToken = brokerTokenService.getSigstoreIdToken(keycloakAccessToken);
 
         Path tempFile = Files.createTempFile("upload-", "-" + file.getOriginalFilename());
         try {
@@ -84,7 +84,7 @@ public class UploadController {
                 }
             }
 
-            ProvenanceRecord record = createProvenanceRecord(tempFile, dataType, dataId, predecessors, googleIdToken);
+            ProvenanceRecord record = createProvenanceRecord(tempFile, dataType, dataId, predecessors, sigstoreToken);
 
             provenanceService.saveSignature(record);
             provenanceService.saveProvenanceRecord(record);
@@ -101,7 +101,7 @@ public class UploadController {
         String dataType,
         String dataId,
         List<Predecessor> predecessors,
-        String googleIdToken
+        String sigstoreToken
     ) throws IOException {
         Metadata metadata = new Metadata(dataId, dataType, predecessors);
 
@@ -115,7 +115,7 @@ public class UploadController {
             .build();
 
         byte[] manifestBytes = new JsonCanonicalizer(provenanceJsonMapper.writeValueAsBytes(manifest)).getEncodedUTF8();
-        ProvenanceSignature provenanceSignature = signingService.sign(manifestBytes, HashAlgorithm.SHA256, googleIdToken);
+        ProvenanceSignature provenanceSignature = signingService.sign(manifestBytes, HashAlgorithm.SHA256, sigstoreToken);
 
         return new ProvenanceRecordBuilder()
             .withMetadata(metadata)
