@@ -16,10 +16,33 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    image: tracing-system:0.1.0-SNAPSHOT
+    pull_policy: never
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: trace4eo
+      DB_USER: trace4eo
+      DB_PASSWORD: trace4eo
+      KEYCLOAK_ISSUER_URI: http://localhost:8180/realms/trace4eo
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8180/realms/trace4eo/protocol/openid-connect/certs
+      KEYCLOAK_BASE_URL: http://keycloak:8180
+      KEYCLOAK_REALM: trace4eo
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
   frontend:
     build: ./tracing-ui
     ports:
       - "3000:80"
+    depends_on:
+      - backend
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.1

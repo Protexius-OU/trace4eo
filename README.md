@@ -15,9 +15,7 @@ The project consists of multiple software components:
 
 ## Running via Docker
 
-Currently Postgres DB and frontend are run in Docker containers and backend locally, as the Sigstore signing process needs a callback URL which wouldn't be accessible if it was running inside Docker.
-
-Use `./build-dev.sh` to build the frontend and Docker images, then `./start-dev.sh` to start the database and frontend containers and run the backend locally.
+Use `./build-dev.sh` to build the backend image, frontend, and Docker images. Then `./start-dev.sh` to start all services (PostgreSQL, Keycloak, backend, frontend).
 
 ### Building a container image for the tracing system
 

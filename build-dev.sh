@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+echo "Building backend image..."
+./gradlew :tracing-system:bootBuildImage
+
 echo "Building frontend..."
 cd tracing-ui
 npm install
