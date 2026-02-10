@@ -143,10 +143,14 @@ public class BatchSigningTool {
         if (registerUrl == null || registerUrl.isBlank()) {
             return;
         }
+        if (keycloakUrl == null || keycloakUrl.isBlank()) {
+            throw new IllegalArgumentException(
+                "--keycloak-url is required when --register-url is provided");
+        }
         String accessToken = null;
-        if (keycloakUrl != null && oidcToken != null) {
+        if (oidcToken != null) {
             accessToken = registrationClient.exchangeToken(keycloakUrl, realm, oidcToken);
-        } else if (keycloakUrl != null) {
+        } else {
             log.warn("No OIDC token available for token exchange. Attempting registration without auth.");
         }
         List<String> failures = registrationClient.registerRecords(records, registerUrl, accessToken);

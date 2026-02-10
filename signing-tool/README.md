@@ -43,14 +43,28 @@ Create a provenance record containing multiple files with metadata.
 | `--data-id` | Identifier for the data | Required |
 | `--predecessors` | IDs of predecessor records | None |
 | `--hash-algorithm` | Hash algorithm to use | SHA-256 |
+| `--register-url` | Tracing backend URL to register provenance records | None |
+| `--keycloak-url` | Keycloak server URL (required when `--register-url` is set) | None |
+| `--realm` | Keycloak realm | trace4eo |
 
-**Example:**
+**Examples:**
 
 ```bash
 ./gradlew :signing-tool:bootRun --args="create-provenance-record \
   --files image.tif,metadata.xml \
   --provenance-record-type sentinel2-processing \
   --data-id S2A_MSIL1C_20240101"
+```
+
+Create and register with a tracing system:
+
+```bash
+./gradlew :signing-tool:bootRun --args="create-provenance-record \
+  --files image.tif,metadata.xml \
+  --provenance-record-type sentinel2-processing \
+  --data-id S2A_MSIL1C_20240101 \
+  --register-url http://localhost:8080/api/provenance \
+  --keycloak-url http://localhost:8180"
 ```
 
 ### batch-sign
@@ -69,6 +83,8 @@ Sign multiple files, creating one provenance record per file and packaging them 
 | `--output`                 | Output ZIP file path                               | Required |
 | `--hash-algorithm`         | Hash algorithm to use                              | SHA256   |
 | `--register-url`           | Tracing backend URL to register provenance records | None     |
+| `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set) | None |
+| `--realm`                  | Keycloak realm                                     | trace4eo |
 
 **Examples:**
 
@@ -102,7 +118,8 @@ Sign and register with a tracing system:
   --provenance-record-type satellite-imagery \
   --data-id batch-2024-01 \
   --output provenance.zip \
-  --register-url http://localhost:8080/api/provenance"
+  --register-url http://localhost:8080/api/provenance \
+  --keycloak-url http://localhost:8180"
 ```
 
 ## Notes
@@ -110,3 +127,4 @@ Sign and register with a tracing system:
 - Batch signing is limited to 100 files per invocation
 - Each file in a batch gets its own provenance record with data ID `<base-id>/<filename>`
 - The `--register-url` option POSTs each provenance record as JSON to the specified URL
+- When `--register-url` is used, `--keycloak-url` is required. The tool exchanges the Sigstore OIDC token for a Keycloak access token via RFC 8693 token exchange to authenticate with the tracing backend.

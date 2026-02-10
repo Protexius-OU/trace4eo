@@ -160,8 +160,14 @@ class BatchSigningToolTest {
         Files.writeString(file2, "content2");
         Path outputPath = tempDir.resolve("output.zip");
 
+        HttpResponse<String> tokenResponse = mock(HttpResponse.class);
+        when(tokenResponse.statusCode()).thenReturn(200);
+        when(tokenResponse.body()).thenReturn("{\"access_token\":\"exchanged-token\"}");
+
         when(mockResponse.statusCode()).thenReturn(200);
         when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(tokenResponse)
+            .thenReturn(mockResponse)
             .thenReturn(mockResponse);
 
         BatchSigningResult result = batchSigningTool.batchSign(
@@ -173,11 +179,12 @@ class BatchSigningToolTest {
             outputPath,
             "SHA256",
             "http://localhost:8080/api/records",
-            null, "trace4eo"
+            "http://localhost:8180", "trace4eo"
         );
 
         assertEquals(2, result.successCount());
-        verify(mockHttpClient, times(2))
+        // Token exchange + 2 record registrations = 3 HTTP calls
+        verify(mockHttpClient, times(3))
             .send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
     }
 
@@ -188,8 +195,13 @@ class BatchSigningToolTest {
         Files.writeString(file1, "content1");
         Path outputPath = tempDir.resolve("output.zip");
 
+        HttpResponse<String> tokenResponse = mock(HttpResponse.class);
+        when(tokenResponse.statusCode()).thenReturn(200);
+        when(tokenResponse.body()).thenReturn("{\"access_token\":\"exchanged-token\"}");
+
         when(mockResponse.statusCode()).thenReturn(500);
         when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(tokenResponse)
             .thenReturn(mockResponse);
 
         BatchSigningResult result = batchSigningTool.batchSign(
@@ -201,11 +213,12 @@ class BatchSigningToolTest {
             outputPath,
             "SHA256",
             "http://localhost:8080/api/records",
-            null, "trace4eo"
+            "http://localhost:8180", "trace4eo"
         );
 
         assertEquals(1, result.successCount());
-        verify(mockHttpClient, times(1))
+        // Token exchange + 1 registration attempt = 2 HTTP calls
+        verify(mockHttpClient, times(2))
             .send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
     }
 
@@ -216,7 +229,12 @@ class BatchSigningToolTest {
         Files.writeString(file1, "content1");
         Path outputPath = tempDir.resolve("output.zip");
 
+        HttpResponse<String> tokenResponse = mock(HttpResponse.class);
+        when(tokenResponse.statusCode()).thenReturn(200);
+        when(tokenResponse.body()).thenReturn("{\"access_token\":\"exchanged-token\"}");
+
         when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(tokenResponse)
             .thenThrow(new IOException("Connection refused"));
 
         BatchSigningResult result = batchSigningTool.batchSign(
@@ -228,11 +246,27 @@ class BatchSigningToolTest {
             outputPath,
             "SHA256",
             "http://localhost:8080/api/records",
-            null, "trace4eo"
+            "http://localhost:8180", "trace4eo"
         );
 
         assertEquals(1, result.successCount());
         assertTrue(Files.exists(outputPath));
+    }
+
+    @Test
+    void batchSign_registerUrlWithoutKeycloakUrl_throws(@TempDir Path tempDir) throws IOException {
+        Path file1 = tempDir.resolve("file1.txt");
+        Files.writeString(file1, "content1");
+        Path outputPath = tempDir.resolve("output.zip");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            batchSigningTool.batchSign(
+                List.of(file1.toString()), null, "*", "test", "test",
+                outputPath, "SHA256",
+                "http://localhost:8080/api/records", null, "trace4eo"
+            )
+        );
+        assertTrue(exception.getMessage().contains("--keycloak-url"));
     }
 
     @Test
