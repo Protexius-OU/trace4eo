@@ -28,6 +28,7 @@ public class ProvenanceSigningService {
     private static final Logger log = LoggerFactory.getLogger(ProvenanceSigningService.class);
 
     private final Map<String, KeylessSigner> signerCache = new ConcurrentHashMap<>();
+    private volatile KeylessSigner browserSigner;
 
     /** Uses Sigstore public good instance. */
     public ProvenanceSigningService() {
@@ -50,7 +51,7 @@ public class ProvenanceSigningService {
             digestInputStream.transferTo(OutputStream.nullOutputStream());
             KeylessSigner signer = oidcToken != null
                 ? signerCache.computeIfAbsent(oidcToken, this::buildSigner)
-                : buildBrowserSigner();
+                : getBrowserSigner();
             Bundle bundle = signer.sign(md.digest());
             Bundle.MessageSignature messageSignature = bundle.getMessageSignature().orElse(null);
             if (messageSignature == null) {
@@ -82,6 +83,13 @@ public class ProvenanceSigningService {
             log.error("Failed to build signer", e);
             throw new RuntimeException(e);
         }
+    }
+
+    private KeylessSigner getBrowserSigner() {
+        if (browserSigner == null) {
+            browserSigner = buildBrowserSigner();
+        }
+        return browserSigner;
     }
 
     private KeylessSigner buildBrowserSigner() {
