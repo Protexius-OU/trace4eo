@@ -1,11 +1,11 @@
 package com.guardtime.trace4eo.provenance.signing;
 
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import dev.sigstore.oidc.client.ImmutableOidcToken;
 import dev.sigstore.oidc.client.OidcClient;
 import dev.sigstore.oidc.client.OidcException;
 import dev.sigstore.oidc.client.OidcToken;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.Base64;
 import java.util.Map;

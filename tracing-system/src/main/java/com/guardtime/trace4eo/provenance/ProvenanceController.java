@@ -1,6 +1,5 @@
 package com.guardtime.trace4eo.provenance;
 
-import com.guardtime.trace4eo.provenance.graph.GraphNode;
 import com.guardtime.trace4eo.provenance.graph.ProvenanceGraph;
 import com.guardtime.trace4eo.provenance.graph.ProvenanceGraphService;
 import com.guardtime.trace4eo.provenance.io.zip.ZipContainerWriter;
@@ -18,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
-import org.springframework.web.servlet.view.RedirectView;
 
 import java.util.LinkedHashSet;
 import java.util.Optional;
@@ -81,26 +79,15 @@ public class ProvenanceController {
 
     @GetMapping("/{id}/zip")
     public ResponseEntity<StreamingResponseBody> downloadProvenanceRecordZip(@PathVariable("id") UUID id) {
-        Optional<ProvenanceGraph> optionalGraph = provenanceGraphService.buildGraph(id);
-        if (optionalGraph.isEmpty()) {
+        var optionalResult = provenanceGraphService.buildGraphWithRecords(id);
+        if (optionalResult.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        ProvenanceGraph graph = optionalGraph.get();
-        log.info("Assembling provenance record ZIP for ID {} with {} nodes", id, graph.nodes().size());
+        var result = optionalResult.get();
+        log.info("Assembling provenance record ZIP for ID {} with {} records", id, result.records().size());
 
-        LinkedHashSet<ProvenanceRecord> provenanceRecords = new LinkedHashSet<>();
-        for (GraphNode node : graph.nodes()) {
-            Optional<ProvenanceRecord> record = provenanceService.get(node.id());
-            if (record.isEmpty()) {
-                log.error("Record {} found in graph but not in registry", node.id());
-                return ResponseEntity.internalServerError().build();
-            }
-            provenanceRecords.add(record.get());
-        }
-
-        Container container = new Container(id, provenanceRecords);
+        Container container = new Container(id, new LinkedHashSet<>(result.records().values()));
         ZipContainerWriter zipContainerWriter = new ZipContainerWriter(provenanceJsonMapper);
-        log.info("Starting to send assembled provenance record with ID {} back to user.", id);
         StreamingResponseBody stream = outputStream -> zipContainerWriter.writeTo(container, outputStream);
         return ResponseEntity.ok().body(stream);
     }
@@ -110,8 +97,4 @@ public class ProvenanceController {
         return ResponseEntity.of(provenanceGraphService.buildGraph(id));
     }
 
-    @GetMapping("/{id}/graph/viewer")
-    public RedirectView viewProvenanceGraph(@PathVariable("id") UUID id) {
-        return new RedirectView("/graph-viewer.html?id=" + id);
-    }
 }

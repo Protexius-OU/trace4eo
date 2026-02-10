@@ -63,7 +63,19 @@ public class UploadController {
         @RequestParam("dataId") String dataId,
         @RequestParam(value = "predecessors", required = false) List<String> predecessorIds
     ) throws IOException {
-        log.info("Uploading file: {} with dataType: {}, dataId: {}", file.getOriginalFilename(), dataType, dataId);
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("file must not be empty");
+        }
+        if (dataType == null || dataType.isBlank()) {
+            throw new IllegalArgumentException("dataType must not be null or blank");
+        }
+        if (dataId == null || dataId.isBlank()) {
+            throw new IllegalArgumentException("dataId must not be null or blank");
+        }
+        String sanitizedFilename = file.getOriginalFilename() != null
+            ? file.getOriginalFilename().replaceAll("[\\r\\n]", "_")
+            : "unknown";
+        log.info("Uploading file: {} with dataType: {}, dataId: {}", sanitizedFilename, dataType, dataId);
 
         // Extract Keycloak access token from security context
         JwtAuthenticationToken authentication =

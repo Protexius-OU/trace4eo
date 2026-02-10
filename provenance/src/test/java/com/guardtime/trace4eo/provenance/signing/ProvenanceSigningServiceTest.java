@@ -20,10 +20,11 @@ class ProvenanceSigningServiceTest {
 
     @Test
     void sign() {
+        String oidcToken = System.getenv("SIGSTORE_ID_TOKEN");
         HashAlgorithm hashAlgorithm = HashAlgorithm.SHA256;
-        ProvenanceSignature signature1 = provenanceSigningService.sign(TEST_BYTES_1, hashAlgorithm);
+        ProvenanceSignature signature1 = provenanceSigningService.sign(TEST_BYTES_1, hashAlgorithm, oidcToken);
         assertNotNull(signature1);
-        ProvenanceSignature signature2 = provenanceSigningService.sign(TEST_BYTES_2, hashAlgorithm);
+        ProvenanceSignature signature2 = provenanceSigningService.sign(TEST_BYTES_2, hashAlgorithm, oidcToken);
         assertNotNull(signature2);
         assertFalse(Arrays.equals(signature1.bytes(), signature2.bytes()));
         assertEquals(hashAlgorithm, signature1.hashAlgorithm());

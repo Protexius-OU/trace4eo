@@ -20,10 +20,14 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ProvenanceSigningService {
 
     private static final Logger log = LoggerFactory.getLogger(ProvenanceSigningService.class);
+
+    private final Map<String, KeylessSigner> signerCache = new ConcurrentHashMap<>();
 
     /** Uses Sigstore public good instance. */
     public ProvenanceSigningService() {
@@ -32,15 +36,6 @@ public class ProvenanceSigningService {
     /** Sign with an explicit OIDC token (e.g. from Google via Keycloak broker). */
     public ProvenanceSignature sign(byte[] bytes, HashAlgorithm hashAlgorithm, String oidcToken) {
         return sign(new ByteArrayInputStream(bytes), hashAlgorithm, oidcToken);
-    }
-
-    /** Sign using SIGSTORE_ID_TOKEN environment variable. */
-    public ProvenanceSignature sign(byte[] bytes, HashAlgorithm hashAlgorithm) {
-        String ciToken = System.getenv("SIGSTORE_ID_TOKEN");
-        if (ciToken == null || ciToken.isBlank()) {
-            throw new IllegalStateException("No OIDC token available. Set SIGSTORE_ID_TOKEN or provide a token explicitly.");
-        }
-        return sign(bytes, hashAlgorithm, ciToken);
     }
 
     public ProvenanceSignature sign(InputStream inputStream, HashAlgorithm hashAlgorithm, String oidcToken) {
@@ -53,7 +48,7 @@ public class ProvenanceSigningService {
         }
         try (DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)) {
             digestInputStream.transferTo(OutputStream.nullOutputStream());
-            KeylessSigner signer = buildSigner(oidcToken);
+            KeylessSigner signer = signerCache.computeIfAbsent(oidcToken, this::buildSigner);
             Bundle bundle = signer.sign(md.digest());
             Bundle.MessageSignature messageSignature = bundle.getMessageSignature().orElse(null);
             if (messageSignature == null) {

@@ -39,15 +39,9 @@ public class KeycloakBrokerTokenService {
     @Autowired
     public KeycloakBrokerTokenService(
         @Value("${keycloak.base-url:http://localhost:8180}") String keycloakBaseUrl,
-        @Value("${keycloak.realm:trace4eo}") String realm
+        @Value("${keycloak.realm:trace4eo}") String realm,
+        HttpClient httpClient
     ) {
-        this.keycloakBaseUrl = keycloakBaseUrl;
-        this.realm = realm;
-        this.httpClient = HttpClient.newHttpClient();
-    }
-
-    // Test constructor
-    KeycloakBrokerTokenService(String keycloakBaseUrl, String realm, HttpClient httpClient) {
         this.keycloakBaseUrl = keycloakBaseUrl;
         this.realm = realm;
         this.httpClient = httpClient;

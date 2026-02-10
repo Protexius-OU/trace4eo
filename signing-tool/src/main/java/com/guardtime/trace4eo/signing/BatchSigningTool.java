@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.shell.core.command.annotation.Command;
 import org.springframework.shell.core.command.annotation.Option;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -39,7 +40,7 @@ public class BatchSigningTool {
     private final RecordRegistrationClient registrationClient;
     private final OidcTokenResolver oidcTokenResolver;
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public BatchSigningTool(
         ProvenanceSigningService signingService,
         ProvenanceJsonMapper provenanceJsonMapper,
@@ -147,7 +148,10 @@ public class BatchSigningTool {
         if (keycloakUrl != null && username != null && password != null) {
             accessToken = registrationClient.authenticateWithDirectGrant(keycloakUrl, realm, username, password);
         }
-        registrationClient.registerRecords(records, registerUrl, accessToken);
+        List<String> failures = registrationClient.registerRecords(records, registerUrl, accessToken);
+        if (!failures.isEmpty()) {
+            log.warn("Registration completed with {} failure(s)", failures.size());
+        }
     }
 
     private BatchSigningResult buildResult(int totalFiles, List<FileSigningResult> results, Path outputPath) {

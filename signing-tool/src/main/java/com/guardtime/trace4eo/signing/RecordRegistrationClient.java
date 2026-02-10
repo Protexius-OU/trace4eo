@@ -15,6 +15,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +23,7 @@ import java.util.Map;
 public class RecordRegistrationClient {
 
     private static final Logger log = LoggerFactory.getLogger(RecordRegistrationClient.class);
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final HttpClient httpClient;
     private final ProvenanceJsonMapper provenanceJsonMapper;
@@ -49,23 +51,26 @@ public class RecordRegistrationClient {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                throw new RuntimeException("Keycloak authentication failed: HTTP " + response.statusCode() + " - " + response.body());
+                throw new RegistrationException("Keycloak authentication failed: HTTP " + response.statusCode() + " - " + response.body());
             }
 
-            Map<String, Object> tokenResponse = new ObjectMapper().readValue(
+            Map<String, Object> tokenResponse = MAPPER.readValue(
                 response.body(), new TypeReference<>() {});
             String accessToken = (String) tokenResponse.get("access_token");
             if (accessToken == null || accessToken.isBlank()) {
-                throw new RuntimeException("Keycloak response did not contain an access_token.");
+                throw new RegistrationException("Keycloak response did not contain an access_token.");
             }
             log.info("Authenticated with Keycloak as {}", username);
             return accessToken;
+        } catch (RegistrationException e) {
+            throw e;
         } catch (IOException | InterruptedException e) {
-            throw new RuntimeException("Failed to authenticate with Keycloak at " + tokenUrl, e);
+            throw new RegistrationException("Failed to authenticate with Keycloak at " + tokenUrl, e);
         }
     }
 
-    public void registerRecords(List<ProvenanceRecord> records, String registerUrl, String accessToken) {
+    public List<String> registerRecords(List<ProvenanceRecord> records, String registerUrl, String accessToken) {
+        List<String> failures = new ArrayList<>();
         for (ProvenanceRecord record : records) {
             try {
                 String json = provenanceJsonMapper.writeValueAsString(record);
@@ -83,11 +88,16 @@ public class RecordRegistrationClient {
                 if (response.statusCode() >= 200 && response.statusCode() < 300) {
                     log.info("Registered record {} at {}", record.id(), registerUrl);
                 } else {
-                    log.warn("Failed to register record {}: HTTP {} - {}", record.id(), response.statusCode(), response.body());
+                    String msg = "Failed to register record " + record.id() + ": HTTP " + response.statusCode();
+                    log.warn(msg);
+                    failures.add(msg);
                 }
             } catch (Exception e) {
-                log.error("Failed to register record {}: {}", record.id(), e.getMessage(), e);
+                String msg = "Failed to register record " + record.id() + ": " + e.getMessage();
+                log.error(msg, e);
+                failures.add(msg);
             }
         }
+        return failures;
     }
 }

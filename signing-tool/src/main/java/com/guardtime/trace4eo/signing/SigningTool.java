@@ -15,6 +15,7 @@ import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import org.springframework.shell.core.command.annotation.Command;
 import org.springframework.shell.core.command.annotation.Option;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -28,7 +29,7 @@ public class SigningTool {
     private final ProvenanceJsonMapper provenanceJsonMapper;
     private final OidcTokenResolver oidcTokenResolver;
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public SigningTool(
         ProvenanceSigningService signingService,
         ProvenanceJsonMapper provenanceJsonMapper

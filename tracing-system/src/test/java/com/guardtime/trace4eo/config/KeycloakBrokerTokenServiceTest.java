@@ -29,7 +29,7 @@ class KeycloakBrokerTokenServiceTest {
     @BeforeEach
     void setUp() {
         mockHttpClient = mock(HttpClient.class);
-        service = new KeycloakBrokerTokenService("http://localhost:8180", "trace4eo", mockHttpClient);
+        service = new KeycloakBrokerTokenService("http://localhost:8180", "trace4eo", mockHttpClient);  // uses @Autowired constructor
     }
 
     /** Creates a fake JWT with the given exp claim (seconds since epoch). */
