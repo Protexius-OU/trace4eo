@@ -42,7 +42,7 @@ Create a provenance record containing multiple files with metadata.
 | `--provenance-record-type` | Type of provenance record | Required |
 | `--data-id` | Identifier for the data | Required |
 | `--predecessors` | IDs of predecessor records | None |
-| `--hash-algorithm` | Hash algorithm to use | SHA-256 |
+| `--hash-algorithm` | Hash algorithm to use | SHA256 |
 | `--register-url` | Tracing backend URL to register provenance records | None |
 | `--keycloak-url` | Keycloak server URL (required when `--register-url` is set) | None |
 | `--realm` | Keycloak realm | trace4eo |
@@ -124,7 +124,6 @@ Sign and register with a tracing system:
 
 ## Notes
 
-- Batch signing is limited to 100 files per invocation
 - Each file in a batch gets its own provenance record with data ID `<base-id>/<filename>`
 - The `--register-url` option POSTs each provenance record as JSON to the specified URL
 - When `--register-url` is used, `--keycloak-url` is required. The tool exchanges the Sigstore OIDC token for a Keycloak access token via RFC 8693 token exchange to authenticate with the tracing backend.

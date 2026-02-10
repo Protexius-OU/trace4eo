@@ -73,7 +73,7 @@ public class UploadController {
             throw new IllegalArgumentException("dataId must not be null or blank");
         }
         String sanitizedFilename = file.getOriginalFilename() != null
-            ? file.getOriginalFilename().replaceAll("[\\r\\n]", "_")
+            ? file.getOriginalFilename().replaceAll("[^a-zA-Z0-9._-]", "_")
             : "unknown";
         log.info("Uploading file: {} with dataType: {}, dataId: {}", sanitizedFilename, dataType, dataId);
 
@@ -85,14 +85,18 @@ public class UploadController {
         // Retrieve Sigstore ID token from Keycloak broker
         String sigstoreToken = brokerTokenService.getSigstoreIdToken(keycloakAccessToken);
 
-        Path tempFile = Files.createTempFile("upload-", "-" + file.getOriginalFilename());
+        Path tempFile = Files.createTempFile("upload-", "-" + sanitizedFilename);
         try {
             file.transferTo(tempFile);
 
             List<Predecessor> predecessors = new ArrayList<>();
             if (predecessorIds != null) {
                 for (String id : predecessorIds) {
-                    predecessors.add(new Predecessor(UUID.fromString(id.trim())));
+                    try {
+                        predecessors.add(new Predecessor(UUID.fromString(id.trim())));
+                    } catch (IllegalArgumentException e) {
+                        throw new IllegalArgumentException("Invalid predecessor ID: " + id.trim());
+                    }
                 }
             }
 

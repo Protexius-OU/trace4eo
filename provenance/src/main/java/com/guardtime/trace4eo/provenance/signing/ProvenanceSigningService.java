@@ -85,7 +85,7 @@ public class ProvenanceSigningService {
         }
     }
 
-    private KeylessSigner getBrowserSigner() {
+    private synchronized KeylessSigner getBrowserSigner() {
         if (browserSigner == null) {
             browserSigner = buildBrowserSigner();
         }

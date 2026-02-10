@@ -101,6 +101,9 @@ public class KeycloakBrokerTokenService {
     private String extractSubject(String jwt) {
         try {
             String[] parts = jwt.split("\\.");
+            if (parts.length < 3) {
+                throw new IllegalArgumentException("Invalid JWT format: expected 3 parts, got " + parts.length);
+            }
             byte[] payload = Base64.getUrlDecoder().decode(parts[1]);
             Map<String, Object> claims = MAPPER.readValue(payload, new TypeReference<>() {});
             return (String) claims.get("sub");

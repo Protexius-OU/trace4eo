@@ -65,7 +65,10 @@ public class RecordRegistrationClient {
             return accessToken;
         } catch (RegistrationException e) {
             throw e;
-        } catch (IOException | InterruptedException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RegistrationException("Token exchange with Keycloak interrupted", e);
+        } catch (IOException e) {
             throw new RegistrationException("Failed to exchange token with Keycloak at " + tokenUrl, e);
         }
     }

@@ -17,6 +17,10 @@ public class SimplePathMappingFilesContext implements FilesContext {
 
     @Override
     public InputStream getFileContents(FileHashInfo fileInfo) throws IOException {
-        return Files.newInputStream(containerToFsMapping.get(fileInfo.path()));
+        Path filePath = containerToFsMapping.get(fileInfo.path());
+        if (filePath == null) {
+            throw new IOException("No file mapping found for: " + fileInfo.path());
+        }
+        return Files.newInputStream(filePath);
     }
 }
