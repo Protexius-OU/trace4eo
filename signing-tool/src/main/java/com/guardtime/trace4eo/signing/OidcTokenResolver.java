@@ -22,7 +22,7 @@ class OidcTokenResolver {
             log.info("Using SIGSTORE_ID_TOKEN from environment");
             return ciToken;
         }
-        throw new IllegalStateException(
-            "No OIDC token available. Set SIGSTORE_ID_TOKEN environment variable..");
+        log.info("No SIGSTORE_ID_TOKEN set, will use browser-based OIDC login");
+        return null;
     }
 }

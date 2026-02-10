@@ -48,7 +48,9 @@ public class ProvenanceSigningService {
         }
         try (DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)) {
             digestInputStream.transferTo(OutputStream.nullOutputStream());
-            KeylessSigner signer = signerCache.computeIfAbsent(oidcToken, this::buildSigner);
+            KeylessSigner signer = oidcToken != null
+                ? signerCache.computeIfAbsent(oidcToken, this::buildSigner)
+                : buildBrowserSigner();
             Bundle bundle = signer.sign(md.digest());
             Bundle.MessageSignature messageSignature = bundle.getMessageSignature().orElse(null);
             if (messageSignature == null) {
@@ -78,6 +80,17 @@ public class ProvenanceSigningService {
                 .build();
         } catch (Exception e) {
             log.error("Failed to build signer", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private KeylessSigner buildBrowserSigner() {
+        try {
+            return KeylessSigner.builder()
+                .sigstorePublicDefaults()
+                .build();
+        } catch (Exception e) {
+            log.error("Failed to build browser-based signer", e);
             throw new RuntimeException(e);
         }
     }
