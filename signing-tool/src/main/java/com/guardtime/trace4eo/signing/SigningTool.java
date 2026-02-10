@@ -48,18 +48,24 @@ public class SigningTool {
 
     @Command(name = "create-provenance-record", description = "Create and sign provenance record")
     public ProvenanceRecord createProvenanceRecord(
-        @Option(longName = "files", description = "Files to be included in provenance record") List<Path> files,
+        @Option(longName = "files", description = "Files to be included in provenance record") List<String> files,
         @Option(longName = "provenance-record-type", description = "Provenance record type") String provenanceRecordType,
         @Option(longName = "data-id", description = "Provenance record data ID") String dataId,
         @Option(longName = "predecessors", description = "Provenance record predecessors") List<Predecessor> predecessors,
         @Option(longName = "hash-algorithm", description = "Hash algorithm", defaultValue = "SHA256") String hashAlgorithm
     ) throws IOException {
-        validateInput(files, provenanceRecordType, dataId);
+        List<Path> paths = toPaths(files);
+        validateInput(paths, provenanceRecordType, dataId);
 
         String oidcToken = oidcTokenResolver.resolve();
         HashAlgorithm algorithm = HashAlgorithm.valueOf(hashAlgorithm);
 
-        return buildSignedRecord(files, dataId, provenanceRecordType, predecessors, algorithm, oidcToken);
+        return buildSignedRecord(paths, dataId, provenanceRecordType, predecessors, algorithm, oidcToken);
+    }
+
+    private List<Path> toPaths(List<String> files) {
+        if (files == null) return List.of();
+        return files.stream().map(Path::of).toList();
     }
 
     private void validateInput(List<Path> files, String provenanceRecordType, String dataId) {

@@ -66,7 +66,7 @@ class BatchSigningToolTest {
         Path outputPath = tempDir.resolve("output.zip");
 
         BatchSigningResult result = batchSigningTool.batchSign(
-            List.of(file1, file2),
+            List.of(file1.toString(), file2.toString()),
             null,
             "*",
             "test-type",
@@ -133,7 +133,7 @@ class BatchSigningToolTest {
         Path outputPath = tempDir.resolve("output.zip");
 
         BatchSigningResult result = batchSigningTool.batchSign(
-            List.of(validFile, nonExistentFile),
+            List.of(validFile.toString(), nonExistentFile.toString()),
             null,
             "*",
             "test",
@@ -165,7 +165,7 @@ class BatchSigningToolTest {
             .thenReturn(mockResponse);
 
         BatchSigningResult result = batchSigningTool.batchSign(
-            List.of(file1, file2),
+            List.of(file1.toString(), file2.toString()),
             null,
             "*",
             "test-type",
@@ -193,7 +193,7 @@ class BatchSigningToolTest {
             .thenReturn(mockResponse);
 
         BatchSigningResult result = batchSigningTool.batchSign(
-            List.of(file1),
+            List.of(file1.toString()),
             null,
             "*",
             "test-type",
@@ -220,7 +220,7 @@ class BatchSigningToolTest {
             .thenThrow(new IOException("Connection refused"));
 
         BatchSigningResult result = batchSigningTool.batchSign(
-            List.of(file1),
+            List.of(file1.toString()),
             null,
             "*",
             "test-type",
@@ -239,7 +239,7 @@ class BatchSigningToolTest {
     void batchSign_blankProvenanceRecordType_throws() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
-                List.of(Path.of("file.txt")), null, "*", " ", "test",
+                List.of("file.txt"), null, "*", " ", "test",
                 Path.of("/tmp/out.zip"), "SHA256", null, null, "trace4eo", null, null
             )
         );
@@ -250,7 +250,7 @@ class BatchSigningToolTest {
     void batchSign_nullProvenanceRecordType_throws() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
-                List.of(Path.of("file.txt")), null, "*", null, "test",
+                List.of("file.txt"), null, "*", null, "test",
                 Path.of("/tmp/out.zip"), "SHA256", null, null, "trace4eo", null, null
             )
         );
@@ -261,7 +261,7 @@ class BatchSigningToolTest {
     void batchSign_blankDataId_throws() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
-                List.of(Path.of("file.txt")), null, "*", "test", " ",
+                List.of("file.txt"), null, "*", "test", " ",
                 Path.of("/tmp/out.zip"), "SHA256", null, null, "trace4eo", null, null
             )
         );
@@ -272,7 +272,7 @@ class BatchSigningToolTest {
     void batchSign_nullDataId_throws() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
-                List.of(Path.of("file.txt")), null, "*", "test", null,
+                List.of("file.txt"), null, "*", "test", null,
                 Path.of("/tmp/out.zip"), "SHA256", null, null, "trace4eo", null, null
             )
         );
@@ -283,7 +283,7 @@ class BatchSigningToolTest {
     void batchSign_nullOutput_throws() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
-                List.of(Path.of("file.txt")), null, "*", "test", "test",
+                List.of("file.txt"), null, "*", "test", "test",
                 null, "SHA256", null, null, "trace4eo", null, null
             )
         );

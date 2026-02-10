@@ -42,7 +42,7 @@ class SigningToolTest {
 
     @Test
     void createProvenanceRecord() throws IOException {
-        List<Path> files = List.of(Path.of("src/test/resources/test.txt"));
+        List<String> files = List.of("src/test/resources/test.txt");
         ProvenanceRecord result = signingTool.createProvenanceRecord(
             files, "test", "test", List.of(), "SHA256"
         );
@@ -71,7 +71,7 @@ class SigningToolTest {
 
     @Test
     void createProvenanceRecord_blankProvenanceRecordType_throws() {
-        List<Path> files = List.of(Path.of("src/test/resources/test.txt"));
+        List<String> files = List.of("src/test/resources/test.txt");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             signingTool.createProvenanceRecord(files, " ", "test", List.of(), "SHA256")
         );
@@ -80,7 +80,7 @@ class SigningToolTest {
 
     @Test
     void createProvenanceRecord_nullProvenanceRecordType_throws() {
-        List<Path> files = List.of(Path.of("src/test/resources/test.txt"));
+        List<String> files = List.of("src/test/resources/test.txt");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             signingTool.createProvenanceRecord(files, null, "test", List.of(), "SHA256")
         );
@@ -89,7 +89,7 @@ class SigningToolTest {
 
     @Test
     void createProvenanceRecord_blankDataId_throws() {
-        List<Path> files = List.of(Path.of("src/test/resources/test.txt"));
+        List<String> files = List.of("src/test/resources/test.txt");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             signingTool.createProvenanceRecord(files, "test", " ", List.of(), "SHA256")
         );
@@ -98,7 +98,7 @@ class SigningToolTest {
 
     @Test
     void createProvenanceRecord_nullDataId_throws() {
-        List<Path> files = List.of(Path.of("src/test/resources/test.txt"));
+        List<String> files = List.of("src/test/resources/test.txt");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             signingTool.createProvenanceRecord(files, "test", null, List.of(), "SHA256")
         );

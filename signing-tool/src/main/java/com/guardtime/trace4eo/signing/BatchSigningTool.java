@@ -62,7 +62,7 @@ public class BatchSigningTool {
 
     @Command(name = "batch-sign", description = "Sign multiple files, creating one provenance record per file")
     public BatchSigningResult batchSign(
-        @Option(longName = "files", description = "Files to sign") List<Path> files,
+        @Option(longName = "files", description = "Files to sign") List<String> files,
         @Option(longName = "directory", description = "Directory containing files to sign") Path directory,
         @Option(longName = "pattern", description = "Glob pattern for files in directory", defaultValue = "*") String pattern,
         @Option(longName = "provenance-record-type", description = "Provenance record type") String provenanceRecordType,
@@ -78,7 +78,8 @@ public class BatchSigningTool {
         validateInput(provenanceRecordType, dataId, outputPath, directory);
 
         String oidcToken = oidcTokenResolver.resolve();
-        List<Path> resolvedFiles = resolveFiles(files, directory, pattern);
+        List<Path> filePaths = files != null ? files.stream().map(Path::of).toList() : List.of();
+        List<Path> resolvedFiles = resolveFiles(filePaths, directory, pattern);
         if (resolvedFiles.isEmpty()) {
             throw new IllegalArgumentException("No files to sign. Provide --files or --directory with --pattern");
         }
