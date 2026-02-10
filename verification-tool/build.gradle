@@ -1,9 +1,8 @@
-plugins {
-    id("application")
-}
+import org.springframework.boot.gradle.plugin.SpringBootPlugin
 
-application {
-    mainClass = 'com.guardtime.trace4eo.verification.VerificationToolApplication'
+plugins {
+    id("java")
+    alias(libs.plugins.spring.boot)
 }
 
 group = 'com.guardtime.trace4eo'
@@ -15,6 +14,7 @@ repositories {
 
 dependencies {
     implementation(project(':provenance'))
+    implementation(platform(SpringBootPlugin.BOM_COORDINATES))
     implementation(libs.bundles.spring.shell)
 }
 

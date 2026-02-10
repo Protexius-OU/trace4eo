@@ -80,7 +80,7 @@ class ProvenanceControllerIntegrationTest {
         restTemplate.postForEntity("/api/provenance", record, Void.class);
 
         ResponseEntity<ProvenanceGraph> response = restTemplate.getForEntity(
-            "/api/provenance/{id}/graph?depth=5",
+            "/api/provenance/{id}/graph",
             ProvenanceGraph.class,
             id
         );
@@ -125,19 +125,6 @@ class ProvenanceControllerIntegrationTest {
         assertNotNull(response.getBody());
         assertEquals(2, response.getBody().nodes().size());
         assertEquals(1, response.getBody().edges().size());
-    }
-
-    @Test
-    void getProvenanceGraphRejectNegativeDepth() {
-        UUID id = UUID.randomUUID();
-
-        ResponseEntity<ProvenanceGraph> response = restTemplate.getForEntity(
-            "/api/provenance/{id}/graph?depth=-1",
-            ProvenanceGraph.class,
-            id
-        );
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     }
 
     private ProvenanceRecord createTestRecord(UUID id, String dataId, List<Predecessor> predecessors) {

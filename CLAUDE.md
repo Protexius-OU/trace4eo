@@ -31,7 +31,7 @@ Four Gradle modules (Java 21) plus a React frontend:
 ./stop-dev.sh    # stop all services
 ```
 
-Docker Compose runs all services: PostgreSQL (trace4eo/trace4eo), Keycloak (port 8180, brokers Sigstore Dex for OIDC tokens), tracing-system backend (port 8080), and frontend (port 3000).
+Docker Compose runs all services: PostgreSQL (trace4eo/trace4eo), Keycloak (port 8180, brokers Sigstore for OIDC tokens), tracing-system backend (port 8080), and frontend (port 3000).
 
 ## Workflow
 

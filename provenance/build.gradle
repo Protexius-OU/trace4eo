@@ -21,8 +21,6 @@ repositories {
 dependencies {
     api(libs.jackson.databind)
     api(libs.sigstore.java)
-    implementation(libs.jackson.databind)
-    implementation(libs.sigstore.java)
     implementation("org.slf4j:slf4j-api:2.0.17")
 
     errorprone(libs.error.prone.core)

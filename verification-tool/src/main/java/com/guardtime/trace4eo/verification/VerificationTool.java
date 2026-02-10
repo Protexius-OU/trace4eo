@@ -28,14 +28,21 @@ public class VerificationTool {
 
     private static final Logger log = LoggerFactory.getLogger(VerificationTool.class);
 
+    private final ProvenanceVerificationService verificationService;
+    private final ProvenanceJsonMapper provenanceJsonMapper;
+
+    public VerificationTool(ProvenanceVerificationService verificationService, ProvenanceJsonMapper provenanceJsonMapper) {
+        this.verificationService = verificationService;
+        this.provenanceJsonMapper = provenanceJsonMapper;
+    }
+
     @Command(name = "verify", description = "Verify input data against signature")
     public ProvenanceVerificationResult verify(
         @Option(longName = "text", description = "Path to input file") Path file,
         @Option(longName = "signature", description = "Path to signature file") Path signaturePath
     ) {
         byte[] inputBytes = resolveInput(file, null, null);
-        ProvenanceVerificationService verificationService = new ProvenanceVerificationService();
-        ProvenanceSignature signature = new ProvenanceJsonMapper().readValue(signaturePath, ProvenanceSignature.class);
+        ProvenanceSignature signature = provenanceJsonMapper.readValue(signaturePath, ProvenanceSignature.class);
         return verificationService.verify(signature, inputBytes);
     }
 
@@ -44,12 +51,10 @@ public class VerificationTool {
         @Option(longName = "file", description = "Path to provenance record") Path provenanceRecordPath
     ) {
         try {
-            ProvenanceJsonMapper provenanceJsonMapper = new ProvenanceJsonMapper();
             ContainerReader reader = provenanceRecordPath.toString().endsWith(".zip")
                 ? new ZipContainerReader(provenanceJsonMapper)
                 : new JsonContainerReader(provenanceJsonMapper);
             Container container = reader.read(provenanceRecordPath);
-            ProvenanceVerificationService verificationService = new ProvenanceVerificationService();
             List<ProvenanceVerificationResult> results = new ArrayList<>();
             for (ProvenanceRecord provenanceRecord : container.provenanceRecords()) {
                 results.add(verificationService.verify(provenanceRecord));

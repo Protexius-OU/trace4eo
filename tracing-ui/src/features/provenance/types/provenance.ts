@@ -51,8 +51,6 @@ export type DisplayNode = (GraphNode & { isGroup?: false }) | GroupNode
 export interface GraphMetadata {
   totalNodes: number
   maxDepth: number
-  requestedDepthLimit: number
-  depthLimitReached: boolean
   missingPredecessors: string[]
 }
 

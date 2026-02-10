@@ -28,7 +28,7 @@ public class ProvenanceGraphService {
         this.provenanceRegistry = provenanceRegistry;
     }
 
-    public Optional<ProvenanceGraph> buildGraph(UUID rootId, int depthLimit) {
+    public Optional<ProvenanceGraph> buildGraph(UUID rootId) {
         Optional<ProvenanceRecord> rootRecord = provenanceRegistry.get(rootId);
         if (rootRecord.isEmpty()) {
             log.warn("Root provenance record not found: {}", rootId);
@@ -44,17 +44,11 @@ public class ProvenanceGraphService {
         queue.add(new TraversalItem(rootId, 0));
 
         int actualMaxDepth = 0;
-        boolean depthLimitReached = false;
 
         while (!queue.isEmpty()) {
             TraversalItem item = queue.poll();
 
             if (visited.contains(item.id())) {
-                continue;
-            }
-
-            if (item.depth() > depthLimit) {
-                depthLimitReached = true;
                 continue;
             }
 
@@ -102,8 +96,6 @@ public class ProvenanceGraphService {
         GraphMetadata metadata = new GraphMetadata(
             nodes.size(),
             actualMaxDepth,
-            depthLimit,
-            depthLimitReached,
             missingPredecessors
         );
 
