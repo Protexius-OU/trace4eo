@@ -32,12 +32,22 @@ class KeycloakBrokerTokenServiceTest {
         service = new KeycloakBrokerTokenService("http://localhost:8180", "trace4eo", mockHttpClient);  // uses @Autowired constructor
     }
 
-    /** Creates a fake JWT with the given exp claim (seconds since epoch). */
+    /** Creates a fake Sigstore JWT with the given exp claim (seconds since epoch). */
     private static String fakeJwt(long expSeconds) {
         String header = Base64.getUrlEncoder().withoutPadding()
             .encodeToString("{\"alg\":\"RS256\"}".getBytes());
         String payload = Base64.getUrlEncoder().withoutPadding()
-            .encodeToString(("{\"exp\":" + expSeconds + ",\"email\":\"test@example.com\",\"iss\":\"https://oauth2.sigstore.dev/auth\"}").getBytes());
+            .encodeToString(("{\"exp\":" + expSeconds + ",\"email\":\"test@example.com\","
+                + "\"iss\":\"https://oauth2.sigstore.dev/auth\"}").getBytes());
+        return header + "." + payload + ".fakesig";
+    }
+
+    /** Creates a fake Keycloak JWT with a sub claim. */
+    private static String fakeKeycloakJwt() {
+        String header = Base64.getUrlEncoder().withoutPadding()
+            .encodeToString("{\"alg\":\"RS256\"}".getBytes());
+        String payload = Base64.getUrlEncoder().withoutPadding()
+            .encodeToString("{\"sub\":\"user-123\",\"iss\":\"http://localhost:8180/realms/trace4eo\"}".getBytes());
         return header + "." + payload + ".fakesig";
     }
 
@@ -64,7 +74,7 @@ class KeycloakBrokerTokenServiceTest {
         when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenReturn(mockResponse);
 
-        String result = service.getSigstoreIdToken("keycloak-access-token");
+        String result = service.getSigstoreIdToken(fakeKeycloakJwt());
 
         assertEquals(jwt, result);
         // Only one HTTP call (to Keycloak broker), no refresh
@@ -103,7 +113,7 @@ class KeycloakBrokerTokenServiceTest {
             .thenReturn(mockResponse)   // first call: Keycloak broker
             .thenReturn(dexResponse);   // second call: Dex refresh
 
-        String result = service.getSigstoreIdToken("keycloak-access-token");
+        String result = service.getSigstoreIdToken(fakeKeycloakJwt());
 
         assertEquals(freshToken, result);
         verify(mockHttpClient, times(2)).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
@@ -125,7 +135,7 @@ class KeycloakBrokerTokenServiceTest {
             .thenReturn(mockResponse);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () ->
-            service.getSigstoreIdToken("keycloak-access-token")
+            service.getSigstoreIdToken(fakeKeycloakJwt())
         );
 
         assertTrue(exception.getMessage().contains("no refresh token available"));
@@ -139,7 +149,7 @@ class KeycloakBrokerTokenServiceTest {
             .thenReturn(mockResponse);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () ->
-            service.getSigstoreIdToken("invalid-token")
+            service.getSigstoreIdToken(fakeKeycloakJwt())
         );
 
         assertTrue(exception.getMessage().contains("HTTP 401"));
@@ -153,7 +163,7 @@ class KeycloakBrokerTokenServiceTest {
             .thenReturn(mockResponse);
 
         BrokerTokenException exception = assertThrows(BrokerTokenException.class, () ->
-            service.getSigstoreIdToken("keycloak-access-token")
+            service.getSigstoreIdToken(fakeKeycloakJwt())
         );
 
         assertTrue(exception.getMessage().contains("Sigstore-supported provider"));
@@ -173,7 +183,7 @@ class KeycloakBrokerTokenServiceTest {
             .thenReturn(mockResponse);
 
         RuntimeException exception = assertThrows(RuntimeException.class, () ->
-            service.getSigstoreIdToken("keycloak-access-token")
+            service.getSigstoreIdToken(fakeKeycloakJwt())
         );
 
         assertTrue(exception.getMessage().contains("No Sigstore ID token found"));
@@ -185,7 +195,7 @@ class KeycloakBrokerTokenServiceTest {
             .thenThrow(new IOException("Connection refused"));
 
         RuntimeException exception = assertThrows(RuntimeException.class, () ->
-            service.getSigstoreIdToken("keycloak-access-token")
+            service.getSigstoreIdToken(fakeKeycloakJwt())
         );
 
         assertTrue(exception.getMessage().contains("Failed to retrieve Sigstore ID token"));

@@ -16,6 +16,7 @@ import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Retrieves the Sigstore OIDC token from Keycloak's broker token endpoint.
@@ -35,6 +36,9 @@ public class KeycloakBrokerTokenService {
     private final String keycloakBaseUrl;
     private final String realm;
     private final HttpClient httpClient;
+    private final ConcurrentHashMap<String, TokenPair> tokenCache = new ConcurrentHashMap<>();
+
+    private record TokenPair(String idToken, String refreshToken) {}
 
     @Autowired
     public KeycloakBrokerTokenService(
@@ -50,11 +54,62 @@ public class KeycloakBrokerTokenService {
     /**
      * Retrieves the Sigstore ID token from Keycloak's broker token endpoint.
      * If the stored token is expired, refreshes it using the Dex refresh token.
+     * Refreshed tokens are cached per user to handle Dex refresh token rotation,
+     * since Keycloak only stores the original tokens from login time.
      *
      * @param keycloakAccessToken the user's Keycloak access token
      * @return the Sigstore-compatible ID token
      */
     public String getSigstoreIdToken(String keycloakAccessToken) {
+        String userSub = extractSubject(keycloakAccessToken);
+
+        TokenPair cached = tokenCache.get(userSub);
+        if (cached != null && !isExpired(cached.idToken())) {
+            log.debug("Using cached Sigstore ID token for user {}", userSub);
+            return cached.idToken();
+        }
+
+        Map<String, Object> brokerResponse = fetchBrokerTokens(keycloakAccessToken);
+
+        String idToken = (String) brokerResponse.get("id_token");
+        if (idToken == null || idToken.isBlank()) {
+            log.error("Keycloak broker token response did not contain id_token");
+            throw new RuntimeException(
+                "No Sigstore ID token found. Ensure the user authenticated via the Sigstore identity provider.");
+        }
+
+        if (!isExpired(idToken)) {
+            log.debug("Sigstore ID token from broker is still valid");
+            String refreshToken = (String) brokerResponse.get("refresh_token");
+            tokenCache.put(userSub, new TokenPair(idToken, refreshToken));
+            return idToken;
+        }
+
+        log.info("Sigstore ID token expired, refreshing via Dex");
+        String refreshToken = cached != null ? cached.refreshToken()
+            : (String) brokerResponse.get("refresh_token");
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new RuntimeException(
+                "Sigstore ID token expired and no refresh token available. Please log in again.");
+        }
+
+        TokenPair refreshed = refreshTokenPair(refreshToken);
+        tokenCache.put(userSub, refreshed);
+        return refreshed.idToken();
+    }
+
+    private String extractSubject(String jwt) {
+        try {
+            String[] parts = jwt.split("\\.");
+            byte[] payload = Base64.getUrlDecoder().decode(parts[1]);
+            Map<String, Object> claims = MAPPER.readValue(payload, new TypeReference<>() {});
+            return (String) claims.get("sub");
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to extract subject from Keycloak token", e);
+        }
+    }
+
+    private Map<String, Object> fetchBrokerTokens(String keycloakAccessToken) {
         String url = keycloakBaseUrl + "/realms/" + realm + "/broker/sigstore/token";
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -68,7 +123,8 @@ public class KeycloakBrokerTokenService {
 
             if (response.statusCode() == 403) {
                 throw new BrokerTokenException(
-                    "Not authorized to retrieve Sigstore token. Sign in with a Sigstore-supported provider (Google, GitHub, Microsoft) to use signing.");
+                    "Not authorized to retrieve Sigstore token. "
+                    + "Sign in with a Sigstore-supported provider (Google, GitHub, Microsoft) to use signing.");
             }
             if (response.statusCode() != 200) {
                 throw new RuntimeException(
@@ -76,27 +132,7 @@ public class KeycloakBrokerTokenService {
                     + response.statusCode() + " - " + response.body());
             }
 
-            Map<String, Object> tokenResponse = MAPPER.readValue(
-                response.body(), new TypeReference<>() {});
-
-            String idToken = (String) tokenResponse.get("id_token");
-            if (idToken == null || idToken.isBlank()) {
-                log.error("Keycloak broker token response did not contain id_token");
-                throw new RuntimeException(
-                    "No Sigstore ID token found. Ensure the user authenticated via the Sigstore identity provider.");
-            }
-
-            if (!isExpired(idToken)) {
-                log.debug("Sigstore ID token is still valid");
-                return idToken;
-            }
-
-            log.info("Sigstore ID token expired, refreshing via Dex");
-            String refreshToken = (String) tokenResponse.get("refresh_token");
-            if (refreshToken == null || refreshToken.isBlank()) {
-                throw new RuntimeException("Sigstore ID token expired and no refresh token available. Please log in again.");
-            }
-            return refreshIdToken(refreshToken);
+            return MAPPER.readValue(response.body(), new TypeReference<>() {});
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
@@ -123,7 +159,7 @@ public class KeycloakBrokerTokenService {
         }
     }
 
-    private String refreshIdToken(String refreshToken) {
+    private TokenPair refreshTokenPair(String refreshToken) {
         String body = "grant_type=refresh_token"
             + "&refresh_token=" + refreshToken
             + "&client_id=" + DEX_CLIENT_ID;
@@ -150,8 +186,13 @@ public class KeycloakBrokerTokenService {
                 throw new RuntimeException("Dex refresh response did not contain id_token. Please log in again.");
             }
 
+            String newRefreshToken = (String) tokenResponse.get("refresh_token");
+            if (newRefreshToken == null) {
+                newRefreshToken = refreshToken;
+            }
+
             log.info("Successfully refreshed Sigstore ID token via Dex");
-            return idToken;
+            return new TokenPair(idToken, newRefreshToken);
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {

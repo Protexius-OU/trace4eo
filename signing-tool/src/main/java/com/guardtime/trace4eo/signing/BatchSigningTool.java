@@ -71,9 +71,7 @@ public class BatchSigningTool {
         @Option(longName = "hash-algorithm", description = "Hash algorithm", defaultValue = "SHA256") String hashAlgorithm,
         @Option(longName = "register-url", description = "URL to register provenance records") String registerUrl,
         @Option(longName = "keycloak-url", description = "Keycloak server URL (for registration auth)") String keycloakUrl,
-        @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm,
-        @Option(longName = "username", description = "Keycloak username (for registration auth)") String username,
-        @Option(longName = "password", description = "Keycloak password (for registration auth)") String password
+        @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm
     ) throws IOException {
         validateInput(provenanceRecordType, dataId, outputPath, directory);
 
@@ -90,7 +88,7 @@ public class BatchSigningTool {
         if (!outcome.records.isEmpty()) {
             writeContainer(outcome.records, outputPath);
             log.info("Written {} records to {}", outcome.records.size(), outputPath);
-            registerIfConfigured(outcome.records, registerUrl, keycloakUrl, realm, username, password);
+            registerIfConfigured(outcome.records, registerUrl, keycloakUrl, realm, oidcToken);
         }
 
         return buildResult(resolvedFiles.size(), outcome.results, outputPath);
@@ -140,14 +138,16 @@ public class BatchSigningTool {
 
     private void registerIfConfigured(
         List<ProvenanceRecord> records, String registerUrl,
-        String keycloakUrl, String realm, String username, String password
+        String keycloakUrl, String realm, String oidcToken
     ) {
         if (registerUrl == null || registerUrl.isBlank()) {
             return;
         }
         String accessToken = null;
-        if (keycloakUrl != null && username != null && password != null) {
-            accessToken = registrationClient.authenticateWithDirectGrant(keycloakUrl, realm, username, password);
+        if (keycloakUrl != null && oidcToken != null) {
+            accessToken = registrationClient.exchangeToken(keycloakUrl, realm, oidcToken);
+        } else if (keycloakUrl != null) {
+            log.warn("No OIDC token available for token exchange. Attempting registration without auth.");
         }
         List<String> failures = registrationClient.registerRecords(records, registerUrl, accessToken);
         if (!failures.isEmpty()) {

@@ -60,10 +60,13 @@
         "tokenUrl": "https://oauth2.sigstore.dev/auth/token",
         "jwksUrl": "https://oauth2.sigstore.dev/auth/keys",
         "issuer": "https://oauth2.sigstore.dev/auth",
-        "defaultScope": "openid email",
+        "defaultScope": "openid email offline_access",
         "pkceEnabled": "true",
         "pkceMethod": "S256",
-        "syncMode": "FORCE"
+        "syncMode": "FORCE",
+        "validateSignature": "true",
+        "useJwksUrl": "true",
+        "disableTypeClaimCheck": "true"
       }
     }
   ],

@@ -46,7 +46,7 @@ services:
         condition: service_started
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.1
+    image: quay.io/keycloak/keycloak:26.5
     command: start-dev --import-realm
     environment:
       KC_DB: postgres
@@ -55,6 +55,7 @@ services:
       KC_DB_PASSWORD: keycloak
       KC_HOSTNAME: localhost
       KC_HTTP_PORT: 8180
+      KC_FEATURES: token-exchange,admin-fine-grained-authz:v1
       KC_HEALTH_ENABLED: "true"
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin

@@ -33,13 +33,13 @@ public class RecordRegistrationClient {
         this.provenanceJsonMapper = provenanceJsonMapper;
     }
 
-    public String authenticateWithDirectGrant(String keycloakUrl, String realm, String username, String password) {
+    public String exchangeToken(String keycloakUrl, String realm, String sigstoreOidcToken) {
         String tokenUrl = keycloakUrl + "/realms/" + realm + "/protocol/openid-connect/token";
-        String body = "grant_type=password"
-            + "&client_id=trace4eo-ui"
-            + "&username=" + URLEncoder.encode(username, StandardCharsets.UTF_8)
-            + "&password=" + URLEncoder.encode(password, StandardCharsets.UTF_8)
-            + "&scope=openid+email";
+        String body = "grant_type=" + URLEncoder.encode("urn:ietf:params:oauth:grant-type:token-exchange", StandardCharsets.UTF_8)
+            + "&subject_token=" + URLEncoder.encode(sigstoreOidcToken, StandardCharsets.UTF_8)
+            + "&subject_token_type=" + URLEncoder.encode("urn:ietf:params:oauth:token-type:id_token", StandardCharsets.UTF_8)
+            + "&subject_issuer=sigstore"
+            + "&client_id=trace4eo-ui";
 
         try {
             HttpRequest request = HttpRequest.newBuilder()
@@ -52,21 +52,21 @@ public class RecordRegistrationClient {
 
             if (response.statusCode() != 200) {
                 throw new RegistrationException(
-                    "Keycloak authentication failed: HTTP " + response.statusCode() + " - " + response.body());
+                    "Keycloak token exchange failed: HTTP " + response.statusCode() + " - " + response.body());
             }
 
             Map<String, Object> tokenResponse = MAPPER.readValue(
                 response.body(), new TypeReference<>() {});
             String accessToken = (String) tokenResponse.get("access_token");
             if (accessToken == null || accessToken.isBlank()) {
-                throw new RegistrationException("Keycloak response did not contain an access_token.");
+                throw new RegistrationException("Keycloak token exchange response did not contain an access_token.");
             }
-            log.info("Authenticated with Keycloak as {}", username);
+            log.info("Exchanged Sigstore OIDC token for Keycloak access token");
             return accessToken;
         } catch (RegistrationException e) {
             throw e;
         } catch (IOException | InterruptedException e) {
-            throw new RegistrationException("Failed to authenticate with Keycloak at " + tokenUrl, e);
+            throw new RegistrationException("Failed to exchange token with Keycloak at " + tokenUrl, e);
         }
     }
 
