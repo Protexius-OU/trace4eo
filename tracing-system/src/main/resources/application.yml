@@ -23,3 +23,7 @@ keycloak:
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
+
+logging:
+  level:
+    org.springframework.security.oauth2: WARN
