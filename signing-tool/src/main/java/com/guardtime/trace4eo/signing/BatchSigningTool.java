@@ -73,7 +73,7 @@ public class BatchSigningTool {
         @Option(longName = "keycloak-url", description = "Keycloak server URL (for registration auth)") String keycloakUrl,
         @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm
     ) throws IOException {
-        validateInput(provenanceRecordType, dataId, outputPath, directory);
+        validateInput(provenanceRecordType, dataId, outputPath, directory, registerUrl, keycloakUrl);
 
         String oidcToken = oidcTokenResolver.resolve();
         List<Path> filePaths = files != null ? files.stream().map(Path::of).toList() : List.of();
@@ -94,7 +94,10 @@ public class BatchSigningTool {
         return buildResult(resolvedFiles.size(), outcome.results, outputPath);
     }
 
-    private void validateInput(String provenanceRecordType, String dataId, Path outputPath, Path directory) {
+    private void validateInput(
+        String provenanceRecordType, String dataId, Path outputPath, Path directory,
+        String registerUrl, String keycloakUrl
+    ) {
         if (provenanceRecordType == null || provenanceRecordType.isBlank()) {
             throw new IllegalArgumentException("--provenance-record-type must not be null or blank");
         }
@@ -111,6 +114,11 @@ public class BatchSigningTool {
             if (!Files.isDirectory(directory)) {
                 throw new IllegalArgumentException("--directory is not a directory: " + directory);
             }
+        }
+        if (registerUrl != null && !registerUrl.isBlank()
+            && (keycloakUrl == null || keycloakUrl.isBlank())) {
+            throw new IllegalArgumentException(
+                "--keycloak-url is required when --register-url is provided");
         }
     }
 
@@ -142,10 +150,6 @@ public class BatchSigningTool {
     ) {
         if (registerUrl == null || registerUrl.isBlank()) {
             return;
-        }
-        if (keycloakUrl == null || keycloakUrl.isBlank()) {
-            throw new IllegalArgumentException(
-                "--keycloak-url is required when --register-url is provided");
         }
         String accessToken = null;
         if (oidcToken != null) {

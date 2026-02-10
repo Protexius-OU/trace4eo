@@ -66,7 +66,7 @@ public class SigningTool {
         @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm
     ) throws IOException {
         List<Path> paths = toPaths(files);
-        validateInput(paths, provenanceRecordType, dataId);
+        validateInput(paths, provenanceRecordType, dataId, registerUrl, keycloakUrl);
 
         String oidcToken = oidcTokenResolver.resolve();
         HashAlgorithm algorithm = HashAlgorithm.valueOf(hashAlgorithm);
@@ -81,7 +81,10 @@ public class SigningTool {
         return files.stream().map(Path::of).toList();
     }
 
-    private void validateInput(List<Path> files, String provenanceRecordType, String dataId) {
+    private void validateInput(
+        List<Path> files, String provenanceRecordType, String dataId,
+        String registerUrl, String keycloakUrl
+    ) {
         if (files == null || files.isEmpty()) {
             throw new IllegalArgumentException("--files must not be null or empty");
         }
@@ -91,6 +94,11 @@ public class SigningTool {
         if (dataId == null || dataId.isBlank()) {
             throw new IllegalArgumentException("--data-id must not be null or blank");
         }
+        if (registerUrl != null && !registerUrl.isBlank()
+            && (keycloakUrl == null || keycloakUrl.isBlank())) {
+            throw new IllegalArgumentException(
+                "--keycloak-url is required when --register-url is provided");
+        }
     }
 
     private void registerIfConfigured(
@@ -99,10 +107,6 @@ public class SigningTool {
     ) {
         if (registerUrl == null || registerUrl.isBlank()) {
             return;
-        }
-        if (keycloakUrl == null || keycloakUrl.isBlank()) {
-            throw new IllegalArgumentException(
-                "--keycloak-url is required when --register-url is provided");
         }
         String accessToken = null;
         if (oidcToken != null) {
