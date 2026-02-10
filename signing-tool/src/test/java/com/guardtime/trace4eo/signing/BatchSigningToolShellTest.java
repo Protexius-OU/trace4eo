@@ -14,13 +14,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BatchSigningToolShellTest {
 
     @Autowired
-    CommandRegistry commandRegistry;
+    private CommandRegistry commandRegistry;
 
     @MockitoBean
-    ProvenanceSigningService provenanceSigningService;
+    private ProvenanceSigningService provenanceSigningService;
 
     @MockitoBean
-    ProvenanceJsonMapper provenanceJsonMapper;
+    private ProvenanceJsonMapper provenanceJsonMapper;
 
     @Test
     void batchSignCommandIsRegistered() {

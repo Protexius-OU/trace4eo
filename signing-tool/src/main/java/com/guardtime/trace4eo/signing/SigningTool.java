@@ -13,9 +13,9 @@ import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecordBuilder;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.core.command.annotation.Command;
 import org.springframework.shell.core.command.annotation.Option;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -54,6 +54,15 @@ public class SigningTool {
         @Option(longName = "predecessors", description = "Provenance record predecessors") List<Predecessor> predecessors,
         @Option(longName = "hash-algorithm", description = "Hash algorithm", defaultValue = "SHA256") String hashAlgorithm
     ) throws IOException {
+        validateInput(files, provenanceRecordType, dataId);
+
+        String oidcToken = oidcTokenResolver.resolve();
+        HashAlgorithm algorithm = HashAlgorithm.valueOf(hashAlgorithm);
+
+        return buildSignedRecord(files, dataId, provenanceRecordType, predecessors, algorithm, oidcToken);
+    }
+
+    private void validateInput(List<Path> files, String provenanceRecordType, String dataId) {
         if (files == null || files.isEmpty()) {
             throw new IllegalArgumentException("--files must not be null or empty");
         }
@@ -63,10 +72,12 @@ public class SigningTool {
         if (dataId == null || dataId.isBlank()) {
             throw new IllegalArgumentException("--data-id must not be null or blank");
         }
+    }
 
-        String oidcToken = oidcTokenResolver.resolve();
-        HashAlgorithm algorithm = HashAlgorithm.valueOf(hashAlgorithm);
-
+    private ProvenanceRecord buildSignedRecord(
+        List<Path> files, String dataId, String provenanceRecordType,
+        List<Predecessor> predecessors, HashAlgorithm algorithm, String oidcToken
+    ) throws IOException {
         Metadata metadata = new Metadata(dataId, provenanceRecordType, predecessors);
         FilesInfo filesInfo = new FilesInfoBuilder(algorithm)
             .addFiles(files)

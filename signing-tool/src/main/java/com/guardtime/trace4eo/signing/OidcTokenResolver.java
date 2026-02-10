@@ -23,6 +23,6 @@ class OidcTokenResolver {
             return ciToken;
         }
         throw new IllegalStateException(
-            "No OIDC token available. Set SIGSTORE_ID_TOKEN environment variable (e.g., from 'gcloud auth print-identity-token').");
+            "No OIDC token available. Set SIGSTORE_ID_TOKEN environment variable..");
     }
 }

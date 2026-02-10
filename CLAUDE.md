@@ -42,4 +42,4 @@ Docker Compose runs all services: PostgreSQL (trace4eo/trace4eo), Keycloak (port
 - After making changes to **tracing-ui**, run `cd tracing-ui && npx tsc --noEmit` to catch TypeScript errors
 - After making changes to **docker-compose.yml**, Dockerfiles, or build configs, validate with `docker compose config -q` to catch syntax errors
 - Always validate user input and write unit tests respectively
-- Keep top level functions as clean as possible by extracting methods
+- Public/command methods must read as a short sequence of named steps — extract validation, building, and I/O into private methods.

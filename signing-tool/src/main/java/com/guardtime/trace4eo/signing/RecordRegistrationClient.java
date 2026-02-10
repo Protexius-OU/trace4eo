@@ -51,7 +51,8 @@ public class RecordRegistrationClient {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                throw new RegistrationException("Keycloak authentication failed: HTTP " + response.statusCode() + " - " + response.body());
+                throw new RegistrationException(
+                    "Keycloak authentication failed: HTTP " + response.statusCode() + " - " + response.body());
             }
 
             Map<String, Object> tokenResponse = MAPPER.readValue(
