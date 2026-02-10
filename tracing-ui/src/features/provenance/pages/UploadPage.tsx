@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import './UploadPage.css'
 import { useNavigate, Link } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { uploadFile, fetchRecords } from '../api/provenanceApi'
 import type { ProvenanceRecord } from '../types/provenance'
 
@@ -8,6 +9,7 @@ type UploadStatus = 'idle' | 'uploading' | 'complete'
 
 export default function UploadPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [file, setFile] = useState<File | null>(null)
   const [dataType, setDataType] = useState('')
   const [dataId, setDataId] = useState('')
@@ -43,6 +45,7 @@ export default function UploadPage() {
         dataId,
         selectedPredecessors.length > 0 ? selectedPredecessors : undefined
       )
+      await queryClient.invalidateQueries({ queryKey: ['records'] })
       setStatus('complete')
       navigate(`/records/${record.id}/graph`)
     } catch (err) {

@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react'
 import { Routes, Route, Link } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
+import './App.css'
 import { setUserGetter } from './core/auth/authFetch'
 import { hasRole } from './core/auth/roles'
 import { RecordListPage, RecordGraphPage, UploadPage } from './features/provenance'
@@ -34,17 +35,22 @@ export default function App() {
   if (!auth.isAuthenticated) {
     return (
       <div className="app">
-        <header className="header">
-          <nav>
-            <span className="logo">Trace4EO</span>
-          </nav>
-        </header>
         <main className="main login">
-          <h1>Welcome to Trace4EO</h1>
-          <p>Please sign in to continue.</p>
-          <button className="btn btn-primary" onClick={() => auth.signinRedirect()}>
-            Sign In
-          </button>
+          <div className="login-card">
+            <div className="login-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M2 12h20" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+            </div>
+            <h1 className="login-title">Trace4EO</h1>
+            <p className="login-subtitle">Earth Observation Provenance Tracing</p>
+            <hr className="login-divider" />
+            <button className="login-btn" onClick={() => auth.signinRedirect()}>
+              Sign In
+            </button>
+          </div>
         </main>
       </div>
     )

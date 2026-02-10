@@ -64,3 +64,19 @@ curl -sf -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${RM_CLIENT_ID}/a
   -d "${UPDATED}" > /dev/null
 
 echo "Token exchange configured: '${CLIENT_ID}' can now exchange '${IDP_ALIAS}' tokens."
+
+echo "Making firstName and lastName optional in user profile..."
+PROFILE=$(curl -sf "${KEYCLOAK_URL}/admin/realms/${REALM}/users/profile" -H "${AUTH}")
+UPDATED_PROFILE=$(echo "${PROFILE}" | python3 -c "
+import sys, json
+p = json.load(sys.stdin)
+for attr in p.get('attributes', []):
+    if attr['name'] in ('firstName', 'lastName'):
+        attr.pop('required', None)
+print(json.dumps(p))
+")
+curl -sf -X PUT "${KEYCLOAK_URL}/admin/realms/${REALM}/users/profile" \
+  -H "${AUTH}" -H "Content-Type: application/json" \
+  -d "${UPDATED_PROFILE}" > /dev/null
+
+echo "User profile updated: firstName and lastName are now optional."
