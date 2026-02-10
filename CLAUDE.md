@@ -41,6 +41,5 @@ Docker Compose runs all services: PostgreSQL (trace4eo/trace4eo), Keycloak (port
 - Run code quality checks when you're done making a series of code changes
 - After making changes to **tracing-ui**, run `cd tracing-ui && npx tsc --noEmit` to catch TypeScript errors
 - After making changes to **docker-compose.yml**, Dockerfiles, or build configs, validate with `docker compose config -q` to catch syntax errors
-- The backend image is built with `bootBuildImage` (Paketo buildpacks, distroless — no shell). Do not use `CMD-SHELL` healthchecks for it
 - Always validate user input and write unit tests respectively
 - Keep top level functions as clean as possible by extracting methods
