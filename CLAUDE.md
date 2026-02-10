@@ -11,6 +11,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Run CLI tools via Gradle
 ./gradlew :signing-tool:bootRun --args="<command> <options>"
 ./gradlew :verification-tool:bootRun --args="<command> <options>"
+
+# Type-check frontend
+cd tracing-ui && npx tsc --noEmit
 ```
 
 ## Architecture
@@ -36,5 +39,6 @@ Docker Compose runs all services: PostgreSQL (trace4eo/trace4eo), Keycloak (port
 ## Workflow
 
 - Run code quality checks when you're done making a series of code changes
+- After making changes to **tracing-ui**, run `cd tracing-ui && npx tsc --noEmit` to catch TypeScript errors
 - Always validate user input and write unit tests respectively
 - Keep top level functions as clean as possible by extracting methods
