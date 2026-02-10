@@ -9,6 +9,7 @@ rewrite-static-analysis = { module = "org.openrewrite.recipe:rewrite-static-anal
 sigstore-java = { module = "dev.sigstore:sigstore-java", version = "2.0.0" }
 spring-shell-starter = { module = "org.springframework.shell:spring-shell-starter", version.ref = "spring-shell" }
 spring-shell-test = { module = "org.springframework.shell:spring-shell-test", version.ref = "spring-shell" }
+spring-shell-test-autoconfigure = { module = "org.springframework.shell:spring-shell-test-autoconfigure", version.ref = "spring-shell" }
 spring-shell-jline = { module = "org.springframework.shell:spring-shell-jline", version.ref = "spring-shell" }
 
 [bundles]

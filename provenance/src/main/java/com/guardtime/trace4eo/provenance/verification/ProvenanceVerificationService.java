@@ -36,6 +36,7 @@ public class ProvenanceVerificationService {
 
     private final KeylessVerifier verifier;
 
+    /** Uses Sigstore public good instance for verification. */
     public ProvenanceVerificationService() {
         try {
             this.verifier = KeylessVerifier.builder().sigstorePublicDefaults().build();

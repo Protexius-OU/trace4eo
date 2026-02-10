@@ -47,7 +47,7 @@ Create a provenance record containing multiple files with metadata.
 **Example:**
 
 ```bash
-./gradlew :signing-tool:run --args="create-provenance-record \
+./gradlew :signing-tool:bootRun --args="create-provenance-record \
   --files image.tif,metadata.xml \
   --provenance-record-type sentinel2-processing \
   --data-id S2A_MSIL1C_20240101"
@@ -75,7 +75,7 @@ Sign multiple files, creating one provenance record per file and packaging them 
 Sign specific files:
 
 ```bash
-./gradlew :signing-tool:run --args="batch-sign \
+./gradlew :signing-tool:bootRun --args="batch-sign \
   --files image1.tif,image2.tif,image3.tif \
   --provenance-record-type satellite-imagery \
   --data-id batch-2024-01 \
@@ -85,7 +85,7 @@ Sign specific files:
 Sign all TIF files in a directory:
 
 ```bash
-./gradlew :signing-tool:run --args="batch-sign \
+./gradlew :signing-tool:bootRun --args="batch-sign \
   --directory /data/images \
   --pattern '*.tif' \
   --provenance-record-type satellite-imagery \
@@ -96,7 +96,7 @@ Sign all TIF files in a directory:
 Sign and register with a tracing system:
 
 ```bash
-./gradlew :signing-tool:run --args="batch-sign \
+./gradlew :signing-tool:bootRun --args="batch-sign \
   --directory /data/images \
   --pattern '*.tif' \
   --provenance-record-type satellite-imagery \

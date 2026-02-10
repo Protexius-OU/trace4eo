@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.resttestclient.TestRestTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.http.HttpStatus;
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
+@ActiveProfiles("test")
 @Testcontainers
 class ProvenanceControllerIntegrationTest {
 
@@ -78,7 +80,7 @@ class ProvenanceControllerIntegrationTest {
         restTemplate.postForEntity("/api/provenance", record, Void.class);
 
         ResponseEntity<ProvenanceGraph> response = restTemplate.getForEntity(
-            "/api/provenance/{id}/graph?depth=5",
+            "/api/provenance/{id}/graph",
             ProvenanceGraph.class,
             id
         );
@@ -123,19 +125,6 @@ class ProvenanceControllerIntegrationTest {
         assertNotNull(response.getBody());
         assertEquals(2, response.getBody().nodes().size());
         assertEquals(1, response.getBody().edges().size());
-    }
-
-    @Test
-    void getProvenanceGraphRejectNegativeDepth() {
-        UUID id = UUID.randomUUID();
-
-        ResponseEntity<ProvenanceGraph> response = restTemplate.getForEntity(
-            "/api/provenance/{id}/graph?depth=-1",
-            ProvenanceGraph.class,
-            id
-        );
-
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     }
 
     private ProvenanceRecord createTestRecord(UUID id, String dataId, List<Predecessor> predecessors) {

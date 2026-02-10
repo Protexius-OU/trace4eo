@@ -13,7 +13,7 @@ A CLI tool for verifying provenance records and signatures using Sigstore.
 Commands are passed via `--args`:
 
 ```bash
-./gradlew :verification-tool:run --args="<command> <options>"
+./gradlew :verification-tool:bootRun --args="<command> <options>"
 ```
 
 ## Commands
@@ -32,7 +32,7 @@ Verify input data against a signature file.
 **Example:**
 
 ```bash
-./gradlew :verification-tool:run --args="verify \
+./gradlew :verification-tool:bootRun --args="verify \
   --text data.bin \
   --signature signature.json"
 ```
@@ -55,6 +55,6 @@ Verify a provenance record container. Both ZIP (`.zip`) and JSON (`.json`) conta
 **Example:**
 
 ```bash
-./gradlew :verification-tool:run --args="verify-provenance-record \
+./gradlew :verification-tool:bootRun --args="verify-provenance-record \
   --file provenance.zip"
 ```

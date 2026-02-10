@@ -6,10 +6,7 @@ import dev.sigstore.KeylessSigner;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import dev.sigstore.oidc.client.OidcClients;
-import dev.sigstore.oidc.client.TokenStringOidcClient;
-import dev.sigstore.oidc.client.WebOidcClient;
 import dev.sigstore.rekor.client.RekorEntry;
-import dev.sigstore.tuf.SigstoreTufClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,46 +20,25 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ProvenanceSigningService {
 
     private static final Logger log = LoggerFactory.getLogger(ProvenanceSigningService.class);
 
-    @FunctionalInterface
-    public interface OAuthUrlCallback {
-        void onOAuthUrl(String url);
-    }
+    private final Map<String, KeylessSigner> signerCache = new ConcurrentHashMap<>();
 
-    private final KeylessSigner signer;
-
+    /** Uses Sigstore public good instance. */
     public ProvenanceSigningService() {
-        try {
-            var builder = KeylessSigner.builder().sigstorePublicDefaults();
-            String ciToken = System.getenv("SIGSTORE_ID_TOKEN");
-            if (ciToken != null && !ciToken.isBlank()) {
-                log.info("Using SIGSTORE_ID_TOKEN from environment");
-                builder.forceCredentialProviders(OidcClients.of(TokenStringOidcClient.from(ciToken)));
-            }
-            this.signer = builder.build();
-        } catch (Exception e) {
-            log.error("Failed to initialize provenance signing service", e);
-            throw new RuntimeException(e);
-        }
     }
 
-    public ProvenanceSignature sign(byte[] bytes, HashAlgorithm hashAlgorithm) {
-        return sign(new ByteArrayInputStream(bytes), hashAlgorithm, null);
+    /** Sign with an explicit OIDC token (e.g. from Google via Keycloak broker). */
+    public ProvenanceSignature sign(byte[] bytes, HashAlgorithm hashAlgorithm, String oidcToken) {
+        return sign(new ByteArrayInputStream(bytes), hashAlgorithm, oidcToken);
     }
 
-    public ProvenanceSignature sign(byte[] bytes, HashAlgorithm hashAlgorithm, OAuthUrlCallback callback) {
-        return sign(new ByteArrayInputStream(bytes), hashAlgorithm, callback);
-    }
-
-    public ProvenanceSignature sign(InputStream inputStream, HashAlgorithm hashAlgorithm) {
-        return sign(inputStream, hashAlgorithm, null);
-    }
-
-    public ProvenanceSignature sign(InputStream inputStream, HashAlgorithm hashAlgorithm, OAuthUrlCallback callback) {
+    public ProvenanceSignature sign(InputStream inputStream, HashAlgorithm hashAlgorithm, String oidcToken) {
         MessageDigest md;
         try {
             md = MessageDigest.getInstance(hashAlgorithm.name());
@@ -72,8 +48,8 @@ public class ProvenanceSigningService {
         }
         try (DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)) {
             digestInputStream.transferTo(OutputStream.nullOutputStream());
-            KeylessSigner signerToUse = callback != null ? createSignerWithCallback(callback) : signer;
-            Bundle bundle = signerToUse.sign(md.digest());
+            KeylessSigner signer = signerCache.computeIfAbsent(oidcToken, this::buildSigner);
+            Bundle bundle = signer.sign(md.digest());
             Bundle.MessageSignature messageSignature = bundle.getMessageSignature().orElse(null);
             if (messageSignature == null) {
                 throw new IllegalStateException("Signature is null");
@@ -94,26 +70,14 @@ public class ProvenanceSigningService {
         }
     }
 
-    private KeylessSigner createSignerWithCallback(OAuthUrlCallback callback) {
+    private KeylessSigner buildSigner(String oidcToken) {
         try {
-            var tufClient = SigstoreTufClient.builder().usePublicGoodInstance().build();
-            tufClient.update();
-
-            var signingConfig = tufClient.getSigstoreSigningConfig();
-            var oidcProviders = signingConfig.getOidcProviders();
-            var oidcService = oidcProviders.getFirst();
-
-            WebOidcClient webClient = WebOidcClient.builder()
-                .setIssuer(oidcService)
-                .setBrowser(callback::onOAuthUrl)
-                .build();
-
             return KeylessSigner.builder()
                 .sigstorePublicDefaults()
-                .forceCredentialProviders(OidcClients.of(webClient))
+                .forceCredentialProviders(OidcClients.of(new EmailOidcClient(oidcToken)))
                 .build();
         } catch (Exception e) {
-            log.error("Failed to create signer with OAuth callback", e);
+            log.error("Failed to build signer", e);
             throw new RuntimeException(e);
         }
     }

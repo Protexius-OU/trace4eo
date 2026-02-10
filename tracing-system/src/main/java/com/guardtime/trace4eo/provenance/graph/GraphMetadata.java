@@ -6,8 +6,6 @@ import java.util.UUID;
 public record GraphMetadata(
     int totalNodes,
     int maxDepth,
-    int requestedDepthLimit,
-    boolean depthLimitReached,
     List<UUID> missingPredecessors
 ) {
 }

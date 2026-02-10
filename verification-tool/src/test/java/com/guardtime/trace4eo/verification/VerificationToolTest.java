@@ -5,6 +5,7 @@ import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.io.json.JsonContainerReader;
 import com.guardtime.trace4eo.provenance.io.zip.ZipContainerWriter;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationResult;
+import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationService;
 import com.guardtime.trace4eo.provenance.verification.VerificationStepName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -27,23 +28,24 @@ class VerificationToolTest {
     private static final String INVALID_SIGNATURE_PROVENANCE_RECORD_FILE = "src/test/resources/invalid-signature-provenance-record.json";
     private static final String INVALID_CONTENTS_PROVENANCE_RECORD_FILE = "src/test/resources/invalid-contents-provenance-record.json";
 
+    private final ProvenanceJsonMapper provenanceJsonMapper = new ProvenanceJsonMapper();
+    private final ProvenanceVerificationService verificationService = new ProvenanceVerificationService();
+    private final VerificationTool verificationTool = new VerificationTool(verificationService, provenanceJsonMapper);
+
     @Test
     void verifyValidSignature() {
-        VerificationTool verificationTool = new VerificationTool();
         ProvenanceVerificationResult result = verificationTool.verify(Path.of(TEST_FILE), Path.of(SIGNATURE_FILE));
         assertTrue(result.status());
     }
 
     @Test
     void verifyInvalidSignature() {
-        VerificationTool verificationTool = new VerificationTool();
         ProvenanceVerificationResult result = verificationTool.verify(Path.of(OTHER_FILE), Path.of(SIGNATURE_FILE));
         assertFalse(result.status());
     }
 
     @Test
     void verifyProvenanceRecord() {
-        VerificationTool verificationTool = new VerificationTool();
         List<ProvenanceVerificationResult> results = verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE));
         assertEquals(1, results.size());
         ProvenanceVerificationResult result = results.getFirst();
@@ -53,14 +55,12 @@ class VerificationToolTest {
 
     @Test
     void verifyProvenanceRecordZip(@TempDir Path tempDir) throws IOException {
-        ProvenanceJsonMapper mapper = new ProvenanceJsonMapper();
-        Container container = new JsonContainerReader(mapper)
+        Container container = new JsonContainerReader(provenanceJsonMapper)
             .read(Path.of(PROVENANCE_RECORD_FILE));
         Path zipPath = tempDir.resolve("provenance-record.zip");
-        new ZipContainerWriter(mapper)
+        new ZipContainerWriter(provenanceJsonMapper)
             .writeTo(container, Files.newOutputStream(zipPath));
 
-        VerificationTool verificationTool = new VerificationTool();
         List<ProvenanceVerificationResult> results = verificationTool.verify(zipPath);
         assertEquals(1, results.size());
         ProvenanceVerificationResult result = results.getFirst();
@@ -70,7 +70,6 @@ class VerificationToolTest {
 
     @Test
     void verifyProvenanceRecordWithInvalidSignature() {
-        VerificationTool verificationTool = new VerificationTool();
         List<ProvenanceVerificationResult> results = verificationTool.verify(
             Path.of(INVALID_SIGNATURE_PROVENANCE_RECORD_FILE));
         assertEquals(1, results.size());
@@ -83,7 +82,6 @@ class VerificationToolTest {
 
     @Test
     void verifyProvenanceRecordWithInvalidContents() {
-        VerificationTool verificationTool = new VerificationTool();
         List<ProvenanceVerificationResult> results = verificationTool.verify(
             Path.of(INVALID_CONTENTS_PROVENANCE_RECORD_FILE));
         assertEquals(1, results.size());

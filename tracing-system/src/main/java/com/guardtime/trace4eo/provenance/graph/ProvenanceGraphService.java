@@ -10,8 +10,10 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
@@ -28,7 +30,13 @@ public class ProvenanceGraphService {
         this.provenanceRegistry = provenanceRegistry;
     }
 
-    public Optional<ProvenanceGraph> buildGraph(UUID rootId, int depthLimit) {
+    public record GraphWithRecords(ProvenanceGraph graph, Map<UUID, ProvenanceRecord> records) {}
+
+    public Optional<ProvenanceGraph> buildGraph(UUID rootId) {
+        return buildGraphWithRecords(rootId).map(GraphWithRecords::graph);
+    }
+
+    public Optional<GraphWithRecords> buildGraphWithRecords(UUID rootId) {
         Optional<ProvenanceRecord> rootRecord = provenanceRegistry.get(rootId);
         if (rootRecord.isEmpty()) {
             log.warn("Root provenance record not found: {}", rootId);
@@ -39,22 +47,17 @@ public class ProvenanceGraphService {
         List<GraphNode> nodes = new ArrayList<>();
         List<GraphEdge> edges = new ArrayList<>();
         List<UUID> missingPredecessors = new ArrayList<>();
+        Map<UUID, ProvenanceRecord> loadedRecords = new LinkedHashMap<>();
 
         Queue<TraversalItem> queue = new LinkedList<>();
         queue.add(new TraversalItem(rootId, 0));
 
         int actualMaxDepth = 0;
-        boolean depthLimitReached = false;
 
         while (!queue.isEmpty()) {
             TraversalItem item = queue.poll();
 
             if (visited.contains(item.id())) {
-                continue;
-            }
-
-            if (item.depth() > depthLimit) {
-                depthLimitReached = true;
                 continue;
             }
 
@@ -69,6 +72,7 @@ public class ProvenanceGraphService {
             }
 
             ProvenanceRecord record = optionalRecord.get();
+            loadedRecords.put(record.id(), record);
             List<Predecessor> predecessors = record.metadata().predecessors();
             if (predecessors == null) {
                 predecessors = Collections.emptyList();
@@ -102,8 +106,6 @@ public class ProvenanceGraphService {
         GraphMetadata metadata = new GraphMetadata(
             nodes.size(),
             actualMaxDepth,
-            depthLimit,
-            depthLimitReached,
             missingPredecessors
         );
 
@@ -111,7 +113,7 @@ public class ProvenanceGraphService {
         log.info("Built provenance graph for root {} with {} nodes and {} edges",
             rootId, nodes.size(), edges.size());
 
-        return Optional.of(graph);
+        return Optional.of(new GraphWithRecords(graph, loadedRecords));
     }
 
     private record TraversalItem(UUID id, int depth) {
