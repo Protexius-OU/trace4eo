@@ -76,7 +76,11 @@ public class FilesInfoBuilder {
         try (InputStream inputStream = Files.newInputStream(filePath);
              DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)
         ) {
-            return digestInputStream.getMessageDigest().digest();
+            byte[] buffer = new byte[8192];
+            while (digestInputStream.read(buffer) != -1) {
+                continue;
+            }
+            return md.digest();
         }
     }
 }
