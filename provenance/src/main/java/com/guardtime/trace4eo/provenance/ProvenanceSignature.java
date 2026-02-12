@@ -3,6 +3,7 @@ package com.guardtime.trace4eo.provenance;
 import com.guardtime.trace4eo.provenance.signing.SignatureDetails;
 
 import java.time.Instant;
+import java.util.Base64;
 
 public record ProvenanceSignature(
     byte[] bytes,
@@ -13,5 +14,12 @@ public record ProvenanceSignature(
     // Constructor for backwards compatibility (details may be null for old signatures)
     public ProvenanceSignature(byte[] bytes, Instant signingTime, HashAlgorithm hashAlgorithm) {
         this(bytes, signingTime, hashAlgorithm, null);
+    }
+
+    @Override
+    public String toString() {
+        return "ProvenanceSignature[bytes=" + Base64.getEncoder().encodeToString(bytes)
+            + ", signingTime=" + signingTime + ", hashAlgorithm=" + hashAlgorithm
+            + ", details=" + details + "]";
     }
 }

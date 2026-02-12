@@ -3,6 +3,7 @@ package com.guardtime.trace4eo.provenance.record;
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
 
 import java.nio.file.Path;
+import java.util.HexFormat;
 
 public record FileHashInfo(
     Path path,
@@ -19,5 +20,11 @@ public record FileHashInfo(
 
     public FileHashInfo(HashAlgorithm hashAlgorithm, byte[] hashValue) {
         this(null, hashAlgorithm, hashValue);
+    }
+
+    @Override
+    public String toString() {
+        return "FileHashInfo[path=" + path + ", hashAlgorithm=" + hashAlgorithm
+            + ", hashValue=" + HexFormat.of().formatHex(hashValue) + "]";
     }
 }
