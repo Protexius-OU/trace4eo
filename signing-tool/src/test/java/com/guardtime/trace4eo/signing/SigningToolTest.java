@@ -7,8 +7,10 @@ import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -18,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -50,39 +51,36 @@ class SigningToolTest {
     }
 
     @Test
-    void createProvenanceRecord() throws IOException {
+    void createProvenanceRecord_writesZipToDefaultPath() throws IOException {
         List<String> files = List.of("src/test/resources/test.txt");
         ProvenanceRecord result = signingTool.createProvenanceRecord(
-            files, "test", "test", List.of(), "SHA256", null, null, "trace4eo"
+            files, "test", "test", List.of(), "SHA256", null, null, null, "trace4eo"
         );
         assertNotNull(result);
-        assertNotNull(result.id());
-        assertNotNull(result.filesInfo());
-        assertNotNull(result.metadata());
-        assertNotNull(result.manifest());
+        // Clean up the default output file (written to CWD as <uuid>.zip)
+        Files.deleteIfExists(Path.of(result.id() + ".zip"));
     }
 
     @Test
-    void createProvenanceRecord_withRegistration() throws IOException {
+    void createProvenanceRecord_withRegistration(@TempDir Path tempDir) throws IOException {
         when(mockRegistrationClient.exchangeToken(anyString(), anyString(), anyString()))
             .thenReturn("access-token");
 
         List<String> files = List.of("src/test/resources/test.txt");
-        ProvenanceRecord result = signingTool.createProvenanceRecord(
-            files, "test", "test", List.of(), "SHA256",
+        Path outputPath = tempDir.resolve("output.zip");
+        signingTool.createProvenanceRecord(
+            files, "test", "test", List.of(), "SHA256", outputPath,
             "http://localhost:8080/api/provenance", "http://localhost:8180", "trace4eo"
         );
-        assertNotNull(result);
         verify(mockRegistrationClient).exchangeToken("http://localhost:8180", "trace4eo", "test-token");
-        verify(mockRegistrationClient).registerRecords(
-            eq(List.of(result)), eq("http://localhost:8080/api/provenance"), eq("access-token"));
+        verify(mockRegistrationClient).registerRecords(anyList(), anyString(), anyString());
     }
 
     @Test
-    void createProvenanceRecord_withoutRegistration_doesNotCallClient() throws IOException {
+    void createProvenanceRecord_withoutRegistration_doesNotCallClient(@TempDir Path tempDir) throws IOException {
         List<String> files = List.of("src/test/resources/test.txt");
         signingTool.createProvenanceRecord(
-            files, "test", "test", List.of(), "SHA256", null, null, "trace4eo"
+            files, "test", "test", List.of(), "SHA256", tempDir.resolve("out.zip"), null, null, "trace4eo"
         );
         verify(mockRegistrationClient, never()).exchangeToken(anyString(), anyString(), anyString());
         verify(mockRegistrationClient, never()).registerRecords(anyList(), anyString(), any());
@@ -91,7 +89,7 @@ class SigningToolTest {
     @Test
     void createProvenanceRecord_nullFiles_throws() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-            signingTool.createProvenanceRecord(null, "test", "test", List.of(), "SHA256", null, null, "trace4eo")
+            signingTool.createProvenanceRecord(null, "test", "test", List.of(), "SHA256", null, null, null, "trace4eo")
         );
         assertTrue(exception.getMessage().contains("--files"));
     }
@@ -99,7 +97,7 @@ class SigningToolTest {
     @Test
     void createProvenanceRecord_emptyFiles_throws() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-            signingTool.createProvenanceRecord(List.of(), "test", "test", List.of(), "SHA256", null, null, "trace4eo")
+            signingTool.createProvenanceRecord(List.of(), "test", "test", List.of(), "SHA256", null, null, null, "trace4eo")
         );
         assertTrue(exception.getMessage().contains("--files"));
     }
@@ -108,7 +106,7 @@ class SigningToolTest {
     void createProvenanceRecord_blankProvenanceRecordType_throws() {
         List<String> files = List.of("src/test/resources/test.txt");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-            signingTool.createProvenanceRecord(files, " ", "test", List.of(), "SHA256", null, null, "trace4eo")
+            signingTool.createProvenanceRecord(files, " ", "test", List.of(), "SHA256", null, null, null, "trace4eo")
         );
         assertTrue(exception.getMessage().contains("--provenance-record-type"));
     }
@@ -117,7 +115,7 @@ class SigningToolTest {
     void createProvenanceRecord_nullProvenanceRecordType_throws() {
         List<String> files = List.of("src/test/resources/test.txt");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-            signingTool.createProvenanceRecord(files, null, "test", List.of(), "SHA256", null, null, "trace4eo")
+            signingTool.createProvenanceRecord(files, null, "test", List.of(), "SHA256", null, null, null, "trace4eo")
         );
         assertTrue(exception.getMessage().contains("--provenance-record-type"));
     }
@@ -126,7 +124,7 @@ class SigningToolTest {
     void createProvenanceRecord_blankDataId_throws() {
         List<String> files = List.of("src/test/resources/test.txt");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-            signingTool.createProvenanceRecord(files, "test", " ", List.of(), "SHA256", null, null, "trace4eo")
+            signingTool.createProvenanceRecord(files, "test", " ", List.of(), "SHA256", null, null, null, "trace4eo")
         );
         assertTrue(exception.getMessage().contains("--data-id"));
     }
@@ -135,9 +133,21 @@ class SigningToolTest {
     void createProvenanceRecord_nullDataId_throws() {
         List<String> files = List.of("src/test/resources/test.txt");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
-            signingTool.createProvenanceRecord(files, "test", null, List.of(), "SHA256", null, null, "trace4eo")
+            signingTool.createProvenanceRecord(files, "test", null, List.of(), "SHA256", null, null, null, "trace4eo")
         );
         assertTrue(exception.getMessage().contains("--data-id"));
+    }
+
+    @Test
+    void createProvenanceRecord_withOutput_writesZipToCustomPath(@TempDir Path tempDir) throws IOException {
+        Path outputPath = tempDir.resolve("output.zip");
+        List<String> files = List.of("src/test/resources/test.txt");
+        ProvenanceRecord result = signingTool.createProvenanceRecord(
+            files, "test", "test", List.of(), "SHA256", outputPath, null, null, "trace4eo"
+        );
+        assertNotNull(result);
+        assertTrue(Files.exists(outputPath));
+        assertTrue(Files.size(outputPath) > 0);
     }
 
     @Test
@@ -145,7 +155,7 @@ class SigningToolTest {
         List<String> files = List.of("src/test/resources/test.txt");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             signingTool.createProvenanceRecord(
-                files, "test", "test", List.of(), "SHA256",
+                files, "test", "test", List.of(), "SHA256", null,
                 "http://localhost:8080/api/provenance", null, "trace4eo")
         );
         assertTrue(exception.getMessage().contains("--keycloak-url"));

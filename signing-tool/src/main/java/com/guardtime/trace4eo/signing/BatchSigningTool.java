@@ -61,7 +61,7 @@ public class BatchSigningTool {
     }
 
     @Command(name = "batch-sign", description = "Sign multiple files, creating one provenance record per file")
-    public BatchSigningResult batchSign(
+    public String batchSign(
         @Option(longName = "files", description = "Files to sign") List<String> files,
         @Option(longName = "directory", description = "Directory containing files to sign") Path directory,
         @Option(longName = "pattern", description = "Glob pattern for files in directory", defaultValue = "*") String pattern,
@@ -74,7 +74,7 @@ public class BatchSigningTool {
         @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm
     ) throws IOException {
         List<Path> filePaths = files != null ? files.stream().map(Path::of).toList() : List.of();
-        validateInput(filePaths, provenanceRecordType, dataId, outputPath, directory, registerUrl, keycloakUrl);
+        validateInput(filePaths, provenanceRecordType, dataId, directory, registerUrl, keycloakUrl);
 
         String oidcToken = oidcTokenResolver.resolve();
         List<Path> resolvedFiles = resolveFiles(filePaths, directory, pattern);
@@ -86,18 +86,17 @@ public class BatchSigningTool {
         SigningOutcome outcome = signFiles(resolvedFiles, dataId, provenanceRecordType, algorithm, oidcToken);
 
         if (!outcome.records.isEmpty()) {
-            if (outputPath != null) {
-                writeContainer(outcome.records, outputPath);
-                log.info("Written {} records to {}", outcome.records.size(), outputPath);
-            }
+            Path resolvedOutput = resolveOutputPath(outputPath, dataId);
+            writeContainer(outcome.records, resolvedOutput);
             registerIfConfigured(outcome.records, registerUrl, keycloakUrl, realm, oidcToken);
+            return formatResult(resolvedFiles.size(), outcome, resolvedOutput);
         }
 
-        return buildResult(resolvedFiles.size(), outcome.results, outputPath);
+        return "No records were signed successfully";
     }
 
     private void validateInput(
-        List<Path> files, String provenanceRecordType, String dataId, Path outputPath,
+        List<Path> files, String provenanceRecordType, String dataId,
         Path directory, String registerUrl, String keycloakUrl
     ) {
         if ((files == null || files.isEmpty()) && directory == null) {
@@ -108,9 +107,6 @@ public class BatchSigningTool {
         }
         if (dataId == null || dataId.isBlank()) {
             throw new IllegalArgumentException("--data-id must not be null or blank");
-        }
-        if (outputPath == null && (registerUrl == null || registerUrl.isBlank())) {
-            throw new IllegalArgumentException("Either --output or --register-url is required");
         }
         if (directory != null) {
             if (!Files.exists(directory)) {
@@ -168,15 +164,28 @@ public class BatchSigningTool {
         }
     }
 
-    private BatchSigningResult buildResult(int totalFiles, List<FileSigningResult> results, Path outputPath) {
-        int successCount = (int) results.stream().filter(FileSigningResult::success).count();
-        return new BatchSigningResult(
-            totalFiles,
-            successCount,
-            totalFiles - successCount,
-            results,
-            outputPath
-        );
+    private Path resolveOutputPath(Path outputPath, String dataId) {
+        if (outputPath != null) {
+            return outputPath;
+        }
+        return Path.of(dataId.replaceAll("[^a-zA-Z0-9._-]", "_") + ".zip");
+    }
+
+    private String formatResult(int totalFiles, SigningOutcome outcome, Path outputPath) {
+        int successCount = (int) outcome.results.stream().filter(FileSigningResult::success).count();
+        int failureCount = totalFiles - successCount;
+        StringBuilder sb = new StringBuilder();
+        sb.append("Signed %d/%d files. Provenance records saved to %s".formatted(
+            successCount, totalFiles, outputPath.toAbsolutePath()));
+        if (failureCount > 0) {
+            sb.append("\nFailed files:");
+            for (FileSigningResult r : outcome.results) {
+                if (!r.success()) {
+                    sb.append("\n  ").append(r.filePath()).append(": ").append(r.errorMessage());
+                }
+            }
+        }
+        return sb.toString();
     }
 
     private List<Path> resolveFiles(List<Path> files, Path directory, String pattern) throws IOException {

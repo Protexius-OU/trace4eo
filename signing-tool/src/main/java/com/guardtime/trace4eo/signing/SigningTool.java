@@ -1,8 +1,10 @@
 package com.guardtime.trace4eo.signing;
 
+import com.guardtime.trace4eo.provenance.Container;
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
+import com.guardtime.trace4eo.provenance.io.zip.ZipContainerWriter;
 import com.guardtime.trace4eo.provenance.record.FilesInfo;
 import com.guardtime.trace4eo.provenance.record.FilesInfoBuilder;
 import com.guardtime.trace4eo.provenance.record.Manifest;
@@ -21,8 +23,13 @@ import org.springframework.shell.core.command.annotation.Option;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 @Component
 public class SigningTool {
@@ -61,6 +68,7 @@ public class SigningTool {
         @Option(longName = "data-id", description = "Provenance record data ID") String dataId,
         @Option(longName = "predecessors", description = "Provenance record predecessors") List<Predecessor> predecessors,
         @Option(longName = "hash-algorithm", description = "Hash algorithm", defaultValue = "SHA256") String hashAlgorithm,
+        @Option(longName = "output", description = "Output ZIP file path") Path outputPath,
         @Option(longName = "register-url", description = "URL to register provenance records") String registerUrl,
         @Option(longName = "keycloak-url", description = "Keycloak server URL (for registration auth)") String keycloakUrl,
         @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm
@@ -72,6 +80,9 @@ public class SigningTool {
         HashAlgorithm algorithm = HashAlgorithm.valueOf(hashAlgorithm);
 
         ProvenanceRecord record = buildSignedRecord(paths, dataId, provenanceRecordType, predecessors, algorithm, oidcToken);
+        Path resolvedOutput = resolveOutputPath(outputPath, record.id());
+        writeContainer(record, resolvedOutput);
+        log.info("Provenance record saved to {}", resolvedOutput.toAbsolutePath());
         registerIfConfigured(record, registerUrl, keycloakUrl, realm, oidcToken);
         return record;
     }
@@ -117,6 +128,21 @@ public class SigningTool {
         List<String> failures = registrationClient.registerRecords(List.of(record), registerUrl, accessToken);
         if (!failures.isEmpty()) {
             log.warn("Registration failed: {}", failures.getFirst());
+        }
+    }
+
+    private Path resolveOutputPath(Path outputPath, UUID recordId) {
+        if (outputPath != null) {
+            return outputPath;
+        }
+        return Path.of(recordId + ".zip");
+    }
+
+    private void writeContainer(ProvenanceRecord record, Path outputPath) throws IOException {
+        Container container = new Container(record.id(), new LinkedHashSet<>(Set.of(record)));
+        ZipContainerWriter writer = new ZipContainerWriter(provenanceJsonMapper);
+        try (OutputStream out = Files.newOutputStream(outputPath)) {
+            writer.writeTo(container, out);
         }
     }
 
