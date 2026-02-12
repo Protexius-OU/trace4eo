@@ -73,21 +73,23 @@ public class BatchSigningTool {
         @Option(longName = "keycloak-url", description = "Keycloak server URL (for registration auth)") String keycloakUrl,
         @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm
     ) throws IOException {
-        validateInput(provenanceRecordType, dataId, outputPath, directory, registerUrl, keycloakUrl);
+        List<Path> filePaths = files != null ? files.stream().map(Path::of).toList() : List.of();
+        validateInput(filePaths, provenanceRecordType, dataId, outputPath, directory, registerUrl, keycloakUrl);
 
         String oidcToken = oidcTokenResolver.resolve();
-        List<Path> filePaths = files != null ? files.stream().map(Path::of).toList() : List.of();
         List<Path> resolvedFiles = resolveFiles(filePaths, directory, pattern);
         if (resolvedFiles.isEmpty()) {
-            throw new IllegalArgumentException("No files to sign. Provide --files or --directory with --pattern");
+            throw new IllegalArgumentException("No files found matching the given --files or --directory/--pattern");
         }
 
         HashAlgorithm algorithm = HashAlgorithm.valueOf(hashAlgorithm);
         SigningOutcome outcome = signFiles(resolvedFiles, dataId, provenanceRecordType, algorithm, oidcToken);
 
         if (!outcome.records.isEmpty()) {
-            writeContainer(outcome.records, outputPath);
-            log.info("Written {} records to {}", outcome.records.size(), outputPath);
+            if (outputPath != null) {
+                writeContainer(outcome.records, outputPath);
+                log.info("Written {} records to {}", outcome.records.size(), outputPath);
+            }
             registerIfConfigured(outcome.records, registerUrl, keycloakUrl, realm, oidcToken);
         }
 
@@ -95,17 +97,20 @@ public class BatchSigningTool {
     }
 
     private void validateInput(
-        String provenanceRecordType, String dataId, Path outputPath, Path directory,
-        String registerUrl, String keycloakUrl
+        List<Path> files, String provenanceRecordType, String dataId, Path outputPath,
+        Path directory, String registerUrl, String keycloakUrl
     ) {
+        if ((files == null || files.isEmpty()) && directory == null) {
+            throw new IllegalArgumentException("Either --files or --directory is required");
+        }
         if (provenanceRecordType == null || provenanceRecordType.isBlank()) {
             throw new IllegalArgumentException("--provenance-record-type must not be null or blank");
         }
         if (dataId == null || dataId.isBlank()) {
             throw new IllegalArgumentException("--data-id must not be null or blank");
         }
-        if (outputPath == null) {
-            throw new IllegalArgumentException("--output must not be null");
+        if (outputPath == null && (registerUrl == null || registerUrl.isBlank())) {
+            throw new IllegalArgumentException("Either --output or --register-url is required");
         }
         if (directory != null) {
             if (!Files.exists(directory)) {

@@ -122,7 +122,7 @@ class BatchSigningToolTest {
             )
         );
 
-        assertTrue(exception.getMessage().contains("No files to sign"));
+        assertTrue(exception.getMessage().contains("--files or --directory"));
     }
 
     @Test
@@ -314,14 +314,14 @@ class BatchSigningToolTest {
     }
 
     @Test
-    void batchSign_nullOutput_throws() {
+    void batchSign_nullOutputAndNoRegisterUrl_throws() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
                 List.of("file.txt"), null, "*", "test", "test",
                 null, "SHA256", null, null, "trace4eo"
             )
         );
-        assertTrue(exception.getMessage().contains("--output"));
+        assertTrue(exception.getMessage().contains("--output or --register-url"));
     }
 
     @Test
