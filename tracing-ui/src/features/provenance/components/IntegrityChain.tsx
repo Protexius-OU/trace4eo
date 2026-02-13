@@ -1,0 +1,202 @@
+import type { ProvenanceRecord, VerificationResult, VerificationStep } from '../types/provenance'
+import './IntegrityChain.css'
+
+interface Props {
+  record: ProvenanceRecord
+  verificationResult: VerificationResult | null
+}
+
+type Status = 'idle' | 'pass' | 'fail' | 'skipped'
+
+function findStep(result: VerificationResult | null, name: string): VerificationStep | null {
+  return result?.steps?.find(s => s.name === name) ?? null
+}
+
+function stepStatus(step: VerificationStep | null): Status {
+  if (!step) return 'idle'
+  if (!step.status) return 'fail'
+  if (step.description.toLowerCase().includes('skipped')) return 'skipped'
+  return 'pass'
+}
+
+function truncateHash(base64: string | undefined): string {
+  if (!base64) return ''
+  return base64.length > 16 ? base64.substring(0, 16) + '\u2026' : base64
+}
+
+function StatusIcon({ status }: { status: Status }) {
+  switch (status) {
+    case 'pass': return <span className="ic-status ic-status-pass">✓</span>
+    case 'fail': return <span className="ic-status ic-status-fail">✗</span>
+    case 'skipped': return <span className="ic-status ic-status-skipped">&ndash;</span>
+    default: return null
+  }
+}
+
+function Connector({ label, status }: { label: string; status: Status }) {
+  const cls = status === 'pass' || status === 'skipped' ? 'pass' : status === 'fail' ? 'fail' : 'idle'
+  return (
+    <div className={`ic-connector ic-connector-${cls}`}>
+      <div className="ic-line" />
+      <span className="ic-label">{label}</span>
+      <div className="ic-line" />
+    </div>
+  )
+}
+
+export default function IntegrityChain({ record, verificationResult }: Props) {
+  const { manifest, filesInfo, metadata, signature } = record
+  const details = signature?.details
+
+  const verified = verificationResult !== null
+
+  const sigStep = findStep(verificationResult, 'SIGNATURE')
+  const metaStep = findStep(verificationResult, 'METADATA')
+  const filesInfoStep = findStep(verificationResult, 'FILES_INFO')
+  const fileContentsStep = findStep(verificationResult, 'FILE_CONTENTS')
+
+  const sigStatus = stepStatus(sigStep)
+  const metaHashStatus = stepStatus(metaStep)
+  const filesHashStatus = stepStatus(filesInfoStep)
+  const fileContentsStatus = stepStatus(fileContentsStep)
+
+  return (
+    <div className="integrity-chain">
+      <div className="ic-header">
+        <span className="ic-title">Integrity Chain</span>
+        {verified && (
+          <span className={`ic-badge ${verificationResult.status ? 'ic-badge-pass' : 'ic-badge-fail'}`}>
+            {verificationResult.status ? '✓ Verified' : '✗ Failed'}
+          </span>
+        )}
+      </div>
+
+      {/* === Signature layer === */}
+      <div className={`ic-node ic-node-${sigStatus}`}>
+        <div className="ic-node-head">
+          <StatusIcon status={sigStatus} />
+          <span className="ic-node-title">Sigstore Signature</span>
+        </div>
+        {details && (
+          <div className="ic-node-body">
+            <div>Signed by <strong>{details.signerIdentity}</strong></div>
+            <div>
+              <a
+                href={`https://search.sigstore.dev/?logIndex=${details.rekorLogIndex}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Transparency log #{details.rekorLogIndex}
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Connector: signs */}
+      <Connector label="signs" status={sigStatus} />
+
+      {/* === Manifest layer === */}
+      <div className="ic-node">
+        <div className="ic-node-head">
+          <span className="ic-node-title">Manifest</span>
+        </div>
+        <div className="ic-manifest-hashes">
+          <div className={`ic-hash ic-hash-${metaHashStatus}`}>
+            <div className="ic-hash-head">
+              <StatusIcon status={metaHashStatus} />
+              <span>Metadata hash</span>
+            </div>
+            {manifest && (
+              <code className="ic-hash-value">
+                {manifest.metadataHashInfo.hashAlgorithm}: {truncateHash(manifest.metadataHashInfo.hashValue)}
+              </code>
+            )}
+          </div>
+          <div className={`ic-hash ic-hash-${filesHashStatus}`}>
+            <div className="ic-hash-head">
+              <StatusIcon status={filesHashStatus} />
+              <span>File inventory hash</span>
+            </div>
+            {manifest && (
+              <code className="ic-hash-value">
+                {manifest.filesHashInfo.hashAlgorithm}: {truncateHash(manifest.filesHashInfo.hashValue)}
+              </code>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Split connectors: protects */}
+      <div className="ic-split">
+        <Connector label="protects" status={metaHashStatus} />
+        <Connector label="protects" status={filesHashStatus} />
+      </div>
+
+      {/* === Data layer === */}
+      <div className="ic-split">
+        {/* Metadata */}
+        <div className={`ic-node ic-node-${metaHashStatus}`}>
+          <div className="ic-node-head">
+            <StatusIcon status={metaHashStatus} />
+            <span className="ic-node-title">Metadata</span>
+          </div>
+          <div className="ic-node-body">
+            <div><strong>{metadata.dataId}</strong></div>
+            <div>{metadata.dataType}</div>
+            {metadata.predecessors.length > 0 && (
+              <div>{metadata.predecessors.length} predecessor(s)</div>
+            )}
+          </div>
+        </div>
+
+        {/* Files */}
+        <div className={`ic-node ic-node-${fileContentsStatus === 'skipped' ? 'idle' : fileContentsStatus}`}>
+          <div className="ic-node-head">
+            <StatusIcon status={fileContentsStatus === 'skipped' ? 'idle' : fileContentsStatus} />
+            <span className="ic-node-title">Files</span>
+            {filesInfo && (
+              <span className="ic-file-count">{filesInfo.files.length}</span>
+            )}
+          </div>
+          <div className="ic-node-body">
+            {filesInfo?.files.map((file, i) => (
+              <div key={i} className="ic-file">
+                {fileContentsStatus === 'pass' && (
+                  <span className="ic-status ic-status-pass">✓</span>
+                )}
+                {fileContentsStatus === 'fail' && (
+                  <span className="ic-status ic-status-fail">✗</span>
+                )}
+                <span className="ic-file-path">{file.path}</span>
+              </div>
+            ))}
+            {fileContentsStatus === 'skipped' && (
+              <div className="ic-note">
+                Content not stored — inventory verified by hash above
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="ic-summary">
+        {!verified && (
+          <span>Click <strong>Verify</strong> to check that nothing has been tampered with.</span>
+        )}
+        {verified && verificationResult.status && (
+          <span>
+            Changing any file, metadata field, or file listing would break
+            the hash chain, invalidating the signature.
+          </span>
+        )}
+        {verified && !verificationResult.status && (
+          <span className="ic-summary-fail">
+            <strong>Integrity check failed.</strong> {verificationResult.errorMessage}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}

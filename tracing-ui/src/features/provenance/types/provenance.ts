@@ -14,11 +14,28 @@ export interface ProvenanceSignature {
   details: SignatureDetails | null
 }
 
+export interface FileHashInfo {
+  path: string | null
+  hashAlgorithm: string
+  hashValue: string
+}
+
+export interface Manifest {
+  version: string
+  metadataHashInfo: FileHashInfo
+  filesHashInfo: FileHashInfo
+}
+
+export interface FilesInfoData {
+  files: FileHashInfo[]
+}
+
 export interface ProvenanceRecord {
   id: string
   metadata: Metadata
   signature?: ProvenanceSignature
-  // filesInfo, manifest omitted for list view
+  manifest?: Manifest
+  filesInfo?: FilesInfoData
 }
 
 export interface GraphNode {

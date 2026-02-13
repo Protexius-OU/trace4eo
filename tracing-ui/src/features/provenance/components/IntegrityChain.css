@@ -1,0 +1,246 @@
+.integrity-chain {
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* Header */
+.ic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.ic-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #1a1a2e;
+}
+
+.ic-badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.ic-badge-pass {
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.ic-badge-fail {
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+/* Nodes (boxes in the chain) */
+.ic-node {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem;
+  background: #f9fafb;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.ic-node-pass {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.ic-node-fail {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.ic-node-head {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.ic-node-title {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: #1a1a2e;
+}
+
+.ic-node-body {
+  font-size: 0.75rem;
+  color: #555;
+  margin-top: 0.375rem;
+  display: grid;
+  gap: 0.125rem;
+}
+
+.ic-node-body strong {
+  color: #333;
+}
+
+.ic-node-body a {
+  color: #4338ca;
+  text-decoration: none;
+}
+
+.ic-node-body a:hover {
+  text-decoration: underline;
+}
+
+/* Status icons */
+.ic-status {
+  font-weight: 700;
+  font-size: 0.75rem;
+  width: 1rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.ic-status-pass {
+  color: #15803d;
+}
+
+.ic-status-fail {
+  color: #b91c1c;
+}
+
+.ic-status-skipped {
+  color: #6b7280;
+}
+
+/* Connectors (vertical lines between layers) */
+.ic-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.125rem 0;
+}
+
+.ic-line {
+  width: 1px;
+  height: 0.5rem;
+  background: #d1d5db;
+  transition: background 0.2s;
+}
+
+.ic-label {
+  font-size: 0.625rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  padding: 0.0625rem 0;
+  transition: color 0.2s;
+}
+
+.ic-connector-pass .ic-line {
+  background: #86efac;
+}
+
+.ic-connector-pass .ic-label {
+  color: #15803d;
+}
+
+.ic-connector-fail .ic-line {
+  background: #fca5a5;
+}
+
+.ic-connector-fail .ic-label {
+  color: #b91c1c;
+}
+
+/* Manifest box */
+.ic-manifest-hashes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.ic-hash {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.5rem;
+  background: white;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.ic-hash-pass {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.ic-hash-fail {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.ic-hash-head {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.ic-hash-value {
+  display: block;
+  font-size: 0.6875rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+  word-break: break-all;
+}
+
+/* Two-column split (for connectors and data row) */
+.ic-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+/* Files */
+.ic-file {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.ic-file-path {
+  font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, monospace;
+  font-size: 0.6875rem;
+}
+
+.ic-file-count {
+  font-size: 0.6875rem;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 0 0.375rem;
+  border-radius: 9999px;
+  margin-left: auto;
+}
+
+.ic-note {
+  font-size: 0.6875rem;
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 0.25rem;
+}
+
+/* Summary */
+.ic-summary {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+.ic-summary-fail {
+  color: #b91c1c;
+}
