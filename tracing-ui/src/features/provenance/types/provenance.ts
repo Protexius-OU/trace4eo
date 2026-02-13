@@ -94,6 +94,5 @@ export interface SignatureDetails {
   signingTime: string
   rekorLogIndex: string
   signerIdentity: string
-  oidcIssuer: string
   certificateIssuer: string
 }

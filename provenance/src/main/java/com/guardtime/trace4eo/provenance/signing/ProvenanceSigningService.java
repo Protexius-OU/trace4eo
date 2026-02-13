@@ -13,21 +13,17 @@ import org.slf4j.LoggerFactory;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class ProvenanceSigningService {
 
     private static final Logger log = LoggerFactory.getLogger(ProvenanceSigningService.class);
 
-    private final Map<String, KeylessSigner> signerCache = new ConcurrentHashMap<>();
     private volatile KeylessSigner browserSigner;
 
     /** Uses Sigstore public good instance. */
@@ -50,7 +46,7 @@ public class ProvenanceSigningService {
         try (DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)) {
             digestInputStream.transferTo(OutputStream.nullOutputStream());
             KeylessSigner signer = oidcToken != null
-                ? signerCache.computeIfAbsent(oidcToken, this::buildSigner)
+                ? buildSigner(oidcToken)
                 : getBrowserSigner();
             Bundle bundle = signer.sign(md.digest());
             Bundle.MessageSignature messageSignature = bundle.getMessageSignature().orElse(null);
@@ -106,7 +102,6 @@ public class ProvenanceSigningService {
     private SignatureDetails extractSignatureDetails(Bundle bundle, RekorEntry rekorEntry, Instant timestamp) {
         String rekorLogIndex = String.valueOf(rekorEntry.getLogIndex());
         String signerIdentity = "Unknown";
-        String oidcIssuer = "Unknown";
         String certificateIssuer = "Unknown";
 
         try {
@@ -132,18 +127,11 @@ public class ProvenanceSigningService {
                         }
                     }
                 }
-
-                // Extract OIDC issuer from certificate extension (OID 1.3.6.1.4.1.57264.1.1)
-                byte[] oidcIssuerExt = signingCert.getExtensionValue("1.3.6.1.4.1.57264.1.1");
-                if (oidcIssuerExt != null && oidcIssuerExt.length > 4) {
-                    // Skip ASN.1 wrapper bytes
-                    oidcIssuer = new String(oidcIssuerExt, 4, oidcIssuerExt.length - 4, StandardCharsets.UTF_8);
-                }
             }
         } catch (Exception e) {
             log.warn("Failed to extract certificate details", e);
         }
 
-        return new SignatureDetails(timestamp, rekorLogIndex, signerIdentity, oidcIssuer, certificateIssuer);
+        return new SignatureDetails(timestamp, rekorLogIndex, signerIdentity, certificateIssuer);
     }
 }
