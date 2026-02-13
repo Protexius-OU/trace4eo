@@ -80,7 +80,8 @@ public class SigningTool {
         HashAlgorithm algorithm = HashAlgorithm.valueOf(hashAlgorithm);
         List<Predecessor> parsedPredecessors = toPredecessors(predecessors);
 
-        ProvenanceRecord record = buildSignedRecord(paths, dataId, provenanceRecordType, parsedPredecessors, algorithm, oidcToken);
+        ProvenanceRecord record = buildSignedRecord(
+                paths, dataId, provenanceRecordType, parsedPredecessors, algorithm, oidcToken);
         Path resolvedOutput = resolveOutputPath(outputPath, record.id());
         writeContainer(record, resolvedOutput);
         log.info("Provenance record saved to {}", resolvedOutput.toAbsolutePath());
