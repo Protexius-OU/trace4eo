@@ -3,6 +3,7 @@ package com.guardtime.trace4eo.signing;
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
+import com.guardtime.trace4eo.provenance.record.Predecessor;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,7 +14,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -148,6 +151,45 @@ class SigningToolTest {
         assertNotNull(result);
         assertTrue(Files.exists(outputPath));
         assertTrue(Files.size(outputPath) > 0);
+    }
+
+    @Test
+    void createProvenanceRecord_withPredecessors(@TempDir Path tempDir) throws IOException {
+        UUID predecessorId1 = UUID.randomUUID();
+        UUID predecessorId2 = UUID.randomUUID();
+        List<String> files = List.of("src/test/resources/test.txt");
+        Path outputPath = tempDir.resolve("output.zip");
+        ProvenanceRecord result = signingTool.createProvenanceRecord(
+            files, "test", "test",
+            List.of(predecessorId1.toString(), predecessorId2.toString()),
+            "SHA256", outputPath, null, null, "trace4eo"
+        );
+        assertNotNull(result);
+        List<Predecessor> predecessors = result.metadata().predecessors();
+        assertEquals(2, predecessors.size());
+        assertEquals(predecessorId1, predecessors.get(0).id());
+        assertEquals(predecessorId2, predecessors.get(1).id());
+    }
+
+    @Test
+    void createProvenanceRecord_nullPredecessors_createsEmptyList(@TempDir Path tempDir) throws IOException {
+        List<String> files = List.of("src/test/resources/test.txt");
+        Path outputPath = tempDir.resolve("output.zip");
+        ProvenanceRecord result = signingTool.createProvenanceRecord(
+            files, "test", "test", null, "SHA256", outputPath, null, null, "trace4eo"
+        );
+        assertNotNull(result);
+        assertTrue(result.metadata().predecessors().isEmpty());
+    }
+
+    @Test
+    void createProvenanceRecord_invalidPredecessorId_throws() {
+        List<String> files = List.of("src/test/resources/test.txt");
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            signingTool.createProvenanceRecord(
+                files, "test", "test", List.of("not-a-uuid"), "SHA256", null, null, null, "trace4eo")
+        );
+        assertTrue(exception.getMessage().contains("Invalid predecessor ID"));
     }
 
     @Test

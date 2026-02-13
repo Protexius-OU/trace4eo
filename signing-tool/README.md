@@ -41,7 +41,7 @@ Create a provenance record containing multiple files with metadata. The record i
 | `--files`                  | Files to include in the record                              | Required            |
 | `--provenance-record-type` | Type of provenance record                                   | Required            |
 | `--data-id`                | Identifier for the data                                     | Required            |
-| `--predecessors`           | IDs of predecessor records                                  | None                |
+| `--predecessors`           | UUIDs of predecessor records                                | None                |
 | `--hash-algorithm`         | Hash algorithm to use                                       | SHA256              |
 | `--output`                 | Output ZIP file path                                        | `<record-uuid>.zip` |
 | `--register-url`           | Tracing backend URL to register provenance records          | None                |

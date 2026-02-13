@@ -66,7 +66,7 @@ public class SigningTool {
         @Option(longName = "files", description = "Files to be included in provenance record") List<String> files,
         @Option(longName = "provenance-record-type", description = "Provenance record type") String provenanceRecordType,
         @Option(longName = "data-id", description = "Provenance record data ID") String dataId,
-        @Option(longName = "predecessors", description = "Provenance record predecessors") List<Predecessor> predecessors,
+        @Option(longName = "predecessors", description = "Provenance record predecessor IDs (UUIDs)") List<String> predecessors,
         @Option(longName = "hash-algorithm", description = "Hash algorithm", defaultValue = "SHA256") String hashAlgorithm,
         @Option(longName = "output", description = "Output ZIP file path") Path outputPath,
         @Option(longName = "register-url", description = "URL to register provenance records") String registerUrl,
@@ -78,8 +78,10 @@ public class SigningTool {
 
         String oidcToken = oidcTokenResolver.resolve();
         HashAlgorithm algorithm = HashAlgorithm.valueOf(hashAlgorithm);
+        List<Predecessor> parsedPredecessors = toPredecessors(predecessors);
 
-        ProvenanceRecord record = buildSignedRecord(paths, dataId, provenanceRecordType, predecessors, algorithm, oidcToken);
+        ProvenanceRecord record = buildSignedRecord(
+                paths, dataId, provenanceRecordType, parsedPredecessors, algorithm, oidcToken);
         Path resolvedOutput = resolveOutputPath(outputPath, record.id());
         writeContainer(record, resolvedOutput);
         log.info("Provenance record saved to {}", resolvedOutput.toAbsolutePath());
@@ -90,6 +92,19 @@ public class SigningTool {
     private List<Path> toPaths(List<String> files) {
         if (files == null) return List.of();
         return files.stream().map(Path::of).toList();
+    }
+
+    private List<Predecessor> toPredecessors(List<String> predecessors) {
+        if (predecessors == null) return List.of();
+        return predecessors.stream()
+            .map(id -> {
+                try {
+                    return new Predecessor(UUID.fromString(id.trim()));
+                } catch (IllegalArgumentException e) {
+                    throw new IllegalArgumentException("Invalid predecessor ID: " + id.trim());
+                }
+            })
+            .toList();
     }
 
     private void validateInput(
