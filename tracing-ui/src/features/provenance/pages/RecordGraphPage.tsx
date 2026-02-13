@@ -73,7 +73,6 @@ export default function RecordGraphPage() {
           <div className="signature-info-title">Signature Information</div>
           <div className="signature-info-details">
             <div><strong>Signed by:</strong> {signatureDetails.signerIdentity}</div>
-            <div><strong>Authenticated via:</strong> {signatureDetails.oidcIssuer}</div>
             <div><strong>Signed at:</strong> {new Date(signatureDetails.signingTime).toLocaleString()}</div>
             <div><strong>Certificate issuer:</strong> {signatureDetails.certificateIssuer}</div>
             <div>
