@@ -1,4 +1,4 @@
-import type { ProvenanceRecord, VerificationResult, VerificationStep } from '../types/provenance'
+import type { ProvenanceRecord, VerificationResult, VerificationStepName } from '../types/provenance'
 import './IntegrityChain.css'
 
 interface Props {
@@ -8,11 +8,8 @@ interface Props {
 
 type Status = 'idle' | 'pass' | 'fail' | 'skipped'
 
-function findStep(result: VerificationResult | null, name: string): VerificationStep | null {
-  return result?.steps?.find(s => s.name === name) ?? null
-}
-
-function stepStatus(step: VerificationStep | null): Status {
+function findStepStatus(result: VerificationResult | null, name: VerificationStepName): Status {
+  const step = result?.steps?.find(s => s.name === name)
   if (!step) return 'idle'
   if (!step.status) return 'fail'
   if (step.description.toLowerCase().includes('skipped')) return 'skipped'
@@ -22,6 +19,12 @@ function stepStatus(step: VerificationStep | null): Status {
 function truncateHash(base64: string | undefined): string {
   if (!base64) return ''
   return base64.length > 16 ? base64.substring(0, 16) + '\u2026' : base64
+}
+
+function connectorClass(status: Status): string {
+  if (status === 'pass' || status === 'skipped') return 'pass'
+  if (status === 'fail') return 'fail'
+  return 'idle'
 }
 
 function StatusIcon({ status }: { status: Status }) {
@@ -34,9 +37,8 @@ function StatusIcon({ status }: { status: Status }) {
 }
 
 function Connector({ label, status }: { label: string; status: Status }) {
-  const cls = status === 'pass' || status === 'skipped' ? 'pass' : status === 'fail' ? 'fail' : 'idle'
   return (
-    <div className={`ic-connector ic-connector-${cls}`}>
+    <div className={`ic-connector ic-connector-${connectorClass(status)}`}>
       <div className="ic-line" />
       <span className="ic-label">{label}</span>
       <div className="ic-line" />
@@ -50,15 +52,11 @@ export default function IntegrityChain({ record, verificationResult }: Props) {
 
   const verified = verificationResult !== null
 
-  const sigStep = findStep(verificationResult, 'SIGNATURE')
-  const metaStep = findStep(verificationResult, 'METADATA')
-  const filesInfoStep = findStep(verificationResult, 'FILES_INFO')
-  const fileContentsStep = findStep(verificationResult, 'FILE_CONTENTS')
-
-  const sigStatus = stepStatus(sigStep)
-  const metaHashStatus = stepStatus(metaStep)
-  const filesHashStatus = stepStatus(filesInfoStep)
-  const fileContentsStatus = stepStatus(fileContentsStep)
+  const sigStatus = findStepStatus(verificationResult, 'SIGNATURE')
+  const metaHashStatus = findStepStatus(verificationResult, 'METADATA')
+  const filesHashStatus = findStepStatus(verificationResult, 'FILES_INFO')
+  const fileContentsStatus = findStepStatus(verificationResult, 'FILE_CONTENTS')
+  const filesNodeStatus: Status = fileContentsStatus === 'skipped' ? 'idle' : fileContentsStatus
 
   return (
     <div className="integrity-chain">
@@ -151,23 +149,18 @@ export default function IntegrityChain({ record, verificationResult }: Props) {
         </div>
 
         {/* Files */}
-        <div className={`ic-node ic-node-${fileContentsStatus === 'skipped' ? 'idle' : fileContentsStatus}`}>
+        <div className={`ic-node ic-node-${filesNodeStatus}`}>
           <div className="ic-node-head">
-            <StatusIcon status={fileContentsStatus === 'skipped' ? 'idle' : fileContentsStatus} />
+            <StatusIcon status={filesNodeStatus} />
             <span className="ic-node-title">Files</span>
             {filesInfo && (
               <span className="ic-file-count">{filesInfo.files.length}</span>
             )}
           </div>
           <div className="ic-node-body">
-            {filesInfo?.files.map((file, i) => (
-              <div key={i} className="ic-file">
-                {fileContentsStatus === 'pass' && (
-                  <span className="ic-status ic-status-pass">✓</span>
-                )}
-                {fileContentsStatus === 'fail' && (
-                  <span className="ic-status ic-status-fail">✗</span>
-                )}
+            {filesInfo?.files.map(file => (
+              <div key={file.path} className="ic-file">
+                <StatusIcon status={filesNodeStatus} />
                 <span className="ic-file-path">{file.path}</span>
               </div>
             ))}

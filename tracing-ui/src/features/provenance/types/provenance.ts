@@ -93,8 +93,10 @@ export interface RecordFilters {
   toDate?: string
 }
 
+export type VerificationStepName = 'SIGNATURE' | 'METADATA' | 'FILES_INFO' | 'FILE_CONTENTS'
+
 export interface VerificationStep {
-  name: string
+  name: VerificationStepName
   description: string
   status: boolean
   errorMessage: string | null
