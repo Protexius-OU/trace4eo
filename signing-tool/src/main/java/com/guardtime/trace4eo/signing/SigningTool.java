@@ -68,7 +68,7 @@ public class SigningTool {
         @Option(longName = "data-id", description = "Provenance record data ID") String dataId,
         @Option(longName = "predecessors", description = "Provenance record predecessor IDs (UUIDs)") List<String> predecessors,
         @Option(longName = "hash-algorithm", description = "Hash algorithm", defaultValue = "SHA256") String hashAlgorithm,
-        @Option(longName = "output", description = "Output ZIP file path") Path outputPath,
+        @Option(longName = "output", description = "Output directory for ZIP file") Path outputDir,
         @Option(longName = "register-url", description = "URL to register provenance records") String registerUrl,
         @Option(longName = "keycloak-url", description = "Keycloak server URL (for registration auth)") String keycloakUrl,
         @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm
@@ -82,7 +82,8 @@ public class SigningTool {
 
         ProvenanceRecord record = buildSignedRecord(
                 paths, dataId, provenanceRecordType, parsedPredecessors, algorithm, oidcToken);
-        Path resolvedOutput = resolveOutputPath(outputPath, record.id());
+        ensureDirectoryExists(outputDir);
+        Path resolvedOutput = resolveOutputPath(outputDir, record.id());
         writeContainer(record, resolvedOutput);
         log.info("Provenance record saved to {}", resolvedOutput.toAbsolutePath());
         registerIfConfigured(record, registerUrl, keycloakUrl, realm, oidcToken);
@@ -146,11 +147,19 @@ public class SigningTool {
         }
     }
 
-    private Path resolveOutputPath(Path outputPath, UUID recordId) {
-        if (outputPath != null) {
-            return outputPath;
+    private void ensureDirectoryExists(Path outputDir) throws IOException {
+        if (outputDir != null && !Files.exists(outputDir)) {
+            Files.createDirectories(outputDir);
+            log.info("Created output directory: {}", outputDir.toAbsolutePath());
         }
-        return Path.of(recordId + ".zip");
+    }
+
+    private Path resolveOutputPath(Path outputDir, UUID recordId) {
+        String filename = recordId + ".zip";
+        if (outputDir != null) {
+            return outputDir.resolve(filename);
+        }
+        return Path.of(filename);
     }
 
     private void writeContainer(ProvenanceRecord record, Path outputPath) throws IOException {
