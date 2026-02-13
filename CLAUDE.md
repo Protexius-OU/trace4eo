@@ -43,3 +43,4 @@ Docker Compose runs all services: PostgreSQL (trace4eo/trace4eo), Keycloak (port
 - After making changes to **docker-compose.yml**, Dockerfiles, or build configs, run `docker compose config -q` before considering the work done
 - Always validate user input and write unit tests respectively
 - Public/command methods must read as a short sequence of named steps — extract validation, building, and I/O into private methods.
+- After changes that affect CLI usage, options, or behavior, update the relevant `README.md` to keep documentation in sync

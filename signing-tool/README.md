@@ -43,7 +43,7 @@ Create a provenance record containing multiple files with metadata. The record i
 | `--data-id`                | Identifier for the data                                     | Required            |
 | `--predecessors`           | UUIDs of predecessor records                                | None                |
 | `--hash-algorithm`         | Hash algorithm to use                                       | SHA256              |
-| `--output`                 | Output ZIP file path                                        | `<record-uuid>.zip` |
+| `--output`                 | Output directory for ZIP file                               | Current directory    |
 | `--register-url`           | Tracing backend URL to register provenance records          | None                |
 | `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set) | None                |
 | `--realm`                  | Keycloak realm                                              | trace4eo            |
@@ -81,7 +81,7 @@ Sign multiple files, creating one provenance record per file and packaging them 
 | `--pattern`                | Glob pattern for files in directory                                       | `*`             |
 | `--provenance-record-type` | Type of provenance record                                                 | Required        |
 | `--data-id`                | Base data ID (files get `<data-id>/<filename>`)                           | Required        |
-| `--output`                 | Output ZIP file path                                                      | `<data-id>.zip` |
+| `--output`                 | Output directory for ZIP file                                             | Current directory |
 | `--hash-algorithm`         | Hash algorithm to use                                                     | SHA256          |
 | `--register-url`           | Tracing backend URL to register provenance records                        | None            |
 | `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set)               | None            |
@@ -96,7 +96,7 @@ Sign specific files:
   --files image1.tif,image2.tif,image3.tif \
   --provenance-record-type satellite-imagery \
   --data-id batch-2024-01 \
-  --output provenance.zip"
+  --output /data/output"
 ```
 
 Sign all TIF files in a directory:
@@ -107,7 +107,7 @@ Sign all TIF files in a directory:
   --pattern '*.tif' \
   --provenance-record-type satellite-imagery \
   --data-id batch-2024-01 \
-  --output provenance.zip"
+  --output /data/output"
 ```
 
 Sign and register with a tracing system:
@@ -118,15 +118,16 @@ Sign and register with a tracing system:
   --pattern '*.tif' \
   --provenance-record-type satellite-imagery \
   --data-id batch-2024-01 \
-  --output provenance.zip \
+  --output /data/output \
   --register-url http://localhost:8080/api/provenance \
   --keycloak-url http://localhost:8180"
 ```
 
 ## Notes
 
-- Provenance records are always saved as ZIP containers. If `--output` is not specified, the file is written to the
-  current directory.
+- Provenance records are always saved as ZIP containers. The output filename is auto-generated (`<record-uuid>.zip` for
+  `create-provenance-record`, `<data-id>.zip` for `batch-sign`). Use `--output` to specify a directory; if omitted, the
+  file is written to the current directory. If the specified directory doesn't exist, it will be created automatically.
 - Each file in a batch gets its own provenance record with data ID `<base-id>/<filename>`
 - The `--register-url` option POSTs each provenance record as JSON to the specified URL
 - When `--register-url` is used, `--keycloak-url` is required. The tool exchanges the Sigstore OIDC token for a Keycloak

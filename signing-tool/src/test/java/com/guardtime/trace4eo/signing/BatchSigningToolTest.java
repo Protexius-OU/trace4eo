@@ -62,7 +62,7 @@ class BatchSigningToolTest {
         Path file2 = tempDir.resolve("file2.txt");
         Files.writeString(file1, "content1");
         Files.writeString(file2, "content2");
-        Path outputPath = tempDir.resolve("output.zip");
+        Path outputDir = tempDir.resolve("out");
 
         String result = batchSigningTool.batchSign(
             List.of(file1.toString(), file2.toString()),
@@ -70,15 +70,16 @@ class BatchSigningToolTest {
             "*",
             "test-type",
             "batch-2024",
-            outputPath,
+            outputDir,
             "SHA256",
             null,
             null, "trace4eo"
         );
 
         assertTrue(result.contains("Signed 2/2 files"));
-        assertTrue(Files.exists(outputPath));
-        assertTrue(Files.size(outputPath) > 0);
+        Path expectedFile = outputDir.resolve("batch-2024.zip");
+        assertTrue(Files.exists(expectedFile));
+        assertTrue(Files.size(expectedFile) > 0);
     }
 
     @Test
@@ -88,7 +89,7 @@ class BatchSigningToolTest {
         Files.writeString(inputDir.resolve("img1.jpg"), "image1");
         Files.writeString(inputDir.resolve("img2.jpg"), "image2");
         Files.writeString(inputDir.resolve("other.txt"), "other");
-        Path outputPath = tempDir.resolve("output.zip");
+        Path outputDir = tempDir.resolve("out");
 
         String result = batchSigningTool.batchSign(
             null,
@@ -96,14 +97,14 @@ class BatchSigningToolTest {
             "*.jpg",
             "satellite-image",
             "acquisition-2024",
-            outputPath,
+            outputDir,
             "SHA256",
             null,
             null, "trace4eo"
         );
 
         assertTrue(result.contains("Signed 2/2 files"));
-        assertTrue(Files.exists(outputPath));
+        assertTrue(Files.exists(outputDir.resolve("acquisition-2024.zip")));
     }
 
     @Test
@@ -131,6 +132,29 @@ class BatchSigningToolTest {
     }
 
     @Test
+    void batchSign_withOutputDir_createsDirectoryIfMissing(@TempDir Path tempDir) throws IOException {
+        Path file1 = tempDir.resolve("file1.txt");
+        Files.writeString(file1, "content1");
+        Path nestedDir = tempDir.resolve("nested/output");
+
+        String result = batchSigningTool.batchSign(
+            List.of(file1.toString()),
+            null,
+            "*",
+            "test-type",
+            "batch-2024",
+            nestedDir,
+            "SHA256",
+            null,
+            null, "trace4eo"
+        );
+
+        assertTrue(result.contains("Signed 1/1 files"));
+        assertTrue(Files.isDirectory(nestedDir));
+        assertTrue(Files.exists(nestedDir.resolve("batch-2024.zip")));
+    }
+
+    @Test
     void batchSign_emptyFilesList_throws() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
@@ -147,7 +171,6 @@ class BatchSigningToolTest {
         Path validFile = tempDir.resolve("valid.txt");
         Files.writeString(validFile, "valid content");
         Path nonExistentFile = tempDir.resolve("nonexistent.txt");
-        Path outputPath = tempDir.resolve("output.zip");
 
         String result = batchSigningTool.batchSign(
             List.of(validFile.toString(), nonExistentFile.toString()),
@@ -155,7 +178,7 @@ class BatchSigningToolTest {
             "*",
             "test",
             "test",
-            outputPath,
+            tempDir,
             "SHA256",
             null,
             null, "trace4eo"
@@ -163,7 +186,7 @@ class BatchSigningToolTest {
 
         assertTrue(result.contains("Signed 1/2 files"));
         assertTrue(result.contains("Failed files:"));
-        assertTrue(Files.exists(outputPath));
+        assertTrue(Files.exists(tempDir.resolve("test.zip")));
     }
 
     @SuppressWarnings("unchecked")
@@ -173,7 +196,6 @@ class BatchSigningToolTest {
         Path file2 = tempDir.resolve("file2.txt");
         Files.writeString(file1, "content1");
         Files.writeString(file2, "content2");
-        Path outputPath = tempDir.resolve("output.zip");
 
         HttpResponse<String> tokenResponse = mock(HttpResponse.class);
         when(tokenResponse.statusCode()).thenReturn(200);
@@ -191,7 +213,7 @@ class BatchSigningToolTest {
             "*",
             "test-type",
             "batch-2024",
-            outputPath,
+            tempDir,
             "SHA256",
             "http://localhost:8080/api/records",
             "http://localhost:8180", "trace4eo"
@@ -208,7 +230,6 @@ class BatchSigningToolTest {
     void batchSign_withRegisterUrl_handlesFailure(@TempDir Path tempDir) throws IOException, InterruptedException {
         Path file1 = tempDir.resolve("file1.txt");
         Files.writeString(file1, "content1");
-        Path outputPath = tempDir.resolve("output.zip");
 
         HttpResponse<String> tokenResponse = mock(HttpResponse.class);
         when(tokenResponse.statusCode()).thenReturn(200);
@@ -225,7 +246,7 @@ class BatchSigningToolTest {
             "*",
             "test-type",
             "batch-2024",
-            outputPath,
+            tempDir,
             "SHA256",
             "http://localhost:8080/api/records",
             "http://localhost:8180", "trace4eo"
@@ -242,7 +263,6 @@ class BatchSigningToolTest {
     void batchSign_withRegisterUrl_handlesException(@TempDir Path tempDir) throws IOException, InterruptedException {
         Path file1 = tempDir.resolve("file1.txt");
         Files.writeString(file1, "content1");
-        Path outputPath = tempDir.resolve("output.zip");
 
         HttpResponse<String> tokenResponse = mock(HttpResponse.class);
         when(tokenResponse.statusCode()).thenReturn(200);
@@ -258,14 +278,14 @@ class BatchSigningToolTest {
             "*",
             "test-type",
             "batch-2024",
-            outputPath,
+            tempDir,
             "SHA256",
             "http://localhost:8080/api/records",
             "http://localhost:8180", "trace4eo"
         );
 
         assertTrue(result.contains("Signed 1/1"));
-        assertTrue(Files.exists(outputPath));
+        assertTrue(Files.exists(tempDir.resolve("batch-2024.zip")));
     }
 
     @Test
@@ -358,7 +378,6 @@ class BatchSigningToolTest {
         throws IOException, InterruptedException {
         Path file1 = tempDir.resolve("file1.txt");
         Files.writeString(file1, "content1");
-        Path outputPath = tempDir.resolve("output.zip");
 
         HttpResponse<String> tokenResponse = mock(HttpResponse.class);
         when(tokenResponse.statusCode()).thenReturn(200);
@@ -377,7 +396,7 @@ class BatchSigningToolTest {
             "*",
             "test-type",
             "batch-2024",
-            outputPath,
+            tempDir,
             "SHA256",
             "http://localhost:8080/api/records",
             "http://localhost:8180", "trace4eo"

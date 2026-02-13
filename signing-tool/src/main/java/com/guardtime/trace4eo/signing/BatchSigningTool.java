@@ -67,7 +67,7 @@ public class BatchSigningTool {
         @Option(longName = "pattern", description = "Glob pattern for files in directory", defaultValue = "*") String pattern,
         @Option(longName = "provenance-record-type", description = "Provenance record type") String provenanceRecordType,
         @Option(longName = "data-id", description = "Base data ID (each file gets dataId/filename)") String dataId,
-        @Option(longName = "output", description = "Output ZIP file path") Path outputPath,
+        @Option(longName = "output", description = "Output directory for ZIP file") Path outputDir,
         @Option(longName = "hash-algorithm", description = "Hash algorithm", defaultValue = "SHA256") String hashAlgorithm,
         @Option(longName = "register-url", description = "URL to register provenance records") String registerUrl,
         @Option(longName = "keycloak-url", description = "Keycloak server URL (for registration auth)") String keycloakUrl,
@@ -86,7 +86,8 @@ public class BatchSigningTool {
         SigningOutcome outcome = signFiles(resolvedFiles, dataId, provenanceRecordType, algorithm, oidcToken);
 
         if (!outcome.records.isEmpty()) {
-            Path resolvedOutput = resolveOutputPath(outputPath, dataId);
+            ensureDirectoryExists(outputDir);
+            Path resolvedOutput = resolveOutputPath(outputDir, dataId);
             writeContainer(outcome.records, resolvedOutput);
             registerIfConfigured(outcome.records, registerUrl, keycloakUrl, realm, oidcToken);
             return formatResult(resolvedFiles.size(), outcome, resolvedOutput);
@@ -164,11 +165,19 @@ public class BatchSigningTool {
         }
     }
 
-    private Path resolveOutputPath(Path outputPath, String dataId) {
-        if (outputPath != null) {
-            return outputPath;
+    private void ensureDirectoryExists(Path outputDir) throws IOException {
+        if (outputDir != null && !Files.exists(outputDir)) {
+            Files.createDirectories(outputDir);
+            log.info("Created output directory: {}", outputDir.toAbsolutePath());
         }
-        return Path.of(dataId.replaceAll("[^a-zA-Z0-9._-]", "_") + ".zip");
+    }
+
+    private Path resolveOutputPath(Path outputDir, String dataId) {
+        String filename = dataId.replaceAll("[^a-zA-Z0-9._-]", "_") + ".zip";
+        if (outputDir != null) {
+            return outputDir.resolve(filename);
+        }
+        return Path.of(filename);
     }
 
     private String formatResult(int totalFiles, SigningOutcome outcome, Path outputPath) {

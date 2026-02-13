@@ -70,9 +70,8 @@ class SigningToolTest {
             .thenReturn("access-token");
 
         List<String> files = List.of("src/test/resources/test.txt");
-        Path outputPath = tempDir.resolve("output.zip");
         signingTool.createProvenanceRecord(
-            files, "test", "test", List.of(), "SHA256", outputPath,
+            files, "test", "test", List.of(), "SHA256", tempDir,
             "http://localhost:8080/api/provenance", "http://localhost:8180", "trace4eo"
         );
         verify(mockRegistrationClient).exchangeToken("http://localhost:8180", "trace4eo", "test-token");
@@ -83,7 +82,7 @@ class SigningToolTest {
     void createProvenanceRecord_withoutRegistration_doesNotCallClient(@TempDir Path tempDir) throws IOException {
         List<String> files = List.of("src/test/resources/test.txt");
         signingTool.createProvenanceRecord(
-            files, "test", "test", List.of(), "SHA256", tempDir.resolve("out.zip"), null, null, "trace4eo"
+            files, "test", "test", List.of(), "SHA256", tempDir, null, null, "trace4eo"
         );
         verify(mockRegistrationClient, never()).exchangeToken(anyString(), anyString(), anyString());
         verify(mockRegistrationClient, never()).registerRecords(anyList(), anyString(), any());
@@ -142,15 +141,15 @@ class SigningToolTest {
     }
 
     @Test
-    void createProvenanceRecord_withOutput_writesZipToCustomPath(@TempDir Path tempDir) throws IOException {
-        Path outputPath = tempDir.resolve("output.zip");
+    void createProvenanceRecord_withOutputDir_writesZipToDirectory(@TempDir Path tempDir) throws IOException {
         List<String> files = List.of("src/test/resources/test.txt");
         ProvenanceRecord result = signingTool.createProvenanceRecord(
-            files, "test", "test", List.of(), "SHA256", outputPath, null, null, "trace4eo"
+            files, "test", "test", List.of(), "SHA256", tempDir, null, null, "trace4eo"
         );
         assertNotNull(result);
-        assertTrue(Files.exists(outputPath));
-        assertTrue(Files.size(outputPath) > 0);
+        Path expectedFile = tempDir.resolve(result.id() + ".zip");
+        assertTrue(Files.exists(expectedFile));
+        assertTrue(Files.size(expectedFile) > 0);
     }
 
     @Test
@@ -158,11 +157,10 @@ class SigningToolTest {
         UUID predecessorId1 = UUID.randomUUID();
         UUID predecessorId2 = UUID.randomUUID();
         List<String> files = List.of("src/test/resources/test.txt");
-        Path outputPath = tempDir.resolve("output.zip");
         ProvenanceRecord result = signingTool.createProvenanceRecord(
             files, "test", "test",
             List.of(predecessorId1.toString(), predecessorId2.toString()),
-            "SHA256", outputPath, null, null, "trace4eo"
+            "SHA256", tempDir, null, null, "trace4eo"
         );
         assertNotNull(result);
         List<Predecessor> predecessors = result.metadata().predecessors();
@@ -174,9 +172,8 @@ class SigningToolTest {
     @Test
     void createProvenanceRecord_nullPredecessors_createsEmptyList(@TempDir Path tempDir) throws IOException {
         List<String> files = List.of("src/test/resources/test.txt");
-        Path outputPath = tempDir.resolve("output.zip");
         ProvenanceRecord result = signingTool.createProvenanceRecord(
-            files, "test", "test", null, "SHA256", outputPath, null, null, "trace4eo"
+            files, "test", "test", null, "SHA256", tempDir, null, null, "trace4eo"
         );
         assertNotNull(result);
         assertTrue(result.metadata().predecessors().isEmpty());
@@ -190,6 +187,18 @@ class SigningToolTest {
                 files, "test", "test", List.of("not-a-uuid"), "SHA256", null, null, null, "trace4eo")
         );
         assertTrue(exception.getMessage().contains("Invalid predecessor ID"));
+    }
+
+    @Test
+    void createProvenanceRecord_withOutputDir_createsDirectoryIfMissing(@TempDir Path tempDir) throws IOException {
+        Path nestedDir = tempDir.resolve("nested/output");
+        List<String> files = List.of("src/test/resources/test.txt");
+        ProvenanceRecord result = signingTool.createProvenanceRecord(
+            files, "test", "test", List.of(), "SHA256", nestedDir, null, null, "trace4eo"
+        );
+        assertNotNull(result);
+        assertTrue(Files.isDirectory(nestedDir));
+        assertTrue(Files.exists(nestedDir.resolve(result.id() + ".zip")));
     }
 
     @Test
