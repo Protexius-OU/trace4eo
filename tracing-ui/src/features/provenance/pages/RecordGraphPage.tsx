@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchGraph, fetchRecord, verifyRecord } from '../api/provenanceApi'
 import type { VerificationResult } from '../types/provenance'
 import ProvenanceGraphViewer from '../components/ProvenanceGraphViewer'
+import IntegrityChain from '../components/IntegrityChain'
 
 export default function RecordGraphPage() {
   const { id } = useParams<{ id: string }>()
@@ -22,8 +23,6 @@ export default function RecordGraphPage() {
     queryFn: () => fetchRecord(id!),
     enabled: !!id,
   })
-
-  const signatureDetails = recordData?.signature?.details
 
   const handleVerify = async () => {
     if (!id) return
@@ -68,56 +67,11 @@ export default function RecordGraphPage() {
         Record ID: <span className="uuid">{id}</span>
       </p>
 
-      {signatureDetails && (
-        <div className="signature-info">
-          <div className="signature-info-title">Signature Information</div>
-          <div className="signature-info-details">
-            <div><strong>Signed by:</strong> {signatureDetails.signerIdentity}</div>
-            <div><strong>Signed at:</strong> {new Date(signatureDetails.signingTime).toLocaleString()}</div>
-            <div><strong>Certificate issuer:</strong> {signatureDetails.certificateIssuer}</div>
-            <div>
-              <strong>Transparency log:</strong>{' '}
-              <a
-                href={`https://search.sigstore.dev/?logIndex=${signatureDetails.rekorLogIndex}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                View on Rekor (index {signatureDetails.rekorLogIndex})
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {verificationResult && (
-        <div className={`verification-result ${verificationResult.status ? 'success' : 'failure'}`}>
-          <div className="verification-result-title">
-            {verificationResult.status ? (
-              <span className="verification-success">✓ Verification successful</span>
-            ) : (
-              <span className="verification-failure">✗ Verification failed</span>
-            )}
-          </div>
-          {verificationResult.steps && verificationResult.steps.length > 0 && (
-            <div className="verification-steps">
-              {verificationResult.steps.map((step, index) => (
-                <div key={index} className="verification-step">
-                  <div className="verification-step-content">
-                    <span className={step.status ? 'verification-success' : 'verification-failure'}>
-                      {step.status ? '✓' : '✗'}
-                    </span>
-                    <span>{step.description}</span>
-                  </div>
-                  {step.errorMessage && (
-                    <div className="verification-step-error">
-                      {step.errorMessage}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {recordData && (
+        <IntegrityChain
+          record={recordData}
+          verificationResult={verificationResult}
+        />
       )}
 
       {graphLoading && <p className="loading">Loading graph...</p>}
