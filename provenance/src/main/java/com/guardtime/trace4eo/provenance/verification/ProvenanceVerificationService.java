@@ -54,10 +54,10 @@ public class ProvenanceVerificationService {
         HashAlgorithm hashAlgorithm = signature.hashAlgorithm();
         MessageDigest md;
         try {
-            md = MessageDigest.getInstance(hashAlgorithm.name());
+            md = MessageDigest.getInstance(hashAlgorithm.getName());
         } catch (NoSuchAlgorithmException e) {
             return new ProvenanceVerificationResult(ProvenanceVerificationError.UNSUPPORTED_HASH_ALGORITHM,
-                String.format("Hash algorithm %s is not supported.", hashAlgorithm.name()));
+                String.format("Hash algorithm %s is not supported.", hashAlgorithm.getName()));
         }
         try (DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)) {
             digestInputStream.transferTo(OutputStream.nullOutputStream());
