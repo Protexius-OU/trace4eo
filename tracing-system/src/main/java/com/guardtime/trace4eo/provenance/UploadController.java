@@ -131,7 +131,7 @@ public class UploadController {
             .build();
 
         byte[] manifestBytes = new JsonCanonicalizer(provenanceJsonMapper.writeValueAsBytes(manifest)).getEncodedUTF8();
-        ProvenanceSignature provenanceSignature = signingService.sign(manifestBytes, HashAlgorithm.SHA256, sigstoreToken);
+        ProvenanceSignature provenanceSignature = signingService.sign(manifestBytes, sigstoreToken);
 
         return new ProvenanceRecordBuilder()
             .withMetadata(metadata)

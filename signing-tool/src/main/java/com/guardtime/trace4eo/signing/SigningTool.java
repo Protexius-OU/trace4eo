@@ -183,7 +183,7 @@ public class SigningTool {
             .withMetadata(metadata)
             .build();
         byte[] manifestBytes = new JsonCanonicalizer(provenanceJsonMapper.writeValueAsBytes(manifest)).getEncodedUTF8();
-        ProvenanceSignature provenanceSignature = signingService.sign(manifestBytes, algorithm, oidcToken);
+        ProvenanceSignature provenanceSignature = signingService.sign(manifestBytes, oidcToken);
         return new ProvenanceRecordBuilder()
             .withMetadata(metadata)
             .withFilesInfo(filesInfo)

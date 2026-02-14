@@ -72,7 +72,7 @@ public class FilesInfoBuilder {
         if (!Files.isRegularFile(filePath)) {
             throw new IOException("Path is not a regular file: " + filePath);
         }
-        MessageDigest md = MessageDigest.getInstance(hashAlgorithm.name());
+        MessageDigest md = MessageDigest.getInstance(hashAlgorithm.getName());
         try (InputStream inputStream = Files.newInputStream(filePath);
              DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)
         ) {

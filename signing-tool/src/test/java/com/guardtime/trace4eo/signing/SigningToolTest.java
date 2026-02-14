@@ -3,16 +3,21 @@ package com.guardtime.trace4eo.signing;
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
+import com.guardtime.trace4eo.provenance.record.FileHashInfo;
 import com.guardtime.trace4eo.provenance.record.Predecessor;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.UUID;
 
@@ -43,7 +48,7 @@ class SigningToolTest {
         );
 
         ProvenanceSigningService mockSigningService = mock(ProvenanceSigningService.class);
-        when(mockSigningService.sign(any(byte[].class), any(HashAlgorithm.class), anyString()))
+        when(mockSigningService.sign(any(byte[].class), anyString()))
             .thenReturn(testSignature);
 
         mockRegistrationClient = mock(RecordRegistrationClient.class);
@@ -187,6 +192,27 @@ class SigningToolTest {
                 files, "test", "test", List.of("not-a-uuid"), "SHA256", null, null, null, "trace4eo")
         );
         assertTrue(exception.getMessage().contains("Invalid predecessor ID"));
+    }
+
+    @ParameterizedTest
+    @EnumSource(HashAlgorithm.class)
+    void createProvenanceRecord_usesSpecifiedHashAlgorithm(HashAlgorithm algorithm, @TempDir Path tempDir)
+        throws IOException, NoSuchAlgorithmException {
+        int expectedLength = MessageDigest.getInstance(algorithm.getName()).getDigestLength();
+        List<String> files = List.of("src/test/resources/test.txt");
+        Path outputPath = tempDir.resolve("output.zip");
+        ProvenanceRecord result = signingTool.createProvenanceRecord(
+            files, "test", "test", List.of(), algorithm.name(), outputPath, null, null, "trace4eo"
+        );
+
+        FileHashInfo fileHash = result.filesInfo().files().iterator().next();
+        assertEquals(algorithm, fileHash.hashAlgorithm());
+        assertEquals(expectedLength, fileHash.hashValue().length);
+
+        assertEquals(algorithm, result.manifest().filesHashInfo().hashAlgorithm());
+        assertEquals(expectedLength, result.manifest().filesHashInfo().hashValue().length);
+        assertEquals(algorithm, result.manifest().metadataHashInfo().hashAlgorithm());
+        assertEquals(expectedLength, result.manifest().metadataHashInfo().hashValue().length);
     }
 
     @Test

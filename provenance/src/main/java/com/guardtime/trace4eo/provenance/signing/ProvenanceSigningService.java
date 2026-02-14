@@ -2,6 +2,7 @@ package com.guardtime.trace4eo.provenance.signing;
 
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
+import dev.sigstore.AlgorithmRegistry;
 import dev.sigstore.KeylessSigner;
 import dev.sigstore.bundle.Bundle;
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
@@ -24,6 +25,9 @@ public class ProvenanceSigningService {
 
     private static final Logger log = LoggerFactory.getLogger(ProvenanceSigningService.class);
 
+    /** Sigstore only supports SHA-256 digests for all available signing algorithms. */
+    private static final HashAlgorithm SIGNING_HASH_ALGORITHM = HashAlgorithm.SHA256;
+
     private volatile KeylessSigner browserSigner;
 
     /** Uses Sigstore public good instance. */
@@ -31,16 +35,16 @@ public class ProvenanceSigningService {
     }
 
     /** Sign with an explicit OIDC token (e.g. from Google via Keycloak broker). */
-    public ProvenanceSignature sign(byte[] bytes, HashAlgorithm hashAlgorithm, String oidcToken) {
-        return sign(new ByteArrayInputStream(bytes), hashAlgorithm, oidcToken);
+    public ProvenanceSignature sign(byte[] bytes, String oidcToken) {
+        return sign(new ByteArrayInputStream(bytes), oidcToken);
     }
 
-    public ProvenanceSignature sign(InputStream inputStream, HashAlgorithm hashAlgorithm, String oidcToken) {
+    public ProvenanceSignature sign(InputStream inputStream, String oidcToken) {
         MessageDigest md;
         try {
-            md = MessageDigest.getInstance(hashAlgorithm.name());
+            md = MessageDigest.getInstance(SIGNING_HASH_ALGORITHM.getName());
         } catch (NoSuchAlgorithmException e) {
-            log.error("Hash algorithm {} not supported", hashAlgorithm.name(), e);
+            log.error("Hash algorithm {} not supported", SIGNING_HASH_ALGORITHM.getName(), e);
             throw new IllegalArgumentException(e);
         }
         try (DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)) {
@@ -62,7 +66,7 @@ public class ProvenanceSigningService {
 
             SignatureDetails details = extractSignatureDetails(bundle, rekorEntry, timestamp);
 
-            return new ProvenanceSignature(bundleBytes, timestamp, hashAlgorithm, details);
+            return new ProvenanceSignature(bundleBytes, timestamp, SIGNING_HASH_ALGORITHM, details);
         } catch (Exception e) {
             log.error("Failed to sign provenance signature", e);
             throw new RuntimeException(e);
@@ -73,6 +77,7 @@ public class ProvenanceSigningService {
         try {
             return KeylessSigner.builder()
                 .sigstorePublicDefaults()
+                .signingAlgorithm(AlgorithmRegistry.SigningAlgorithm.PKIX_RSA_PKCS1V15_4096_SHA256)
                 .forceCredentialProviders(OidcClients.of(new EmailOidcClient(oidcToken)))
                 .build();
         } catch (Exception e) {

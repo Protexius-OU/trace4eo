@@ -1,6 +1,5 @@
 package com.guardtime.trace4eo.signing;
 
-import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
@@ -43,7 +42,7 @@ class BatchSigningToolTest {
 
         AtomicInteger callCount = new AtomicInteger(0);
         ProvenanceSigningService mockSigningService = mock(ProvenanceSigningService.class);
-        when(mockSigningService.sign(any(byte[].class), any(HashAlgorithm.class), anyString()))
+        when(mockSigningService.sign(any(byte[].class), anyString()))
             .thenAnswer(invocation -> new ProvenanceSignature(
                 testSignature.bytes(),
                 testSignature.signingTime().plusSeconds(callCount.getAndIncrement()),
