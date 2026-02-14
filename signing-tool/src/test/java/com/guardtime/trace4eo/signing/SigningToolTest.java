@@ -228,6 +228,44 @@ class SigningToolTest {
     }
 
     @Test
+    void createProvenanceRecord_nonExistentFile_throws() {
+        List<String> files = List.of("nonexistent.txt");
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            signingTool.createProvenanceRecord(files, "test", "test", List.of(), "SHA256", null, null, null, "trace4eo")
+        );
+        assertTrue(exception.getMessage().contains("File does not exist"));
+    }
+
+    @Test
+    void createProvenanceRecord_directoryAsFile_throws(@TempDir Path tempDir) {
+        List<String> files = List.of(tempDir.toString());
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            signingTool.createProvenanceRecord(files, "test", "test", List.of(), "SHA256", null, null, null, "trace4eo")
+        );
+        assertTrue(exception.getMessage().contains("not a regular file"));
+    }
+
+    @Test
+    void createProvenanceRecord_invalidHashAlgorithm_throws() {
+        List<String> files = List.of("src/test/resources/test.txt");
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            signingTool.createProvenanceRecord(files, "test", "test", List.of(), "INVALID", null, null, null, "trace4eo")
+        );
+        assertTrue(exception.getMessage().contains("--hash-algorithm"));
+    }
+
+    @Test
+    void createProvenanceRecord_outputDirIsFile_throws(@TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("not-a-dir");
+        Files.writeString(file, "content");
+        List<String> files = List.of("src/test/resources/test.txt");
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            signingTool.createProvenanceRecord(files, "test", "test", List.of(), "SHA256", file, null, null, "trace4eo")
+        );
+        assertTrue(exception.getMessage().contains("--output is not a directory"));
+    }
+
+    @Test
     void createProvenanceRecord_registerUrlWithoutKeycloakUrl_throws() {
         List<String> files = List.of("src/test/resources/test.txt");
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->

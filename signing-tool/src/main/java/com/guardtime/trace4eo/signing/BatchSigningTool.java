@@ -74,15 +74,19 @@ public class BatchSigningTool {
         @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm
     ) throws IOException {
         List<Path> filePaths = files != null ? files.stream().map(Path::of).toList() : List.of();
-        validateInput(filePaths, provenanceRecordType, dataId, directory, registerUrl, keycloakUrl);
+        HashAlgorithm algorithm = validateHashAlgorithm(hashAlgorithm);
+        validateInput(filePaths, provenanceRecordType, dataId, directory);
+        validateFilesExist(filePaths);
+        validateOutputDirectory(outputDir);
+        validateGlobPattern(pattern);
+        validateRegistrationConfig(registerUrl, keycloakUrl);
 
-        String oidcToken = oidcTokenResolver.resolve();
         List<Path> resolvedFiles = resolveFiles(filePaths, directory, pattern);
         if (resolvedFiles.isEmpty()) {
             throw new IllegalArgumentException("No files found matching the given --files or --directory/--pattern");
         }
 
-        HashAlgorithm algorithm = HashAlgorithm.valueOf(hashAlgorithm);
+        String oidcToken = oidcTokenResolver.resolve();
         SigningOutcome outcome = signFiles(resolvedFiles, dataId, provenanceRecordType, algorithm, oidcToken);
 
         if (!outcome.records.isEmpty()) {
@@ -97,8 +101,7 @@ public class BatchSigningTool {
     }
 
     private void validateInput(
-        List<Path> files, String provenanceRecordType, String dataId,
-        Path directory, String registerUrl, String keycloakUrl
+        List<Path> files, String provenanceRecordType, String dataId, Path directory
     ) {
         if ((files == null || files.isEmpty()) && directory == null) {
             throw new IllegalArgumentException("Either --files or --directory is required");
@@ -117,10 +120,67 @@ public class BatchSigningTool {
                 throw new IllegalArgumentException("--directory is not a directory: " + directory);
             }
         }
+    }
+
+    private void validateRegistrationConfig(String registerUrl, String keycloakUrl) {
         if (registerUrl != null && !registerUrl.isBlank()
             && (keycloakUrl == null || keycloakUrl.isBlank())) {
             throw new IllegalArgumentException(
                 "--keycloak-url is required when --register-url is provided");
+        }
+    }
+
+    private HashAlgorithm validateHashAlgorithm(String hashAlgorithm) {
+        try {
+            return HashAlgorithm.valueOf(hashAlgorithm);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid --hash-algorithm: " + hashAlgorithm
+                + ". Supported values: " + java.util.Arrays.stream(HashAlgorithm.values())
+                    .map(Enum::name).toList());
+        }
+    }
+
+    private void validateFilesExist(List<Path> files) {
+        for (Path file : files) {
+            if (!Files.exists(file)) {
+                throw new IllegalArgumentException("File does not exist: " + file);
+            }
+            if (!Files.isRegularFile(file)) {
+                throw new IllegalArgumentException("Path is not a regular file: " + file);
+            }
+            if (!Files.isReadable(file)) {
+                throw new IllegalArgumentException("File is not readable: " + file);
+            }
+        }
+    }
+
+    private void validateOutputDirectory(Path outputDir) {
+        if (outputDir == null) {
+            return;
+        }
+        if (Files.exists(outputDir)) {
+            if (!Files.isDirectory(outputDir)) {
+                throw new IllegalArgumentException("--output is not a directory: " + outputDir);
+            }
+            if (!Files.isWritable(outputDir)) {
+                throw new IllegalArgumentException("--output directory is not writable: " + outputDir);
+            }
+        } else {
+            Path ancestor = outputDir.toAbsolutePath().getParent();
+            while (ancestor != null && !Files.exists(ancestor)) {
+                ancestor = ancestor.getParent();
+            }
+            if (ancestor != null && !Files.isWritable(ancestor)) {
+                throw new IllegalArgumentException("--output directory is not writable: " + ancestor);
+            }
+        }
+    }
+
+    private void validateGlobPattern(String pattern) {
+        try {
+            java.nio.file.FileSystems.getDefault().getPathMatcher("glob:" + pattern);
+        } catch (java.util.regex.PatternSyntaxException e) {
+            throw new IllegalArgumentException("Invalid --pattern: " + pattern);
         }
     }
 

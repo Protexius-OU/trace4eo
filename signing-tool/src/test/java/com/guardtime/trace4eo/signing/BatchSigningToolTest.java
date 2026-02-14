@@ -166,26 +166,21 @@ class BatchSigningToolTest {
     }
 
     @Test
-    void batchSign_partialFailure_continuesWithRemainingFiles(@TempDir Path tempDir) throws IOException {
-        Path validFile = tempDir.resolve("valid.txt");
-        Files.writeString(validFile, "valid content");
-        Path nonExistentFile = tempDir.resolve("nonexistent.txt");
-
-        String result = batchSigningTool.batchSign(
-            List.of(validFile.toString(), nonExistentFile.toString()),
-            null,
-            "*",
-            "test",
-            "test",
-            tempDir,
-            "SHA256",
-            null,
-            null, "trace4eo"
+    void batchSign_nonExistentFile_throwsBeforeSigning() {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            batchSigningTool.batchSign(
+                List.of("nonexistent.txt"),
+                null,
+                "*",
+                "test",
+                "test",
+                null,
+                "SHA256",
+                null,
+                null, "trace4eo"
+            )
         );
-
-        assertTrue(result.contains("Signed 1/2 files"));
-        assertTrue(result.contains("Failed files:"));
-        assertTrue(Files.exists(tempDir.resolve("test.zip")));
+        assertTrue(exception.getMessage().contains("File does not exist"));
     }
 
     @SuppressWarnings("unchecked")
@@ -369,6 +364,61 @@ class BatchSigningToolTest {
             )
         );
         assertTrue(exception.getMessage().contains("--directory"));
+    }
+
+    @Test
+    void batchSign_invalidHashAlgorithm_throws(@TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("file.txt");
+        Files.writeString(file, "content");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            batchSigningTool.batchSign(
+                List.of(file.toString()), null, "*", "test", "test",
+                null, "INVALID", null, null, "trace4eo"
+            )
+        );
+        assertTrue(exception.getMessage().contains("--hash-algorithm"));
+    }
+
+    @Test
+    void batchSign_directoryAsFile_throws(@TempDir Path tempDir) {
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            batchSigningTool.batchSign(
+                List.of(tempDir.toString()), null, "*", "test", "test",
+                null, "SHA256", null, null, "trace4eo"
+            )
+        );
+        assertTrue(exception.getMessage().contains("not a regular file"));
+    }
+
+    @Test
+    void batchSign_outputDirIsFile_throws(@TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("file.txt");
+        Files.writeString(file, "content");
+        Path notADir = tempDir.resolve("not-a-dir");
+        Files.writeString(notADir, "content");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            batchSigningTool.batchSign(
+                List.of(file.toString()), null, "*", "test", "test",
+                notADir, "SHA256", null, null, "trace4eo"
+            )
+        );
+        assertTrue(exception.getMessage().contains("--output is not a directory"));
+    }
+
+    @Test
+    void batchSign_invalidGlobPattern_throws(@TempDir Path tempDir) throws IOException {
+        Path file = tempDir.resolve("file.txt");
+        Files.writeString(file, "content");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            batchSigningTool.batchSign(
+                null, tempDir, "[invalid", "test", "test",
+                null, "SHA256", null, null, "trace4eo"
+            )
+        );
+        assertTrue(exception.getMessage().contains("--pattern"));
     }
 
     @SuppressWarnings("unchecked")
