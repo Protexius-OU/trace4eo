@@ -60,7 +60,23 @@ public class BatchSigningTool {
         this.oidcTokenResolver = new OidcTokenResolver(oidcToken);
     }
 
-    @Command(name = "batch-sign", description = "Sign multiple files, creating one provenance record per file")
+    @Command(name = "batch-sign", description = "Sign multiple files, creating one provenance record per file",
+        help = """
+            Sign multiple files in batch, creating one provenance record per file.
+
+            Files can be specified individually with --files or by pointing to a directory
+            with --directory and an optional --pattern glob filter. Each file produces its
+            own provenance record. All records are written into a single ZIP container.
+
+            Examples:
+              batch-sign --files a.tif,b.tif --provenance-record-type RAW \\
+                --data-id satellite/batch-001 --output ./out
+              batch-sign --directory ./images --pattern *.tif --provenance-record-type RAW \\
+                --data-id satellite/batch-002 --output ./out
+              batch-sign --directory ./images --provenance-record-type PROCESSED \\
+                --data-id satellite/batch-003 --output ./out \\
+                --register-url http://localhost:8080/api/provenance
+            """)
     public String batchSign(
         @Option(longName = "files", description = "Files to sign") List<String> files,
         @Option(longName = "directory", description = "Directory containing files to sign") Path directory,
