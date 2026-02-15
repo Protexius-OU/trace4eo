@@ -36,7 +36,16 @@ public class VerificationTool {
         this.provenanceJsonMapper = provenanceJsonMapper;
     }
 
-    @Command(name = "verify", description = "Verify input data against signature")
+    @Command(name = "verify", description = "Verify input data against signature",
+        help = """
+            Verify that a file's content matches a standalone Sigstore signature.
+
+            Reads the input file and the JSON signature file, then checks the signature
+            against the Sigstore transparency log.
+
+            Example:
+              verify --text data.json --signature data.json.sig
+            """)
     public ProvenanceVerificationResult verify(
         @Option(longName = "text", description = "Path to input file") Path file,
         @Option(longName = "signature", description = "Path to signature file") Path signaturePath
@@ -46,7 +55,17 @@ public class VerificationTool {
         return verificationService.verify(signature, inputBytes);
     }
 
-    @Command(name = "verify-provenance-record", description = "Verify provenance record")
+    @Command(name = "verify-provenance-record", description = "Verify provenance record",
+        help = """
+            Verify all signatures in a provenance record container.
+
+            Accepts both ZIP and JSON container formats. Each provenance record in the
+            container is verified independently against the Sigstore transparency log.
+
+            Examples:
+              verify-provenance-record --file record.zip
+              verify-provenance-record --file record.json
+            """)
     public List<ProvenanceVerificationResult> verify(
         @Option(longName = "file", description = "Path to provenance record") Path provenanceRecordPath
     ) {
