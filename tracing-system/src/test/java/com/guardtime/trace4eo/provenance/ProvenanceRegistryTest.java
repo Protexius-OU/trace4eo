@@ -12,6 +12,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,7 +45,7 @@ class ProvenanceRegistryTest {
         Instant signingTime = Instant.parse("2024-01-15T10:30:00Z");
         byte[] signatureBytes = new byte[]{1, 2, 3, 4, 5};
 
-        provenanceRegistry.addSignature(id, signingTime, signatureBytes);
+        provenanceRegistry.addSignature(id, signingTime, signatureBytes, "user@example.com");
 
         Integer count = jdbcClient.sql("SELECT COUNT(*) FROM signature WHERE id = :id")
             .param("id", id)
@@ -59,18 +60,37 @@ class ProvenanceRegistryTest {
         Instant signingTime = Instant.parse("2024-01-15T10:30:00Z");
         byte[] signatureBytes = new byte[]{1, 2, 3, 4, 5};
 
-        provenanceRegistry.addSignature(id, signingTime, signatureBytes);
+        provenanceRegistry.addSignature(id, signingTime, signatureBytes, "user@example.com");
 
-        var result = jdbcClient.sql("SELECT signing_time, signature FROM signature WHERE id = :id")
+        var result = jdbcClient.sql("SELECT signing_time, signature, signer_identity FROM signature WHERE id = :id")
             .param("id", id)
             .query((rs, rowNum) -> new Object[]{
                 rs.getTimestamp("signing_time").toInstant(),
-                rs.getBytes("signature")
+                rs.getBytes("signature"),
+                rs.getString("signer_identity")
             })
             .single();
 
         assertEquals(signingTime, result[0]);
         assertNotNull(result[1]);
+        assertEquals("user@example.com", result[2]);
+    }
+
+    @Test
+    void addSignatureWithNullSignerIdentity() {
+        UUID id = UUID.randomUUID();
+        Instant signingTime = Instant.parse("2024-01-15T10:30:00Z");
+        byte[] signatureBytes = new byte[]{1, 2, 3, 4, 5};
+
+        provenanceRegistry.addSignature(id, signingTime, signatureBytes, null);
+
+        String signerIdentity = jdbcClient.sql("SELECT signer_identity FROM signature WHERE id = :id")
+            .param("id", id)
+            .query(String.class)
+            .optional()
+            .orElse(null);
+
+        assertTrue(signerIdentity == null);
     }
 
     @Test
@@ -78,7 +98,7 @@ class ProvenanceRegistryTest {
         UUID id = UUID.randomUUID();
         Instant createdAt = Instant.parse("2024-01-15T10:30:00Z");
 
-        provenanceRegistry.addSignature(id, createdAt, new byte[]{1, 2, 3});
+        provenanceRegistry.addSignature(id, createdAt, new byte[]{1, 2, 3}, null);
         provenanceRegistry.addProvenanceRecord(
             id,
             """
@@ -108,7 +128,7 @@ class ProvenanceRegistryTest {
         String metadataJson = """
             {"dataId":"%s","dataType":"%s","predecessors":[]}""".formatted(dataId, dataType);
 
-        provenanceRegistry.addSignature(id, createdAt, new byte[]{1, 2, 3});
+        provenanceRegistry.addSignature(id, createdAt, new byte[]{1, 2, 3}, null);
         provenanceRegistry.addProvenanceRecord(id, manifestJson, metadataJson, null, createdAt);
 
         String storedMetadata = jdbcClient.sql("SELECT metadata::text FROM provenance_record WHERE id = :id")
@@ -125,7 +145,7 @@ class ProvenanceRegistryTest {
         UUID id = UUID.randomUUID();
         Instant createdAt = Instant.now();
 
-        provenanceRegistry.addSignature(id, createdAt, new byte[]{1, 2, 3});
+        provenanceRegistry.addSignature(id, createdAt, new byte[]{1, 2, 3}, null);
         provenanceRegistry.addProvenanceRecord(
             id,
             """
@@ -150,7 +170,7 @@ class ProvenanceRegistryTest {
         UUID id = UUID.randomUUID();
         Instant createdAt = Instant.now();
 
-        provenanceRegistry.addSignature(id, createdAt, new byte[]{1, 2, 3});
+        provenanceRegistry.addSignature(id, createdAt, new byte[]{1, 2, 3}, null);
         provenanceRegistry.addProvenanceRecord(
             id,
             """
@@ -175,7 +195,7 @@ class ProvenanceRegistryTest {
         UUID id = UUID.randomUUID();
         Instant createdAt = Instant.now();
 
-        provenanceRegistry.addSignature(id, createdAt, new byte[]{1, 2, 3});
+        provenanceRegistry.addSignature(id, createdAt, new byte[]{1, 2, 3}, null);
         provenanceRegistry.addProvenanceRecord(
             id,
             """
@@ -200,7 +220,7 @@ class ProvenanceRegistryTest {
         UUID id = UUID.randomUUID();
         Instant createdAt = Instant.now();
 
-        provenanceRegistry.addSignature(id, createdAt, new byte[]{1, 2, 3});
+        provenanceRegistry.addSignature(id, createdAt, new byte[]{1, 2, 3}, null);
         provenanceRegistry.addProvenanceRecord(
             id,
             """
@@ -240,7 +260,7 @@ class ProvenanceRegistryTest {
         byte[] signatureBytes = """
             {"bytes":"AQID","signingTime":"2024-01-15T10:30:00Z","hashAlgorithm":"SHA256"}""".getBytes();
 
-        provenanceRegistry.addSignature(id, signingTime, signatureBytes);
+        provenanceRegistry.addSignature(id, signingTime, signatureBytes, null);
         provenanceRegistry.addProvenanceRecord(
             id,
             """
@@ -265,10 +285,137 @@ class ProvenanceRegistryTest {
         Instant signingTime = Instant.now();
         byte[] signatureBytes = new byte[]{1, 2, 3};
 
-        provenanceRegistry.addSignature(id, signingTime, signatureBytes);
+        provenanceRegistry.addSignature(id, signingTime, signatureBytes, null);
 
         assertThrows(Exception.class, () ->
-            provenanceRegistry.addSignature(id, signingTime, signatureBytes)
+            provenanceRegistry.addSignature(id, signingTime, signatureBytes, null)
         );
+    }
+
+    @Test
+    void findDistinctDataTypesReturnsUniqueValues() {
+        createRecordWithTypeAndSigner("type-a", "user1@example.com");
+        createRecordWithTypeAndSigner("type-b", "user2@example.com");
+        createRecordWithTypeAndSigner("type-a", "user3@example.com");
+
+        List<String> dataTypes = provenanceRegistry.findDistinctDataTypes();
+
+        assertEquals(2, dataTypes.size());
+        assertTrue(dataTypes.contains("type-a"));
+        assertTrue(dataTypes.contains("type-b"));
+    }
+
+    @Test
+    void findDistinctSignerIdentitiesReturnsUniqueValues() {
+        createRecordWithTypeAndSigner("type-a", "user1@example.com");
+        createRecordWithTypeAndSigner("type-b", "user1@example.com");
+        createRecordWithTypeAndSigner("type-c", "user2@example.com");
+
+        List<String> signerIdentities = provenanceRegistry.findDistinctSignerIdentities();
+
+        assertEquals(2, signerIdentities.size());
+        assertTrue(signerIdentities.contains("user1@example.com"));
+        assertTrue(signerIdentities.contains("user2@example.com"));
+    }
+
+    @Test
+    void findAllWithDataTypeFilter() {
+        createRecordWithTypeAndSigner("type-a", "user@example.com");
+        createRecordWithTypeAndSigner("type-b", "user@example.com");
+        createRecordWithTypeAndSigner("type-a", "user@example.com");
+
+        List<ProvenanceRecord> results = provenanceRegistry.findAll(
+            0, 20, List.of("type-a"), null, null
+        );
+
+        assertEquals(2, results.size());
+        results.forEach(r -> assertEquals("type-a", r.metadata().dataType()));
+    }
+
+    @Test
+    void findAllWithMultipleDataTypeFilter() {
+        createRecordWithTypeAndSigner("type-a", "user@example.com");
+        createRecordWithTypeAndSigner("type-b", "user@example.com");
+        createRecordWithTypeAndSigner("type-c", "user@example.com");
+
+        List<ProvenanceRecord> results = provenanceRegistry.findAll(
+            0, 20, List.of("type-a", "type-b"), null, null
+        );
+
+        assertEquals(2, results.size());
+    }
+
+    @Test
+    void findAllWithSignerIdentityFilter() {
+        createRecordWithTypeAndSigner("type-a", "user1@example.com");
+        createRecordWithTypeAndSigner("type-a", "user2@example.com");
+        createRecordWithTypeAndSigner("type-a", "user1@example.com");
+
+        List<ProvenanceRecord> results = provenanceRegistry.findAll(
+            0, 20, null, null, List.of("user1@example.com")
+        );
+
+        assertEquals(2, results.size());
+    }
+
+    @Test
+    void findAllWithDataIdTextFilter() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        Instant now = Instant.now();
+
+        provenanceRegistry.addSignature(id1, now, createSignatureBytes(), "user@example.com");
+        provenanceRegistry.addProvenanceRecord(id1,
+            """
+            {"version":"1"}""",
+            """
+            {"dataId":"satellite-image-001","dataType":"type-a","predecessors":[]}""",
+            null, now);
+
+        provenanceRegistry.addSignature(id2, now, createSignatureBytes(), "user@example.com");
+        provenanceRegistry.addProvenanceRecord(id2,
+            """
+            {"version":"1"}""",
+            """
+            {"dataId":"ground-truth-001","dataType":"type-a","predecessors":[]}""",
+            null, now);
+
+        List<ProvenanceRecord> results = provenanceRegistry.findAll(
+            0, 20, null, "satellite", null
+        );
+
+        assertEquals(1, results.size());
+        assertEquals("satellite-image-001", results.get(0).metadata().dataId());
+    }
+
+    @Test
+    void countWithFilters() {
+        createRecordWithTypeAndSigner("type-a", "user1@example.com");
+        createRecordWithTypeAndSigner("type-b", "user2@example.com");
+        createRecordWithTypeAndSigner("type-a", "user2@example.com");
+
+        assertEquals(2, provenanceRegistry.count(List.of("type-a"), null, null));
+        assertEquals(2, provenanceRegistry.count(null, null, List.of("user2@example.com")));
+        assertEquals(1, provenanceRegistry.count(List.of("type-a"), null, List.of("user1@example.com")));
+    }
+
+    private void createRecordWithTypeAndSigner(String dataType, String signerIdentity) {
+        UUID id = UUID.randomUUID();
+        Instant now = Instant.now();
+        provenanceRegistry.addSignature(id, now, createSignatureBytes(), signerIdentity);
+        provenanceRegistry.addProvenanceRecord(
+            id,
+            """
+            {"version":"1"}""",
+            """
+            {"dataId":"data-%s","dataType":"%s","predecessors":[]}""".formatted(id, dataType),
+            null,
+            now
+        );
+    }
+
+    private byte[] createSignatureBytes() {
+        return """
+            {"bytes":"AQID","signingTime":"2024-01-15T10:30:00Z","hashAlgorithm":"SHA256"}""".getBytes();
     }
 }

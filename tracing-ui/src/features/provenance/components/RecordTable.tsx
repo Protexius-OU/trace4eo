@@ -1,12 +1,15 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import './RecordTable.css'
 import { Link } from 'react-router-dom'
-import type { ProvenanceRecord } from '../types/provenance'
+import type { ProvenanceRecord, FilterOptions, RecordFilters } from '../types/provenance'
 import { downloadZip } from '../api/provenanceApi'
 import { getSignerDomain } from '../utils/signerIdentity'
 
 interface Props {
   records: ProvenanceRecord[]
+  filterOptions: FilterOptions
+  filters: RecordFilters
+  onFilterChange: (filters: RecordFilters) => void
 }
 
 interface TooltipProps {
@@ -56,13 +59,14 @@ function Tooltip({ text, children }: TooltipProps) {
 interface FilterDropdownProps {
   label: string
   values: string[]
+  displayValues?: Map<string, string>
   selected: Set<string>
   onToggle: (value: string) => void
   onSelectAll: () => void
   onClearAll: () => void
 }
 
-function FilterDropdown({ label, values, selected, onToggle, onSelectAll, onClearAll }: FilterDropdownProps) {
+function FilterDropdown({ label, values, displayValues, selected, onToggle, onSelectAll, onClearAll }: FilterDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -78,7 +82,7 @@ function FilterDropdown({ label, values, selected, onToggle, onSelectAll, onClea
 
   const allSelected = selected.size === values.length
   const noneSelected = selected.size === 0
-  const filterActive = selected.size < values.length
+  const filterActive = !allSelected && !noneSelected
 
   return (
     <div className="filter-dropdown" ref={dropdownRef}>
@@ -106,7 +110,7 @@ function FilterDropdown({ label, values, selected, onToggle, onSelectAll, onClea
                   checked={selected.has(value)}
                   onChange={() => onToggle(value)}
                 />
-                <span>{value}</span>
+                <span>{displayValues?.get(value) ?? value}</span>
               </label>
             ))}
           </div>
@@ -116,7 +120,73 @@ function FilterDropdown({ label, values, selected, onToggle, onSelectAll, onClea
   )
 }
 
-export default function RecordTable({ records }: Props) {
+interface DataIdFilterProps {
+  value: string
+  onChange: (value: string) => void
+}
+
+function DataIdFilter({ value, onChange }: DataIdFilterProps) {
+  const [localValue, setLocalValue] = useState(value)
+  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    setLocalValue(value)
+  }, [value])
+
+  const handleChange = (newValue: string) => {
+    setLocalValue(newValue)
+    clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => onChange(newValue), 300)
+  }
+
+  useEffect(() => {
+    return () => clearTimeout(timerRef.current)
+  }, [])
+
+  return (
+    <div className="filter-dropdown">
+      <input
+        type="text"
+        placeholder="Search Data ID..."
+        value={localValue}
+        onChange={e => handleChange(e.target.value)}
+        className="filter-text-input"
+      />
+    </div>
+  )
+}
+
+function useCheckboxFilter(
+  filterKey: 'dataTypes' | 'signerIdentities',
+  allValues: string[],
+  filters: RecordFilters,
+  onFilterChange: (f: RecordFilters) => void
+) {
+  const selected = new Set(filters[filterKey] ?? allValues)
+
+  const toggle = useCallback((value: string) => {
+    const current = new Set(filters[filterKey] ?? allValues)
+    if (current.has(value)) {
+      current.delete(value)
+    } else {
+      current.add(value)
+    }
+    const updated = current.size === allValues.length ? undefined : [...current]
+    onFilterChange({ ...filters, [filterKey]: updated })
+  }, [filterKey, allValues, filters, onFilterChange])
+
+  const selectAll = useCallback(() => {
+    onFilterChange({ ...filters, [filterKey]: undefined })
+  }, [filterKey, filters, onFilterChange])
+
+  const clearAll = useCallback(() => {
+    onFilterChange({ ...filters, [filterKey]: [] })
+  }, [filterKey, filters, onFilterChange])
+
+  return { selected, toggle, selectAll, clearAll }
+}
+
+export default function RecordTable({ records, filterOptions, filters, onFilterChange }: Props) {
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   const getSignerEmail = (record: ProvenanceRecord): string | null => {
@@ -127,63 +197,16 @@ export default function RecordTable({ records }: Props) {
     return getSignerDomain(getSignerEmail(record))
   }
 
-  // Extract unique values for filters
-  const uniqueTypes = useMemo(() =>
-    [...new Set(records.map(r => r.metadata.dataType))].sort(),
-    [records]
-  )
-  const uniqueDataIds = useMemo(() =>
-    [...new Set(records.map(r => r.metadata.dataId))].sort(),
-    [records]
-  )
-  const uniqueSigners = useMemo(() =>
-    [...new Set(records.map(r => getRecordSignerDomain(r)))].sort(),
-    [records]
+  const signerDisplayValues = new Map(
+    filterOptions.signerIdentities.map(email => [email, getSignerDomain(email)])
   )
 
-  // Initialize filters with all values selected
-  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(() => new Set(uniqueTypes))
-  const [selectedDataIds, setSelectedDataIds] = useState<Set<string>>(() => new Set(uniqueDataIds))
-  const [selectedSigners, setSelectedSigners] = useState<Set<string>>(() => new Set(uniqueSigners))
+  const typeFilter = useCheckboxFilter('dataTypes', filterOptions.dataTypes, filters, onFilterChange)
+  const signerFilter = useCheckboxFilter('signerIdentities', filterOptions.signerIdentities, filters, onFilterChange)
 
-  // Update selected values when records change (to include new values)
-  useEffect(() => {
-    setSelectedTypes(prev => {
-      const newSet = new Set(prev)
-      uniqueTypes.forEach(t => newSet.add(t))
-      // Remove values that no longer exist
-      prev.forEach(t => { if (!uniqueTypes.includes(t)) newSet.delete(t) })
-      return newSet
-    })
-  }, [uniqueTypes])
-
-  useEffect(() => {
-    setSelectedDataIds(prev => {
-      const newSet = new Set(prev)
-      uniqueDataIds.forEach(id => newSet.add(id))
-      prev.forEach(id => { if (!uniqueDataIds.includes(id)) newSet.delete(id) })
-      return newSet
-    })
-  }, [uniqueDataIds])
-
-  useEffect(() => {
-    setSelectedSigners(prev => {
-      const newSet = new Set(prev)
-      uniqueSigners.forEach(s => newSet.add(s))
-      prev.forEach(s => { if (!uniqueSigners.includes(s)) newSet.delete(s) })
-      return newSet
-    })
-  }, [uniqueSigners])
-
-  // Filter records based on selections
-  const filteredRecords = useMemo(() =>
-    records.filter(r =>
-      selectedTypes.has(r.metadata.dataType) &&
-      selectedDataIds.has(r.metadata.dataId) &&
-      selectedSigners.has(getRecordSignerDomain(r))
-    ),
-    [records, selectedTypes, selectedDataIds, selectedSigners]
-  )
+  const handleDataIdChange = useCallback((value: string) => {
+    onFilterChange({ ...filters, dataId: value || undefined })
+  }, [filters, onFilterChange])
 
   const handleDownload = async (id: string) => {
     setDownloadingId(id)
@@ -196,79 +219,36 @@ export default function RecordTable({ records }: Props) {
     }
   }
 
-  const toggleType = (value: string) => {
-    setSelectedTypes(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(value)) {
-        newSet.delete(value)
-      } else {
-        newSet.add(value)
-      }
-      return newSet
-    })
-  }
-
-  const toggleDataId = (value: string) => {
-    setSelectedDataIds(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(value)) {
-        newSet.delete(value)
-      } else {
-        newSet.add(value)
-      }
-      return newSet
-    })
-  }
-
-  const toggleSigner = (value: string) => {
-    setSelectedSigners(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(value)) {
-        newSet.delete(value)
-      } else {
-        newSet.add(value)
-      }
-      return newSet
-    })
-  }
-
-  if (records.length === 0) {
-    return <p className="loading">No records found</p>
-  }
-
   return (
     <div className="table-container">
       <table>
         <thead>
           <tr>
             <th>
-              <FilterDropdown
-                label="Data ID"
-                values={uniqueDataIds}
-                selected={selectedDataIds}
-                onToggle={toggleDataId}
-                onSelectAll={() => setSelectedDataIds(new Set(uniqueDataIds))}
-                onClearAll={() => setSelectedDataIds(new Set())}
+              <DataIdFilter
+                value={filters.dataId ?? ''}
+                onChange={handleDataIdChange}
               />
             </th>
             <th>
               <FilterDropdown
                 label="Type"
-                values={uniqueTypes}
-                selected={selectedTypes}
-                onToggle={toggleType}
-                onSelectAll={() => setSelectedTypes(new Set(uniqueTypes))}
-                onClearAll={() => setSelectedTypes(new Set())}
+                values={filterOptions.dataTypes}
+                selected={typeFilter.selected}
+                onToggle={typeFilter.toggle}
+                onSelectAll={typeFilter.selectAll}
+                onClearAll={typeFilter.clearAll}
               />
             </th>
             <th>
               <FilterDropdown
                 label="Signed By"
-                values={uniqueSigners}
-                selected={selectedSigners}
-                onToggle={toggleSigner}
-                onSelectAll={() => setSelectedSigners(new Set(uniqueSigners))}
-                onClearAll={() => setSelectedSigners(new Set())}
+                values={filterOptions.signerIdentities}
+                displayValues={signerDisplayValues}
+                selected={signerFilter.selected}
+                onToggle={signerFilter.toggle}
+                onSelectAll={signerFilter.selectAll}
+                onClearAll={signerFilter.clearAll}
               />
             </th>
             <th>Direct Predecessors</th>
@@ -276,14 +256,14 @@ export default function RecordTable({ records }: Props) {
           </tr>
         </thead>
         <tbody>
-          {filteredRecords.length === 0 ? (
+          {records.length === 0 ? (
             <tr>
               <td colSpan={5} style={{ textAlign: 'center', color: '#666' }}>
                 No records match the current filters
               </td>
             </tr>
           ) : (
-            filteredRecords.map((record) => (
+            records.map((record) => (
               <tr key={record.id}>
                 <td>{record.metadata.dataId}</td>
                 <td>

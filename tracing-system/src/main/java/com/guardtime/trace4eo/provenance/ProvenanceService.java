@@ -43,19 +43,33 @@ public class ProvenanceService {
         return provenanceRegistry.get(id);
     }
 
-    public List<ProvenanceRecord> findAll(int page, int size, String dataType, String dataId) {
-        return provenanceRegistry.findAll(page, size, dataType, dataId);
+    public PagedResponse<ProvenanceRecord> findAll(
+        int page,
+        int size,
+        List<String> dataTypes,
+        String dataId,
+        List<String> signerIdentities
+    ) {
+        var records = provenanceRegistry.findAll(page, size, dataTypes, dataId, signerIdentities);
+        var total = provenanceRegistry.count(dataTypes, dataId, signerIdentities);
+        return PagedResponse.of(records, total, page, size);
     }
 
-    public long count(String dataType, String dataId) {
-        return provenanceRegistry.count(dataType, dataId);
+    public FilterOptions getFilterOptions() {
+        return new FilterOptions(
+            provenanceRegistry.findDistinctDataTypes(),
+            provenanceRegistry.findDistinctSignerIdentities()
+        );
     }
 
     public void saveSignature(ProvenanceRecord provenanceRecord) {
         UUID id = provenanceRecord.id();
         Instant signingTime = provenanceRecord.signature().signingTime();
         String signatureJson = provenanceJsonMapper.writeValueAsString(provenanceRecord.signature());
-        provenanceRegistry.addSignature(id, signingTime, signatureJson.getBytes(StandardCharsets.UTF_8));
+        String signerIdentity = provenanceRecord.signature().details() != null
+            ? provenanceRecord.signature().details().signerIdentity()
+            : null;
+        provenanceRegistry.addSignature(id, signingTime, signatureJson.getBytes(StandardCharsets.UTF_8), signerIdentity);
     }
 
     public void saveProvenanceRecord(ProvenanceRecord provenanceRecord) {

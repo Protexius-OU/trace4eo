@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -47,12 +48,16 @@ public class ProvenanceController {
     public PagedResponse<ProvenanceRecord> listRecords(
         @RequestParam(value = "page", defaultValue = "0") int page,
         @RequestParam(value = "size", defaultValue = "20") int size,
-        @RequestParam(value = "dataType", required = false) String dataType,
-        @RequestParam(value = "dataId", required = false) String dataId
+        @RequestParam(value = "dataType", required = false) List<String> dataTypes,
+        @RequestParam(value = "dataId", required = false) String dataId,
+        @RequestParam(value = "signerIdentity", required = false) List<String> signerIdentities
     ) {
-        var records = provenanceService.findAll(page, size, dataType, dataId);
-        var total = provenanceService.count(dataType, dataId);
-        return PagedResponse.of(records, total, page, size);
+        return provenanceService.findAll(page, size, dataTypes, dataId, signerIdentities);
+    }
+
+    @GetMapping("/filters")
+    public FilterOptions getFilterOptions() {
+        return provenanceService.getFilterOptions();
     }
 
     @PostMapping

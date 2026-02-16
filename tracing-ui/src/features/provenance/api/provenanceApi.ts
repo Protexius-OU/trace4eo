@@ -1,26 +1,46 @@
 import { authFetch } from '../../../core/auth/authFetch'
-import type { ProvenanceRecord, ProvenanceGraph, PagedResponse, RecordFilters, VerificationResult } from '../types/provenance'
+import type { ProvenanceRecord, ProvenanceGraph, PagedResponse, RecordFilters, FilterOptions, VerificationResult } from '../types/provenance'
 
 const API_BASE = '/api/provenance'
+
+const EMPTY_PAGE: PagedResponse<ProvenanceRecord> = {
+  content: [], totalElements: 0, totalPages: 0, page: 0, size: 0
+}
 
 export async function fetchRecords(
   page: number = 0,
   size: number = 20,
   filters: RecordFilters = {}
 ): Promise<PagedResponse<ProvenanceRecord>> {
+  // An explicitly empty filter array means "match nothing" — no need to ask the server
+  if (filters.dataTypes?.length === 0 || filters.signerIdentities?.length === 0) {
+    return EMPTY_PAGE
+  }
+
   const params = new URLSearchParams({
     page: page.toString(),
     size: size.toString(),
   })
 
-  if (filters.dataType) params.set('dataType', filters.dataType)
+  if (filters.dataTypes) {
+    filters.dataTypes.forEach(t => params.append('dataType', t))
+  }
   if (filters.dataId) params.set('dataId', filters.dataId)
-  if (filters.fromDate) params.set('fromDate', filters.fromDate)
-  if (filters.toDate) params.set('toDate', filters.toDate)
+  if (filters.signerIdentities) {
+    filters.signerIdentities.forEach(s => params.append('signerIdentity', s))
+  }
 
   const response = await authFetch(`${API_BASE}?${params}`)
   if (!response.ok) {
     throw new Error(`Failed to fetch records: ${response.statusText}`)
+  }
+  return response.json()
+}
+
+export async function fetchFilterOptions(): Promise<FilterOptions> {
+  const response = await authFetch(`${API_BASE}/filters`)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch filter options: ${response.statusText}`)
   }
   return response.json()
 }

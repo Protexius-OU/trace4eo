@@ -3,6 +3,7 @@ package com.guardtime.trace4eo.signing;
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
+import dev.sigstore.KeylessSigner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -42,7 +43,9 @@ class BatchSigningToolTest {
 
         AtomicInteger callCount = new AtomicInteger(0);
         ProvenanceSigningService mockSigningService = mock(ProvenanceSigningService.class);
-        when(mockSigningService.sign(any(byte[].class), anyString()))
+        KeylessSigner mockSigner = mock(KeylessSigner.class);
+        when(mockSigningService.buildTokenSigner(anyString())).thenReturn(mockSigner);
+        when(mockSigningService.sign(any(byte[].class), any(KeylessSigner.class)))
             .thenAnswer(invocation -> new ProvenanceSignature(
                 testSignature.bytes(),
                 testSignature.signingTime().plusSeconds(callCount.getAndIncrement()),

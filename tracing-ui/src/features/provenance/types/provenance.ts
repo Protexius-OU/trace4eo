@@ -87,10 +87,14 @@ export interface PagedResponse<T> {
 }
 
 export interface RecordFilters {
-  dataType?: string
+  dataTypes?: string[]
   dataId?: string
-  fromDate?: string
-  toDate?: string
+  signerIdentities?: string[]
+}
+
+export interface FilterOptions {
+  dataTypes: string[]
+  signerIdentities: string[]
 }
 
 export type VerificationStepName = 'SIGNATURE' | 'METADATA' | 'FILES_INFO' | 'FILE_CONTENTS'
