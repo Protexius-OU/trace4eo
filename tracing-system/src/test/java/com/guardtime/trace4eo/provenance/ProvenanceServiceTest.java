@@ -15,9 +15,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -80,7 +82,7 @@ class ProvenanceServiceTest {
 
         provenanceService.saveSignature(record);
 
-        verify(provenanceRegistry).addSignature(eq(id), eq(signingTime), eq(signatureJson.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        verify(provenanceRegistry).addSignature(eq(id), eq(signingTime), eq(signatureJson.getBytes(java.nio.charset.StandardCharsets.UTF_8)), eq((String) null));
     }
 
     @Test
@@ -123,6 +125,37 @@ class ProvenanceServiceTest {
             eq((String) null),
             eq(signingTime)
         );
+    }
+
+    @Test
+    void findAllReturnsPagedResponse() {
+        List<String> dataTypes = List.of("type-a");
+        String dataId = "satellite";
+        List<String> signerIdentities = List.of("user@example.com");
+        List<ProvenanceRecord> records = List.of(createTestRecord(UUID.randomUUID()));
+
+        when(provenanceRegistry.findAll(0, 20, dataTypes, dataId, signerIdentities)).thenReturn(records);
+        when(provenanceRegistry.count(dataTypes, dataId, signerIdentities)).thenReturn(45L);
+
+        PagedResponse<ProvenanceRecord> result = provenanceService.findAll(0, 20, dataTypes, dataId, signerIdentities);
+
+        assertEquals(records, result.content());
+        assertEquals(45L, result.totalElements());
+        assertEquals(3, result.totalPages());
+        assertEquals(0, result.page());
+        assertEquals(20, result.size());
+    }
+
+    @Test
+    void findAllReturnsEmptyPage() {
+        when(provenanceRegistry.findAll(0, 20, null, null, null)).thenReturn(List.of());
+        when(provenanceRegistry.count(null, null, null)).thenReturn(0L);
+
+        PagedResponse<ProvenanceRecord> result = provenanceService.findAll(0, 20, null, null, null);
+
+        assertTrue(result.content().isEmpty());
+        assertEquals(0, result.totalElements());
+        assertEquals(0, result.totalPages());
     }
 
     @Test

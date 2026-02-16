@@ -166,6 +166,30 @@ td .btn-primary {
   text-overflow: ellipsis;
 }
 
+/* Data ID text filter input */
+.filter-text-input {
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  color: #333;
+  width: 160px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.filter-text-input:focus {
+  border-color: #1565c0;
+}
+
+.filter-text-input::placeholder {
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
 /* Record type badge */
 .badge {
   display: inline-block;

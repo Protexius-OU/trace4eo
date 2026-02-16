@@ -13,6 +13,7 @@ import com.guardtime.trace4eo.provenance.record.Metadata;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecordBuilder;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
+import dev.sigstore.KeylessSigner;
 import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -103,7 +104,11 @@ public class BatchSigningTool {
         }
 
         String oidcToken = oidcTokenResolver.resolve();
-        SigningOutcome outcome = signFiles(resolvedFiles, dataId, provenanceRecordType, algorithm, oidcToken);
+        if (oidcToken == null) {
+            throw new IllegalStateException("No OIDC token available. Set SIGSTORE_ID_TOKEN or enable browser-based login.");
+        }
+        KeylessSigner signer = signingService.buildTokenSigner(oidcToken);
+        SigningOutcome outcome = signFiles(resolvedFiles, dataId, provenanceRecordType, algorithm, signer);
 
         if (!outcome.records.isEmpty()) {
             ensureDirectoryExists(outputDir);
@@ -204,13 +209,13 @@ public class BatchSigningTool {
 
     private SigningOutcome signFiles(
         List<Path> files, String dataId, String provenanceRecordType,
-        HashAlgorithm algorithm, String oidcToken
+        HashAlgorithm algorithm, KeylessSigner signer
     ) {
         List<FileSigningResult> results = new ArrayList<>();
         List<ProvenanceRecord> records = new ArrayList<>();
         for (Path file : files) {
             try {
-                ProvenanceRecord record = createSingleFileRecord(file, dataId, provenanceRecordType, algorithm, oidcToken);
+                ProvenanceRecord record = createSingleFileRecord(file, dataId, provenanceRecordType, algorithm, signer);
                 records.add(record);
                 results.add(FileSigningResult.success(file, record.id()));
                 log.info("Successfully signed: {}", file);
@@ -295,7 +300,7 @@ public class BatchSigningTool {
 
     private ProvenanceRecord createSingleFileRecord(
         Path file, String baseDataId, String provenanceRecordType,
-        HashAlgorithm algorithm, String oidcToken
+        HashAlgorithm algorithm, KeylessSigner signer
     ) throws IOException {
         String fileDataId = baseDataId + "/" + file.getFileName().toString();
         Metadata metadata = new Metadata(fileDataId, provenanceRecordType, List.of());
@@ -307,7 +312,7 @@ public class BatchSigningTool {
             .withMetadata(metadata)
             .build();
         byte[] manifestBytes = new JsonCanonicalizer(provenanceJsonMapper.writeValueAsBytes(manifest)).getEncodedUTF8();
-        ProvenanceSignature provenanceSignature = signingService.sign(manifestBytes, oidcToken);
+        ProvenanceSignature provenanceSignature = signingService.sign(manifestBytes, signer);
         return new ProvenanceRecordBuilder()
             .withMetadata(metadata)
             .withFilesInfo(filesInfo)

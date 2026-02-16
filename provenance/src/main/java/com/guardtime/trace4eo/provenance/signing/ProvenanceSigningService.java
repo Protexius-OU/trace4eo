@@ -34,12 +34,25 @@ public class ProvenanceSigningService {
     public ProvenanceSigningService() {
     }
 
-    /** Sign with an explicit OIDC token (e.g. from Google via Keycloak broker). */
-    public ProvenanceSignature sign(byte[] bytes, String oidcToken) {
-        return sign(new ByteArrayInputStream(bytes), oidcToken);
+    /** Build a reusable signer for an explicit OIDC token. Caller manages the lifecycle. */
+    public KeylessSigner buildTokenSigner(String oidcToken) {
+        return buildSigner(oidcToken);
     }
 
-    public ProvenanceSignature sign(InputStream inputStream, String oidcToken) {
+    /** Sign with an explicit OIDC token (e.g. from Google via Keycloak broker). */
+    public ProvenanceSignature sign(byte[] bytes, String oidcToken) {
+        KeylessSigner signer = oidcToken != null
+            ? buildSigner(oidcToken)
+            : getBrowserSigner();
+        return sign(new ByteArrayInputStream(bytes), signer);
+    }
+
+    /** Sign using a pre-built signer (for batch operations). */
+    public ProvenanceSignature sign(byte[] bytes, KeylessSigner signer) {
+        return sign(new ByteArrayInputStream(bytes), signer);
+    }
+
+    private ProvenanceSignature sign(InputStream inputStream, KeylessSigner signer) {
         MessageDigest md;
         try {
             md = MessageDigest.getInstance(SIGNING_HASH_ALGORITHM.getName());
@@ -49,9 +62,6 @@ public class ProvenanceSigningService {
         }
         try (DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)) {
             digestInputStream.transferTo(OutputStream.nullOutputStream());
-            KeylessSigner signer = oidcToken != null
-                ? buildSigner(oidcToken)
-                : getBrowserSigner();
             Bundle bundle = signer.sign(md.digest());
             Bundle.MessageSignature messageSignature = bundle.getMessageSignature().orElse(null);
             if (messageSignature == null) {

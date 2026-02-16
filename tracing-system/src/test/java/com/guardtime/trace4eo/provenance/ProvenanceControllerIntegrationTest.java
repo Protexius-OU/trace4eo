@@ -5,6 +5,7 @@ import com.guardtime.trace4eo.provenance.record.Manifest;
 import com.guardtime.trace4eo.provenance.record.Metadata;
 import com.guardtime.trace4eo.provenance.record.Predecessor;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
+import com.guardtime.trace4eo.provenance.signing.SignatureDetails;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -25,6 +26,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
@@ -43,7 +45,7 @@ class ProvenanceControllerIntegrationTest {
     void saveAndGetProvenanceRecord() {
         UUID id = UUID.randomUUID();
         String dataId = "data-" + id;
-        ProvenanceRecord record = createTestRecord(id, dataId, Collections.emptyList());
+        ProvenanceRecord record = createTestRecord(id, dataId, "test-type", null, Collections.emptyList());
 
         ResponseEntity<String> postResponse = restTemplate.postForEntity("/api/provenance", record, String.class);
         assertEquals(HttpStatus.OK, postResponse.getStatusCode(), "Save failed: " + postResponse.getBody());
@@ -76,7 +78,7 @@ class ProvenanceControllerIntegrationTest {
     @Test
     void getProvenanceGraphReturnsGraphForExistingRecord() {
         UUID id = UUID.randomUUID();
-        ProvenanceRecord record = createTestRecord(id, "data-" + id, Collections.emptyList());
+        ProvenanceRecord record = createTestRecord(id, "data-" + id, "test-type", null, Collections.emptyList());
         restTemplate.postForEntity("/api/provenance", record, Void.class);
 
         ResponseEntity<ProvenanceGraph> response = restTemplate.getForEntity(
@@ -109,8 +111,8 @@ class ProvenanceControllerIntegrationTest {
         UUID predecessorId = UUID.randomUUID();
         UUID rootId = UUID.randomUUID();
 
-        ProvenanceRecord predecessor = createTestRecord(predecessorId, "data-" + predecessorId, Collections.emptyList());
-        ProvenanceRecord root = createTestRecord(rootId, "data-" + rootId, List.of(new Predecessor(predecessorId)));
+        ProvenanceRecord predecessor = createTestRecord(predecessorId, "data-" + predecessorId, "test-type", null, Collections.emptyList());
+        ProvenanceRecord root = createTestRecord(rootId, "data-" + rootId, "test-type", null, List.of(new Predecessor(predecessorId)));
 
         restTemplate.postForEntity("/api/provenance", predecessor, Void.class);
         restTemplate.postForEntity("/api/provenance", root, Void.class);
@@ -127,14 +129,93 @@ class ProvenanceControllerIntegrationTest {
         assertEquals(1, response.getBody().edges().size());
     }
 
-    private ProvenanceRecord createTestRecord(UUID id, String dataId, List<Predecessor> predecessors) {
-        Metadata metadata = new Metadata(dataId, "test-type", predecessors);
+    @Test
+    void getFilterOptionsReturnsDistinctValues() {
+        String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+        String typeA = "filter-type-a-" + uniqueSuffix;
+        String typeB = "filter-type-b-" + uniqueSuffix;
+        String signer = "filtertest-" + uniqueSuffix + "@example.com";
+
+        createAndSaveRecord(typeA, signer);
+        createAndSaveRecord(typeB, signer);
+        createAndSaveRecord(typeA, signer);
+
+        ResponseEntity<FilterOptions> response = restTemplate.getForEntity(
+            "/api/provenance/filters",
+            FilterOptions.class
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().dataTypes().contains(typeA));
+        assertTrue(response.getBody().dataTypes().contains(typeB));
+        assertTrue(response.getBody().signerIdentities().contains(signer));
+    }
+
+    @Test
+    void listRecordsWithMultiValueDataTypeFilter() {
+        String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+        String typeA = "mv-type-a-" + uniqueSuffix;
+        String typeB = "mv-type-b-" + uniqueSuffix;
+        String typeC = "mv-type-c-" + uniqueSuffix;
+
+        createAndSaveRecord(typeA, null);
+        createAndSaveRecord(typeB, null);
+        createAndSaveRecord(typeC, null);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+            "/api/provenance?dataType={t1}&dataType={t2}",
+            String.class,
+            typeA, typeB
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().contains(typeA));
+        assertTrue(response.getBody().contains(typeB));
+        // typeC should not appear
+        assertTrue(!response.getBody().contains(typeC));
+    }
+
+    @Test
+    void listRecordsWithSignerIdentityFilter() {
+        String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+        String signer1 = "signer1-" + uniqueSuffix + "@example.com";
+        String signer2 = "signer2-" + uniqueSuffix + "@example.com";
+
+        createAndSaveRecord("type-" + uniqueSuffix, signer1);
+        createAndSaveRecord("type-" + uniqueSuffix, signer2);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+            "/api/provenance?signerIdentity={s}",
+            String.class,
+            signer1
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        // Response should contain exactly 1 record (total)
+        assertTrue(response.getBody().contains("\"totalElements\":1"));
+    }
+
+    private void createAndSaveRecord(String dataType, String signerIdentity) {
+        UUID id = UUID.randomUUID();
+        ProvenanceRecord record = createTestRecord(id, "data-" + id, dataType, signerIdentity, Collections.emptyList());
+        restTemplate.postForEntity("/api/provenance", record, Void.class);
+    }
+
+    private ProvenanceRecord createTestRecord(UUID id, String dataId, String dataType, String signerIdentity, List<Predecessor> predecessors) {
+        Metadata metadata = new Metadata(dataId, dataType, predecessors);
         Manifest manifest = new Manifest("1", null, null);
         Instant signingTime = Instant.parse("2024-01-15T10:30:00Z");
+        SignatureDetails details = signerIdentity != null
+            ? new SignatureDetails(signingTime, "12345", signerIdentity, "https://issuer.example.com")
+            : null;
         ProvenanceSignature signature = new ProvenanceSignature(
             new byte[]{1, 2, 3},
             signingTime,
-            HashAlgorithm.SHA256
+            HashAlgorithm.SHA256,
+            details
         );
         return new ProvenanceRecordImpl(id, metadata, null, manifest, signature);
     }

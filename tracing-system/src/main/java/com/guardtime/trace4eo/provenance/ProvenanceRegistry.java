@@ -34,15 +34,17 @@ public class ProvenanceRegistry {
     public void addSignature(
         UUID id,
         Instant signingTime,
-        byte[] signatureBytes
+        byte[] signatureBytes,
+        String signerIdentity
     ) {
         int rowsUpdated = jdbcClient.sql("""
-                insert into signature (id, signing_time, signature)
-                values (:id, :signing_time, :signature)
+                insert into signature (id, signing_time, signature, signer_identity)
+                values (:id, :signing_time, :signature, :signer_identity)
                 """)
             .param("id", id)
             .param("signing_time", Timestamp.from(signingTime))
             .param("signature", signatureBytes)
+            .param("signer_identity", signerIdentity)
             .update();
         if (rowsUpdated != 1) {
             String message = String.format("Expected to update exactly one row, updated %s instead", rowsUpdated);
@@ -96,7 +98,13 @@ public class ProvenanceRegistry {
             .optional();
     }
 
-    public List<ProvenanceRecord> findAll(int page, int size, String dataType, String dataId) {
+    public List<ProvenanceRecord> findAll(
+        int page,
+        int size,
+        List<String> dataTypes,
+        String dataId,
+        List<String> signerIdentities
+    ) {
         StringBuilder sql = new StringBuilder("""
             select
                 pr.id,
@@ -109,13 +117,7 @@ public class ProvenanceRegistry {
             where 1=1
             """);
 
-        if (dataType != null && !dataType.isBlank()) {
-            sql.append(" and pr.metadata->>'dataType' ilike :dataType");
-        }
-        if (dataId != null && !dataId.isBlank()) {
-            sql.append(" and pr.metadata->>'dataId' ilike :dataId");
-        }
-
+        appendFilters(sql, dataTypes, dataId, signerIdentities);
         sql.append(" order by pr.created_at desc");
         sql.append(" limit :limit offset :offset");
 
@@ -123,39 +125,78 @@ public class ProvenanceRegistry {
             .param("limit", size)
             .param("offset", page * size);
 
-        if (dataType != null && !dataType.isBlank()) {
-            query = query.param("dataType", "%" + dataType + "%");
-        }
-        if (dataId != null && !dataId.isBlank()) {
-            query = query.param("dataId", "%" + dataId + "%");
-        }
-
+        query = bindFilterParams(query, dataTypes, dataId, signerIdentities);
         return query.query(this::mapRow).list();
     }
 
-    public long count(String dataType, String dataId) {
+    public long count(List<String> dataTypes, String dataId, List<String> signerIdentities) {
         StringBuilder sql = new StringBuilder("""
             select count(*) from provenance_record pr
+            inner join signature s on pr.id = s.id
             where 1=1
             """);
 
-        if (dataType != null && !dataType.isBlank()) {
-            sql.append(" and pr.metadata->>'dataType' ilike :dataType");
+        appendFilters(sql, dataTypes, dataId, signerIdentities);
+        var query = jdbcClient.sql(sql.toString());
+        query = bindFilterParams(query, dataTypes, dataId, signerIdentities);
+        return query.query(Long.class).single();
+    }
+
+    public List<String> findDistinctDataTypes() {
+        return jdbcClient.sql("""
+                select distinct pr.metadata->>'dataType' as data_type
+                from provenance_record pr
+                where pr.metadata->>'dataType' is not null
+                order by data_type
+                """)
+            .query(String.class)
+            .list();
+    }
+
+    public List<String> findDistinctSignerIdentities() {
+        return jdbcClient.sql("""
+                select distinct s.signer_identity
+                from signature s
+                where s.signer_identity is not null
+                order by s.signer_identity
+                """)
+            .query(String.class)
+            .list();
+    }
+
+    private void appendFilters(
+        StringBuilder sql,
+        List<String> dataTypes,
+        String dataId,
+        List<String> signerIdentities
+    ) {
+        if (dataTypes != null && !dataTypes.isEmpty()) {
+            sql.append(" and pr.metadata->>'dataType' in (:dataTypes)");
         }
         if (dataId != null && !dataId.isBlank()) {
             sql.append(" and pr.metadata->>'dataId' ilike :dataId");
         }
+        if (signerIdentities != null && !signerIdentities.isEmpty()) {
+            sql.append(" and s.signer_identity in (:signerIdentities)");
+        }
+    }
 
-        var query = jdbcClient.sql(sql.toString());
-
-        if (dataType != null && !dataType.isBlank()) {
-            query = query.param("dataType", "%" + dataType + "%");
+    private JdbcClient.StatementSpec bindFilterParams(
+        JdbcClient.StatementSpec query,
+        List<String> dataTypes,
+        String dataId,
+        List<String> signerIdentities
+    ) {
+        if (dataTypes != null && !dataTypes.isEmpty()) {
+            query = query.param("dataTypes", dataTypes);
         }
         if (dataId != null && !dataId.isBlank()) {
             query = query.param("dataId", "%" + dataId + "%");
         }
-
-        return query.query(Long.class).single();
+        if (signerIdentities != null && !signerIdentities.isEmpty()) {
+            query = query.param("signerIdentities", signerIdentities);
+        }
+        return query;
     }
 
     public void addVerificationLog(UUID provenanceRecordId, Instant createdAt, boolean status) {
