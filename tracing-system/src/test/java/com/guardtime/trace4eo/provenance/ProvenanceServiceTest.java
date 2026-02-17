@@ -3,6 +3,7 @@ package com.guardtime.trace4eo.provenance;
 import com.guardtime.trace4eo.provenance.record.FilesInfo;
 import com.guardtime.trace4eo.provenance.record.Manifest;
 import com.guardtime.trace4eo.provenance.record.Metadata;
+import com.guardtime.trace4eo.provenance.record.Predecessor;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationResult;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationService;
@@ -21,9 +22,11 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -201,6 +204,160 @@ class ProvenanceServiceTest {
         provenanceService.verifyProvenanceRecord(record);
 
         verify(provenanceRegistry).addVerificationLog(eq(id), any(Instant.class), eq(false));
+    }
+
+    @Test
+    void saveWithNullIdThrows() {
+        ProvenanceRecord record = new ProvenanceRecordImpl(null,
+            new Metadata("data-id", "test-type", Collections.emptyList()),
+            new FilesInfo(null, null), new Manifest("1", null, null),
+            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> provenanceService.save(record));
+        assertEquals("Record ID must not be null", ex.getMessage());
+    }
+
+    @Test
+    void saveWithNullMetadataThrows() {
+        ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
+            null, new FilesInfo(null, null), new Manifest("1", null, null),
+            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> provenanceService.save(record));
+        assertEquals("Metadata must not be null", ex.getMessage());
+    }
+
+    @Test
+    void saveWithNullDataIdThrows() {
+        ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
+            new Metadata(null, "test-type", Collections.emptyList()),
+            new FilesInfo(null, null), new Manifest("1", null, null),
+            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> provenanceService.save(record));
+        assertEquals("dataId must not be null or blank", ex.getMessage());
+    }
+
+    @Test
+    void saveWithBlankDataTypeThrows() {
+        ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
+            new Metadata("data-id", "  ", Collections.emptyList()),
+            new FilesInfo(null, null), new Manifest("1", null, null),
+            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> provenanceService.save(record));
+        assertEquals("dataType must not be null or blank", ex.getMessage());
+    }
+
+    @Test
+    void saveWithNullSignatureThrows() {
+        ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
+            new Metadata("data-id", "test-type", Collections.emptyList()),
+            new FilesInfo(null, null), new Manifest("1", null, null), null);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> provenanceService.save(record));
+        assertEquals("Signature must not be null", ex.getMessage());
+    }
+
+    @Test
+    void saveWithNullManifestThrows() {
+        ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
+            new Metadata("data-id", "test-type", Collections.emptyList()),
+            new FilesInfo(null, null), null,
+            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> provenanceService.save(record));
+        assertEquals("Manifest must not be null", ex.getMessage());
+    }
+
+    @Test
+    void saveWithDuplicateIdThrows() {
+        UUID id = UUID.randomUUID();
+        ProvenanceRecord record = createTestRecord(id);
+        when(provenanceRegistry.get(id)).thenReturn(Optional.of(record));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> provenanceService.save(record));
+        assertTrue(ex.getMessage().contains(id.toString()));
+        verify(provenanceRegistry, never()).addSignature(any(), any(), any(), any());
+    }
+
+    @Test
+    void saveWithNullPredecessorsSkipsValidation() {
+        UUID id = UUID.randomUUID();
+        Metadata metadata = new Metadata("data-id", "test-type", null);
+        Manifest manifest = new Manifest("1", null, null);
+        FilesInfo filesInfo = new FilesInfo(null, null);
+        ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1, 2, 3}, Instant.now(), HashAlgorithm.SHA256);
+        ProvenanceRecord record = new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature);
+        when(provenanceRegistry.get(id)).thenReturn(Optional.empty());
+        when(provenanceJsonMapper.writeValueAsString(any())).thenReturn("{}");
+
+        provenanceService.save(record);
+
+        verify(provenanceRegistry, never()).allExist(any());
+        verify(provenanceRegistry).addSignature(any(), any(), any(), any());
+        verify(provenanceRegistry).addProvenanceRecord(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void saveWithNoPredecessorsSkipsValidation() {
+        UUID id = UUID.randomUUID();
+        ProvenanceRecord record = createTestRecord(id);
+        when(provenanceRegistry.get(id)).thenReturn(Optional.empty());
+        when(provenanceJsonMapper.writeValueAsString(any())).thenReturn("{}");
+
+        provenanceService.save(record);
+
+        verify(provenanceRegistry, never()).allExist(any());
+        verify(provenanceRegistry).addSignature(any(), any(), any(), any());
+        verify(provenanceRegistry).addProvenanceRecord(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void saveWithValidPredecessorsDelegatesToRegistry() {
+        UUID id = UUID.randomUUID();
+        UUID predecessorId = UUID.randomUUID();
+        ProvenanceRecord record = createTestRecordWithPredecessors(id, List.of(new Predecessor(predecessorId)));
+        when(provenanceRegistry.get(id)).thenReturn(Optional.empty());
+        when(provenanceRegistry.allExist(List.of(predecessorId))).thenReturn(true);
+        when(provenanceJsonMapper.writeValueAsString(any())).thenReturn("{}");
+
+        provenanceService.save(record);
+
+        verify(provenanceRegistry).allExist(List.of(predecessorId));
+        verify(provenanceRegistry).addSignature(any(), any(), any(), any());
+        verify(provenanceRegistry).addProvenanceRecord(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void saveWithNonExistingPredecessorsThrowsIllegalArgumentException() {
+        UUID id = UUID.randomUUID();
+        UUID missingId = UUID.randomUUID();
+        ProvenanceRecord record = createTestRecordWithPredecessors(id, List.of(new Predecessor(missingId)));
+        when(provenanceRegistry.get(id)).thenReturn(Optional.empty());
+        when(provenanceRegistry.allExist(List.of(missingId))).thenReturn(false);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+            () -> provenanceService.save(record));
+
+        assertTrue(ex.getMessage().contains(missingId.toString()));
+        verify(provenanceRegistry, never()).addSignature(any(), any(), any(), any());
+        verify(provenanceRegistry, never()).addProvenanceRecord(any(), any(), any(), any(), any());
+    }
+
+    private ProvenanceRecord createTestRecordWithPredecessors(UUID id, List<Predecessor> predecessors) {
+        Metadata metadata = new Metadata("data-id", "test-type", predecessors);
+        Manifest manifest = new Manifest("1", null, null);
+        FilesInfo filesInfo = new FilesInfo(null, null);
+        ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1, 2, 3}, Instant.now(), HashAlgorithm.SHA256);
+        return new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature);
     }
 
     private ProvenanceRecord createTestRecord(UUID id) {

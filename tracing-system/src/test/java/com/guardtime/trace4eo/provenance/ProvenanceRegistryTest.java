@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -397,6 +398,59 @@ class ProvenanceRegistryTest {
         assertEquals(2, provenanceRegistry.count(List.of("type-a"), null, null));
         assertEquals(2, provenanceRegistry.count(null, null, List.of("user2@example.com")));
         assertEquals(1, provenanceRegistry.count(List.of("type-a"), null, List.of("user1@example.com")));
+    }
+
+    @Test
+    void allExistReturnsTrueWhenAllExist() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        createRecordWithId(id1);
+        createRecordWithId(id2);
+
+        assertTrue(provenanceRegistry.allExist(List.of(id1, id2)));
+    }
+
+    @Test
+    void allExistReturnsFalseWhenSomeMissing() {
+        UUID existingId = UUID.randomUUID();
+        createRecordWithId(existingId);
+
+        assertFalse(provenanceRegistry.allExist(List.of(existingId, UUID.randomUUID())));
+    }
+
+    @Test
+    void allExistReturnsFalseWhenNoneExist() {
+        assertFalse(provenanceRegistry.allExist(List.of(UUID.randomUUID(), UUID.randomUUID())));
+    }
+
+    @Test
+    void allExistHandlesDuplicateIds() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        createRecordWithId(id1);
+        createRecordWithId(id2);
+
+        // Without dedup, size=3 != count=2 would incorrectly return false
+        assertTrue(provenanceRegistry.allExist(List.of(id1, id2, id1)));
+    }
+
+    @Test
+    void allExistReturnsTrueForEmptyInput() {
+        assertTrue(provenanceRegistry.allExist(List.of()));
+    }
+
+    private void createRecordWithId(UUID id) {
+        Instant now = Instant.now();
+        provenanceRegistry.addSignature(id, now, createSignatureBytes(), null);
+        provenanceRegistry.addProvenanceRecord(
+            id,
+            """
+            {"version":"1"}""",
+            """
+            {"dataId":"data-%s","dataType":"test-type","predecessors":[]}""".formatted(id),
+            null,
+            now
+        );
     }
 
     private void createRecordWithTypeAndSigner(String dataType, String signerIdentity) {
