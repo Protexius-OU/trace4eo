@@ -1,0 +1,38 @@
+{
+  "head": "019bea4a-bc08-8c3c-b844-136000cce56e",
+  "provenanceRecords": [
+    {
+      "id": "019bea4a-bc08-8c3c-b844-136000cce56e",
+      "metadata": {
+        "dataId": "data-id",
+        "dataType": "container-type",
+        "predecessors": []
+      },
+      "filesInfo": {
+        "files": [
+          {
+            "path": "test.txt",
+            "hashAlgorithm": "SHA256",
+            "hashValue": "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+          }
+        ]
+      },
+      "manifest": {
+        "version": "1",
+        "metadataHashInfo": {
+          "hashAlgorithm": "SHA256",
+          "hashValue": "ZQuKd+CWpVsBMqevihf5Qo1Q7jgd4Gflr86qAMQfRBk="
+        },
+        "filesHashInfo": {
+          "hashAlgorithm": "SHA256",
+          "hashValue": "ru0aI+19f7qhgQxYXiaoJH90A/TsIgOTFmdCakf6Wlo="
+        }
+      },
+      "signature": {
+        "bytes": "aW52YWxpZC1zaWduYXR1cmUtYnl0ZXM=",
+        "signingTime": "2026-01-23T09:58:45Z",
+        "hashAlgorithm": "SHA256"
+      }
+    }
+  ]
+}

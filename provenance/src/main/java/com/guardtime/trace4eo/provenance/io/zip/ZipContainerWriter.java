@@ -107,8 +107,12 @@ public class ZipContainerWriter implements ContainerWriter {
     }
 
     private void addFiles(ZipOutputStream zipOut, ProvenanceRecord provenanceRecord) throws IOException {
-        String filesDir = getContainerFilesPath(provenanceRecord.id());
         FilesContext filesContext = provenanceRecord.filesInfo().filesContext();
+        if (filesContext == null) {
+            log.debug("Skipping file contents - no filesContext available for record {}", provenanceRecord.id());
+            return;
+        }
+        String filesDir = getContainerFilesPath(provenanceRecord.id());
         for (FileHashInfo file : provenanceRecord.filesInfo().files()) {
             ZipEntry zipEntry = new ZipEntry(filesDir + file.path().getFileName());
             zipOut.putNextEntry(zipEntry);

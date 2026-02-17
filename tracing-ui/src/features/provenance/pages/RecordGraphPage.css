@@ -1,0 +1,29 @@
+/* UUID styling */
+.uuid {
+  font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, monospace;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+/* Page header */
+.record-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.record-header h1 {
+  margin-bottom: 0;
+}
+
+.record-header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.record-id {
+  color: #888;
+  font-size: 0.8125rem;
+  margin-bottom: 1.25rem;
+}

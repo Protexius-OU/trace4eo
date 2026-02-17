@@ -1,14 +1,29 @@
 # trace4eo
 
-TODO
+The project consists of multiple software components:
+
+* Provenance SDK
+* Tracing system
+* Tracing UI
+* Signing CLI tool
+* Verification CLI tool
 
 ## Prerequisites
 
 * Java 21
+* For UI, `npm` and `node`
 
 ## Running via Docker
 
+Use `./build-dev.sh` to build the backend image, frontend, and Docker images. Then `./start-dev.sh` to start all services (PostgreSQL, Keycloak, backend, frontend).
 
+### Building a container image for the tracing system
+
+```bash
+./gradlew :tracing-system:bootBuildImage
+```
+
+This uses Spring Boot's built-in Buildpacks support to produce an OCI image.
 
 ## Static code analysis
 
@@ -17,18 +32,12 @@ TODO
 Checkstyle is used to maintain a consistent code style.
 Checkstyle is configured to run automatically in Gradle compile phase.
 
-### JaCoCo (https://www.eclemma.org/jacoco/)
-
-Code test coverage can be measured by running `./gradlew jacocoTestReport`.
-
-Report is generated to `build/reports/jacoco/` directory.
-
 ### SpotBugs (https://spotbugs.github.io/)
 
 SpotBugs analyzes bytecode to find common bugs and code problems. This is done automatically when
 running `./gradlew build`
 
-XML and HTML reports can be found in `build/reports/spotbugs/` directory.
+XML and HTML reports can be found in each module's `build/reports/spotbugs/` directory.
 
 ### OpenRewrite (https://docs.openrewrite.org/)
 

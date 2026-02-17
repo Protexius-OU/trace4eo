@@ -18,8 +18,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.SequencedSet;
 
-import static com.guardtime.trace4eo.provenance.io.TestUtils.SIGNATURE_1;
-import static com.guardtime.trace4eo.provenance.io.TestUtils.SIGNATURE_2;
 import static com.guardtime.trace4eo.provenance.io.TestUtils.TEST_FILE_1;
 import static com.guardtime.trace4eo.provenance.io.TestUtils.TEST_FILE_2;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,8 +34,8 @@ class ZipContainerTest {
     @Test
     @Order(1)
     void write() throws IOException {
-        ProvenanceRecord provenanceRecord1 = TestUtils.createProvenanceRecord(TEST_FILE_1, SIGNATURE_1);
-        ProvenanceRecord provenanceRecord2 = TestUtils.createProvenanceRecord(TEST_FILE_2, SIGNATURE_2);
+        ProvenanceRecord provenanceRecord1 = TestUtils.createProvenanceRecord(TEST_FILE_1);
+        ProvenanceRecord provenanceRecord2 = TestUtils.createProvenanceRecord(TEST_FILE_2);
         List<ProvenanceRecord> records = List.of(provenanceRecord1, provenanceRecord2);
         SequencedSet<ProvenanceRecord> provenanceRecords = new LinkedHashSet<>(records);
         Container container = new Container(provenanceRecords.getLast().id(), provenanceRecords);

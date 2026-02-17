@@ -1,16 +1,26 @@
 [versions]
 checkstyle = "12.2.0"
+spring-shell = "4.0.1"
 
 [libraries]
-error-prone-core = { module = "com.google.errorprone:error_prone_core", version = "2.45.0" }
-jackson-databind = { module = "tools.jackson.core:jackson-databind", version = "3.0.3" }
-rewrite-static-analysis = { module = "org.openrewrite.recipe:rewrite-static-analysis", version = "2.22.0" }
+error-prone-core = { module = "com.google.errorprone:error_prone_core", version = "2.46.0" }
+jackson-databind = { module = "tools.jackson.core:jackson-databind", version = "3.0.4" }
+rewrite-static-analysis = { module = "org.openrewrite.recipe:rewrite-static-analysis", version = "2.26.0" }
+sigstore-java = { module = "dev.sigstore:sigstore-java", version = "2.0.0" }
+spring-shell-starter = { module = "org.springframework.shell:spring-shell-starter", version.ref = "spring-shell" }
+spring-shell-test = { module = "org.springframework.shell:spring-shell-test", version.ref = "spring-shell" }
+spring-shell-test-autoconfigure = { module = "org.springframework.shell:spring-shell-test-autoconfigure", version.ref = "spring-shell" }
+spring-shell-jline = { module = "org.springframework.shell:spring-shell-jline", version.ref = "spring-shell" }
 
 [bundles]
-
+spring-shell = [
+    "spring-shell-jline",
+    "spring-shell-starter"
+]
 
 [plugins]
-errorprone = { id = "net.ltgt.errorprone", version = "4.3.0" }
-openrewrite = { id = "org.openrewrite.rewrite", version = "7.21.0" }
-owasp = { id = "org.owasp.dependencycheck", version = "12.1.9" }
-spotbugs = { id = "com.github.spotbugs", version = "6.4.7" }
+errorprone = { id = "net.ltgt.errorprone", version = "5.0.0" }
+openrewrite = { id = "org.openrewrite.rewrite", version = "7.25.0" }
+owasp = { id = "org.owasp.dependencycheck", version = "12.2.0" }
+spotbugs = { id = "com.github.spotbugs", version = "6.4.8" }
+spring-boot = { id = "org.springframework.boot", version = "4.0.2" }

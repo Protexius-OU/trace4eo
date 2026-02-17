@@ -19,8 +19,8 @@ repositories {
 }
 
 dependencies {
-    implementation(libs.jackson.databind)
-    implementation("io.github.erdtman:java-json-canonicalization:1.1")
+    api(libs.jackson.databind)
+    api(libs.sigstore.java)
     implementation("org.slf4j:slf4j-api:2.0.17")
 
     errorprone(libs.error.prone.core)
@@ -36,10 +36,11 @@ java {
 testing {
     suites {
         test {
-            useJUnitJupiter("6.0.1")
+            useJUnitJupiter("6.0.2")
         }
     }
 }
+
 
 dependencyCheck {
     outputDirectory = layout.buildDirectory.dir("reports/dependency-check").get()

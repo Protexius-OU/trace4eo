@@ -2,8 +2,11 @@ package com.guardtime.trace4eo.provenance.record;
 
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
+import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 public class ManifestBuilder {
     private final HashAlgorithm hashAlgorithm;
@@ -23,11 +26,23 @@ public class ManifestBuilder {
         if (filesInfo == null) {
             throw new IllegalStateException("FilesInfo must not be null.");
         }
-        byte[] manifestBytes = provenanceJsonMapper.writeValueAsBytes(metadata);
-        FileHashInfo metadata = new FileHashInfo(hashAlgorithm, manifestBytes);
-        byte[] filesInfoBytes = provenanceJsonMapper.writeValueAsBytes(filesInfo);
-        FileHashInfo filesInfo = new FileHashInfo(hashAlgorithm, filesInfoBytes);
-        return new Manifest(metadata, filesInfo);
+        try {
+            MessageDigest md = MessageDigest.getInstance(hashAlgorithm.getName());
+
+            byte[] metadataBytes = new JsonCanonicalizer(provenanceJsonMapper.writeValueAsBytes(metadata)).getEncodedUTF8();
+            byte[] metadataHash = md.digest(metadataBytes);
+            FileHashInfo metadataHashInfo = new FileHashInfo(hashAlgorithm, metadataHash);
+
+            md.reset();
+
+            byte[] filesInfoBytes = new JsonCanonicalizer(provenanceJsonMapper.writeValueAsBytes(filesInfo)).getEncodedUTF8();
+            byte[] filesInfoHash = md.digest(filesInfoBytes);
+            FileHashInfo filesInfoHashInfo = new FileHashInfo(hashAlgorithm, filesInfoHash);
+
+            return new Manifest(metadataHashInfo, filesInfoHashInfo);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IOException("Unsupported hash algorithm: " + hashAlgorithm.getName(), e);
+        }
     }
 
     public ManifestBuilder withMetadata(Metadata metadata) {

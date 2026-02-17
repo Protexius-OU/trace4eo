@@ -1,9 +1,14 @@
 package com.guardtime.trace4eo.provenance.signing;
 
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
+import dev.sigstore.bundle.Bundle;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.UUID;
@@ -14,7 +19,19 @@ public final class SignatureUtil {
     }
 
     public static UUID createUuid(ProvenanceSignature signature) {
-        return createUuid(signature.bytes(), signature.signingTime().toEpochMilli());
+        byte[] signatureBytes = extractSignatureBytes(signature.bytes());
+        return createUuid(signatureBytes, signature.signingTime().toEpochMilli());
+    }
+
+    public static byte[] extractSignatureBytes(byte[] bundleBytes) {
+        try (Reader reader = new InputStreamReader(new ByteArrayInputStream(bundleBytes), StandardCharsets.UTF_8)) {
+            Bundle bundle = Bundle.from(reader);
+            return bundle.getMessageSignature()
+                .orElseThrow(() -> new IllegalStateException("Bundle does not contain message signature"))
+                .getSignature();
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to parse bundle", e);
+        }
     }
 
     // https://www.rfc-editor.org/rfc/rfc9562.html#name-uuid-version-8
