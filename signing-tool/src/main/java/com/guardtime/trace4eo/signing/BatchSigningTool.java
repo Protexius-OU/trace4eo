@@ -85,7 +85,8 @@ public class BatchSigningTool {
         @Option(longName = "provenance-record-type", description = "Provenance record type") String provenanceRecordType,
         @Option(longName = "data-id", description = "Base data ID (each file gets dataId/filename)") String dataId,
         @Option(longName = "output", description = "Output directory for ZIP file") Path outputDir,
-        @Option(longName = "hash-algorithm", description = "Hash algorithm", defaultValue = "SHA256") String hashAlgorithm,
+        @Option(longName = "hash-algorithm", description = "Hash algorithm (SHA256, SHA384, SHA512)",
+            defaultValue = "SHA256") String hashAlgorithm,
         @Option(longName = "register-url", description = "URL to register provenance records") String registerUrl,
         @Option(longName = "keycloak-url", description = "Keycloak server URL (for registration auth)") String keycloakUrl,
         @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm
