@@ -301,7 +301,7 @@ class ProvenanceServiceTest {
 
         provenanceService.save(record);
 
-        verify(provenanceRegistry, never()).allExist(any());
+        verify(provenanceRegistry, never()).findMissing(any());
         verify(provenanceRegistry).addSignature(any(), any(), any(), any());
         verify(provenanceRegistry).addProvenanceRecord(any(), any(), any(), any(), any());
     }
@@ -315,7 +315,7 @@ class ProvenanceServiceTest {
 
         provenanceService.save(record);
 
-        verify(provenanceRegistry, never()).allExist(any());
+        verify(provenanceRegistry, never()).findMissing(any());
         verify(provenanceRegistry).addSignature(any(), any(), any(), any());
         verify(provenanceRegistry).addProvenanceRecord(any(), any(), any(), any(), any());
     }
@@ -326,12 +326,12 @@ class ProvenanceServiceTest {
         UUID predecessorId = UUID.randomUUID();
         ProvenanceRecord record = createTestRecordWithPredecessors(id, List.of(new Predecessor(predecessorId)));
         when(provenanceRegistry.get(id)).thenReturn(Optional.empty());
-        when(provenanceRegistry.allExist(List.of(predecessorId))).thenReturn(true);
+        when(provenanceRegistry.findMissing(List.of(predecessorId))).thenReturn(List.of());
         when(provenanceJsonMapper.writeValueAsString(any())).thenReturn("{}");
 
         provenanceService.save(record);
 
-        verify(provenanceRegistry).allExist(List.of(predecessorId));
+        verify(provenanceRegistry).findMissing(List.of(predecessorId));
         verify(provenanceRegistry).addSignature(any(), any(), any(), any());
         verify(provenanceRegistry).addProvenanceRecord(any(), any(), any(), any(), any());
     }
@@ -342,7 +342,7 @@ class ProvenanceServiceTest {
         UUID missingId = UUID.randomUUID();
         ProvenanceRecord record = createTestRecordWithPredecessors(id, List.of(new Predecessor(missingId)));
         when(provenanceRegistry.get(id)).thenReturn(Optional.empty());
-        when(provenanceRegistry.allExist(List.of(missingId))).thenReturn(false);
+        when(provenanceRegistry.findMissing(List.of(missingId))).thenReturn(List.of(missingId));
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
             () -> provenanceService.save(record));

@@ -96,6 +96,8 @@ public class SigningTool {
         validateRegistrationConfig(registerUrl, keycloakUrl);
 
         String oidcToken = oidcTokenResolver.resolve();
+        String accessToken = exchangeTokenIfConfigured(registerUrl, keycloakUrl, realm, oidcToken);
+        validatePredecessorsExist(parsedPredecessors, registerUrl, accessToken);
 
         ProvenanceRecord record = buildSignedRecord(
                 paths, dataId, provenanceRecordType, parsedPredecessors, algorithm, oidcToken);
@@ -103,7 +105,7 @@ public class SigningTool {
         Path resolvedOutput = resolveOutputPath(outputDir, record.id());
         writeContainer(record, resolvedOutput);
         log.info("Provenance record saved to {}", resolvedOutput.toAbsolutePath());
-        registerIfConfigured(record, registerUrl, keycloakUrl, realm, oidcToken);
+        registerIfConfigured(record, registerUrl, accessToken);
         return record;
     }
 
@@ -191,18 +193,31 @@ public class SigningTool {
         }
     }
 
-    private void registerIfConfigured(
-        ProvenanceRecord record, String registerUrl,
-        String keycloakUrl, String realm, String oidcToken
-    ) {
+    private String exchangeTokenIfConfigured(String registerUrl, String keycloakUrl, String realm, String oidcToken) {
         if (registerUrl == null || registerUrl.isBlank()) {
+            return null;
+        }
+        if (oidcToken != null) {
+            return registrationClient.exchangeToken(keycloakUrl, realm, oidcToken);
+        }
+        log.warn("No OIDC token available for token exchange. Attempting registration without auth.");
+        return null;
+    }
+
+    private void validatePredecessorsExist(List<Predecessor> predecessors, String registerUrl, String accessToken) {
+        if (registerUrl == null || registerUrl.isBlank() || predecessors.isEmpty()) {
             return;
         }
-        String accessToken = null;
-        if (oidcToken != null) {
-            accessToken = registrationClient.exchangeToken(keycloakUrl, realm, oidcToken);
-        } else {
-            log.warn("No OIDC token available for token exchange. Attempting registration without auth.");
+        List<UUID> ids = predecessors.stream().map(Predecessor::id).toList();
+        List<UUID> missing = registrationClient.findMissingPredecessors(ids, registerUrl, accessToken);
+        if (!missing.isEmpty()) {
+            throw new IllegalArgumentException("Predecessor records not found: " + missing);
+        }
+    }
+
+    private void registerIfConfigured(ProvenanceRecord record, String registerUrl, String accessToken) {
+        if (registerUrl == null || registerUrl.isBlank()) {
+            return;
         }
         List<String> failures = registrationClient.registerRecords(List.of(record), registerUrl, accessToken);
         if (!failures.isEmpty()) {

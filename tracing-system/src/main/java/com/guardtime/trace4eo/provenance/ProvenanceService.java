@@ -45,6 +45,10 @@ public class ProvenanceService {
         return provenanceRegistry.get(id);
     }
 
+    public List<UUID> findMissing(List<UUID> ids) {
+        return provenanceRegistry.findMissing(ids);
+    }
+
     public PagedResponse<ProvenanceRecord> findAll(
         int page,
         int size,
@@ -102,9 +106,12 @@ public class ProvenanceService {
             : provenanceRecord.metadata().predecessors().stream()
                 .map(Predecessor::id)
                 .toList();
-        if (!predecessorIds.isEmpty() && !provenanceRegistry.allExist(predecessorIds)) {
-            throw new IllegalArgumentException(
-                "Not all predecessor records exist: " + predecessorIds);
+        if (predecessorIds.isEmpty()) {
+            return;
+        }
+        List<UUID> missing = provenanceRegistry.findMissing(predecessorIds);
+        if (!missing.isEmpty()) {
+            throw new IllegalArgumentException("Predecessor records not found: " + missing);
         }
     }
 

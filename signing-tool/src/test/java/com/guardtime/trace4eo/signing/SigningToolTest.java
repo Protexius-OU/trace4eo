@@ -73,13 +73,18 @@ class SigningToolTest {
     void createProvenanceRecord_withRegistration(@TempDir Path tempDir) throws IOException {
         when(mockRegistrationClient.exchangeToken(anyString(), anyString(), anyString()))
             .thenReturn("access-token");
+        when(mockRegistrationClient.findMissingPredecessors(anyList(), anyString(), any()))
+            .thenReturn(List.of());
 
+        UUID predecessorId = UUID.randomUUID();
         List<String> files = List.of("src/test/resources/test.txt");
         signingTool.createProvenanceRecord(
-            files, "test", "test", List.of(), "SHA256", tempDir,
+            files, "test", "test", List.of(predecessorId.toString()), "SHA256", tempDir,
             "http://localhost:8080/api/provenance", "http://localhost:8180", "trace4eo"
         );
         verify(mockRegistrationClient).exchangeToken("http://localhost:8180", "trace4eo", "test-token");
+        verify(mockRegistrationClient).findMissingPredecessors(
+            List.of(predecessorId), "http://localhost:8080/api/provenance", "access-token");
         verify(mockRegistrationClient).registerRecords(anyList(), anyString(), anyString());
     }
 
@@ -263,6 +268,34 @@ class SigningToolTest {
             signingTool.createProvenanceRecord(files, "test", "test", List.of(), "SHA256", file, null, null, "trace4eo")
         );
         assertTrue(exception.getMessage().contains("--output is not a directory"));
+    }
+
+    @Test
+    void createProvenanceRecord_missingPredecessors_throws(@TempDir Path tempDir) {
+        UUID missingId = UUID.randomUUID();
+        when(mockRegistrationClient.exchangeToken(anyString(), anyString(), anyString()))
+            .thenReturn("access-token");
+        when(mockRegistrationClient.findMissingPredecessors(anyList(), anyString(), any()))
+            .thenReturn(List.of(missingId));
+
+        List<String> files = List.of("src/test/resources/test.txt");
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+            signingTool.createProvenanceRecord(
+                files, "test", "test", List.of(missingId.toString()), "SHA256", tempDir,
+                "http://localhost:8080/api/provenance", "http://localhost:8180", "trace4eo")
+        );
+        assertTrue(exception.getMessage().contains("Predecessor records not found"));
+        assertTrue(exception.getMessage().contains(missingId.toString()));
+    }
+
+    @Test
+    void createProvenanceRecord_predecessorsWithoutRegisterUrl_skipsValidation(@TempDir Path tempDir) throws IOException {
+        List<String> files = List.of("src/test/resources/test.txt");
+        signingTool.createProvenanceRecord(
+            files, "test", "test",
+            List.of(UUID.randomUUID().toString()), "SHA256", tempDir, null, null, "trace4eo"
+        );
+        verify(mockRegistrationClient, never()).findMissingPredecessors(anyList(), anyString(), any());
     }
 
     @Test

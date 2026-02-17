@@ -131,3 +131,6 @@ Sign and register with a tracing system:
 - The `--register-url` option POSTs each provenance record as JSON to the specified URL
 - When `--register-url` is used, `--keycloak-url` is required. The tool exchanges the Sigstore OIDC token for a Keycloak
   access token via RFC 8693 token exchange to authenticate with the tracing backend.
+- When `--register-url` and `--predecessors` are both provided, the tool validates that all predecessor records exist
+  in the tracing backend before signing. If any predecessors are missing, the command aborts with an error listing the
+  missing IDs, avoiding the slow Sigstore OIDC signing flow for records that would be rejected on registration.
