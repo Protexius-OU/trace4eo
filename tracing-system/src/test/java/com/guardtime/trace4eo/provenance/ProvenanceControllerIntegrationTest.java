@@ -198,6 +198,32 @@ class ProvenanceControllerIntegrationTest {
         assertTrue(response.getBody().contains("\"totalElements\":1"));
     }
 
+    @Test
+    void saveWithDuplicateIdReturns400() {
+        UUID id = UUID.randomUUID();
+        ProvenanceRecord record = createTestRecord(id, "data-" + id, "test-type", null, Collections.emptyList());
+
+        restTemplate.postForEntity("/api/provenance", record, String.class);
+        ResponseEntity<String> response = restTemplate.postForEntity("/api/provenance", record, String.class);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertTrue(response.getBody().contains(id.toString()));
+    }
+
+    @Test
+    void saveWithNonExistingPredecessorReturns400() {
+        UUID id = UUID.randomUUID();
+        UUID nonExistingPredecessorId = UUID.randomUUID();
+        ProvenanceRecord record = createTestRecord(
+            id, "data-" + id, "test-type", null, List.of(new Predecessor(nonExistingPredecessorId))
+        );
+
+        ResponseEntity<String> response = restTemplate.postForEntity("/api/provenance", record, String.class);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertTrue(response.getBody().contains(nonExistingPredecessorId.toString()));
+    }
+
     private void createAndSaveRecord(String dataType, String signerIdentity) {
         UUID id = UUID.randomUUID();
         ProvenanceRecord record = createTestRecord(id, "data-" + id, dataType, signerIdentity, Collections.emptyList());

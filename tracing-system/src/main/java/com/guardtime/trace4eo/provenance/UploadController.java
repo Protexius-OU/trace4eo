@@ -102,8 +102,7 @@ public class UploadController {
 
             ProvenanceRecord record = createProvenanceRecord(tempFile, dataType, dataId, predecessors, sigstoreToken);
 
-            provenanceService.saveSignature(record);
-            provenanceService.saveProvenanceRecord(record);
+            provenanceService.save(record);
 
             log.info("Created provenance record with ID: {}", record.id());
             return record;

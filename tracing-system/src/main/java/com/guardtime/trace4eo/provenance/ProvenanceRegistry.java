@@ -14,8 +14,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Repository
@@ -73,6 +75,19 @@ public class ProvenanceRegistry {
             String message = String.format("Expected to update exactly one row, updated %s instead", rowsUpdated);
             throw new IllegalStateException(message);
         }
+    }
+
+    public boolean allExist(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return true;
+        }
+        Set<UUID> uniqueIds = Set.copyOf(ids);
+        long count = jdbcClient.sql(
+                "select count(*) from provenance_record where id in (:ids)")
+            .param("ids", uniqueIds)
+            .query(Long.class)
+            .single();
+        return count == uniqueIds.size();
     }
 
     public Optional<ProvenanceRecord> get(UUID id) {

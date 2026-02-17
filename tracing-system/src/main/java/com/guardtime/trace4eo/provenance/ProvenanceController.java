@@ -62,8 +62,7 @@ public class ProvenanceController {
 
     @PostMapping
     public void save(@RequestBody ProvenanceRecord provenanceRecord) {
-        provenanceService.saveSignature(provenanceRecord);
-        provenanceService.saveProvenanceRecord(provenanceRecord);
+        provenanceService.save(provenanceRecord);
     }
 
     @GetMapping("/{id}")

@@ -1,11 +1,13 @@
 package com.guardtime.trace4eo.provenance;
 
+import com.guardtime.trace4eo.provenance.record.Predecessor;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationResult;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -60,6 +62,50 @@ public class ProvenanceService {
             provenanceRegistry.findDistinctDataTypes(),
             provenanceRegistry.findDistinctSignerIdentities()
         );
+    }
+
+    @Transactional
+    public void save(ProvenanceRecord provenanceRecord) {
+        validate(provenanceRecord);
+        saveSignature(provenanceRecord);
+        saveProvenanceRecord(provenanceRecord);
+    }
+
+    private void validate(ProvenanceRecord record) {
+        if (record.id() == null) {
+            throw new IllegalArgumentException("Record ID must not be null");
+        }
+        if (record.metadata() == null) {
+            throw new IllegalArgumentException("Metadata must not be null");
+        }
+        if (record.metadata().dataId() == null || record.metadata().dataId().isBlank()) {
+            throw new IllegalArgumentException("dataId must not be null or blank");
+        }
+        if (record.metadata().dataType() == null || record.metadata().dataType().isBlank()) {
+            throw new IllegalArgumentException("dataType must not be null or blank");
+        }
+        if (record.signature() == null) {
+            throw new IllegalArgumentException("Signature must not be null");
+        }
+        if (record.manifest() == null) {
+            throw new IllegalArgumentException("Manifest must not be null");
+        }
+        if (provenanceRegistry.get(record.id()).isPresent()) {
+            throw new IllegalArgumentException("Record with ID " + record.id() + " already exists");
+        }
+        validatePredecessorsExist(record);
+    }
+
+    private void validatePredecessorsExist(ProvenanceRecord provenanceRecord) {
+        List<UUID> predecessorIds = provenanceRecord.metadata().predecessors() == null
+            ? List.of()
+            : provenanceRecord.metadata().predecessors().stream()
+                .map(Predecessor::id)
+                .toList();
+        if (!predecessorIds.isEmpty() && !provenanceRegistry.allExist(predecessorIds)) {
+            throw new IllegalArgumentException(
+                "Not all predecessor records exist: " + predecessorIds);
+        }
     }
 
     public void saveSignature(ProvenanceRecord provenanceRecord) {
