@@ -36,38 +36,19 @@ public class VerificationTool {
         this.provenanceJsonMapper = provenanceJsonMapper;
     }
 
-    @Command(name = "verify", description = "Verify input data against signature",
-        help = """
-            Verify that a file's content matches a standalone Sigstore signature.
-
-            Reads the input file and the JSON signature file, then checks the signature
-            against the Sigstore transparency log.
-
-            Example:
-              verify --text data.json --signature data.json.sig
-            """)
+    @Command(name = "verify", description = "Verify input data against signature")
     public ProvenanceVerificationResult verify(
-        @Option(longName = "text", description = "Path to input file") Path file,
-        @Option(longName = "signature", description = "Path to signature file") Path signaturePath
+        @Option(longName = "text", description = "Path to input file", required = true) Path file,
+        @Option(longName = "signature", description = "Path to signature file", required = true) Path signaturePath
     ) {
         byte[] inputBytes = resolveInput(file, null, null);
         ProvenanceSignature signature = provenanceJsonMapper.readValue(signaturePath, ProvenanceSignature.class);
         return verificationService.verify(signature, inputBytes);
     }
 
-    @Command(name = "verify-provenance-record", description = "Verify provenance record",
-        help = """
-            Verify all signatures in a provenance record container.
-
-            Accepts both ZIP and JSON container formats. Each provenance record in the
-            container is verified independently against the Sigstore transparency log.
-
-            Examples:
-              verify-provenance-record --file record.zip
-              verify-provenance-record --file record.json
-            """)
+    @Command(name = "verify-provenance-record", description = "Verify provenance record")
     public List<ProvenanceVerificationResult> verify(
-        @Option(longName = "file", description = "Path to provenance record") Path provenanceRecordPath
+        @Option(longName = "file", description = "Path to provenance record", required = true) Path provenanceRecordPath
     ) {
         try {
             ContainerReader reader = provenanceRecordPath.toString().endsWith(".zip")

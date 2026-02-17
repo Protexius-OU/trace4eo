@@ -61,29 +61,15 @@ public class BatchSigningTool {
         this.oidcTokenResolver = new OidcTokenResolver(oidcToken);
     }
 
-    @Command(name = "batch-sign", description = "Sign multiple files, creating one provenance record per file",
-        help = """
-            Sign multiple files in batch, creating one provenance record per file.
-
-            Files can be specified individually with --files or by pointing to a directory
-            with --directory and an optional --pattern glob filter. Each file produces its
-            own provenance record. All records are written into a single ZIP container.
-
-            Examples:
-              batch-sign --files a.tif,b.tif --provenance-record-type RAW \\
-                --data-id satellite/batch-001 --output ./out
-              batch-sign --directory ./images --pattern *.tif --provenance-record-type RAW \\
-                --data-id satellite/batch-002 --output ./out
-              batch-sign --directory ./images --provenance-record-type PROCESSED \\
-                --data-id satellite/batch-003 --output ./out \\
-                --register-url http://localhost:8080/api/provenance
-            """)
+    @Command(name = "batch-sign", description = "Sign multiple files, creating one provenance record per file")
     public String batchSign(
         @Option(longName = "files", description = "Files to sign") List<String> files,
         @Option(longName = "directory", description = "Directory containing files to sign") Path directory,
         @Option(longName = "pattern", description = "Glob pattern for files in directory", defaultValue = "*") String pattern,
-        @Option(longName = "provenance-record-type", description = "Provenance record type") String provenanceRecordType,
-        @Option(longName = "data-id", description = "Base data ID (each file gets dataId/filename)") String dataId,
+        @Option(longName = "provenance-record-type", description = "Provenance record type",
+            required = true) String provenanceRecordType,
+        @Option(longName = "data-id", description = "Base data ID (each file gets dataId/filename)",
+            required = true) String dataId,
         @Option(longName = "output", description = "Output directory for ZIP file") Path outputDir,
         @Option(longName = "hash-algorithm", description = "Hash algorithm (SHA256, SHA384, SHA512)",
             defaultValue = "SHA256") String hashAlgorithm,
