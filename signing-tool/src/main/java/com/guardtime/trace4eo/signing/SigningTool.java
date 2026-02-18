@@ -30,6 +30,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @Component
 public class SigningTool {
@@ -75,15 +76,22 @@ public class SigningTool {
         @Option(longName = "output", description = "Output directory for ZIP file") Path outputDir,
         @Option(longName = "register-url", description = "URL to register provenance records") String registerUrl,
         @Option(longName = "keycloak-url", description = "Keycloak server URL (for registration auth)") String keycloakUrl,
-        @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm
+        @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm,
+        @Option(longName = "predecessors-file",
+            description = "Path to a plain-text file of predecessor record IDs, one UUID per line.")
+            Path predecessorsFile
     ) throws IOException {
         List<Path> paths = toPaths(files);
         HashAlgorithm algorithm = validateHashAlgorithm(hashAlgorithm);
-        List<Predecessor> parsedPredecessors = toPredecessors(predecessors);
         validateInput(paths, provenanceRecordType, dataId);
         validateFilesExist(paths);
         validateOutputDirectory(outputDir);
         validateRegistrationConfig(registerUrl, keycloakUrl);
+        validatePredecessorsFile(predecessorsFile);
+        List<Predecessor> parsedPredecessors = Stream.concat(
+            toPredecessors(predecessors).stream(),
+            readPredecessorsFromFile(predecessorsFile).stream()
+        ).toList();
 
         String oidcToken = oidcTokenResolver.resolve();
         String accessToken = exchangeTokenIfConfigured(registerUrl, keycloakUrl, realm, oidcToken);
@@ -127,6 +135,34 @@ public class SigningTool {
         if (dataId == null || dataId.isBlank()) {
             throw new IllegalArgumentException("--data-id must not be null or blank");
         }
+    }
+
+    private void validatePredecessorsFile(Path predecessorsFile) {
+        if (predecessorsFile == null) return;
+        if (!Files.exists(predecessorsFile)) {
+            throw new IllegalArgumentException("--predecessors-file does not exist: " + predecessorsFile);
+        }
+        if (!Files.isRegularFile(predecessorsFile)) {
+            throw new IllegalArgumentException("--predecessors-file is not a regular file: " + predecessorsFile);
+        }
+        if (!Files.isReadable(predecessorsFile)) {
+            throw new IllegalArgumentException("--predecessors-file is not readable: " + predecessorsFile);
+        }
+    }
+
+    private List<Predecessor> readPredecessorsFromFile(Path predecessorsFile) {
+        if (predecessorsFile == null) return List.of();
+        List<String> lines;
+        try {
+            lines = Files.readAllLines(predecessorsFile);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Cannot read --predecessors-file: " + predecessorsFile, e);
+        }
+        List<String> ids = lines.stream()
+            .map(String::strip)
+            .filter(line -> !line.isEmpty() && !line.startsWith("#"))
+            .toList();
+        return toPredecessors(ids);
     }
 
     private void validateRegistrationConfig(String registerUrl, String keycloakUrl) {

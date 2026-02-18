@@ -75,7 +75,10 @@ public class BatchSigningTool {
             defaultValue = "SHA256") String hashAlgorithm,
         @Option(longName = "register-url", description = "URL to register provenance records") String registerUrl,
         @Option(longName = "keycloak-url", description = "Keycloak server URL (for registration auth)") String keycloakUrl,
-        @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm
+        @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm,
+        @Option(longName = "create-record-ids-file",
+            description = "Write a plain-text file with the IDs of all successfully signed provenance records, one UUID per line",
+            defaultValue = "false") boolean createRecordIdsFile
     ) throws IOException {
         List<Path> filePaths = files != null ? files.stream().map(Path::of).toList() : List.of();
         HashAlgorithm algorithm = validateHashAlgorithm(hashAlgorithm);
@@ -102,7 +105,13 @@ public class BatchSigningTool {
             Path resolvedOutput = resolveOutputPath(outputDir, dataId);
             writeContainer(outcome.records, resolvedOutput);
             registerIfConfigured(outcome.records, registerUrl, keycloakUrl, realm, oidcToken);
-            return formatResult(resolvedFiles.size(), outcome, resolvedOutput);
+            Path recordIdsPath = writeRecordIdsIfConfigured(
+                outcome.results, createRecordIdsFile, resolvedOutput.toAbsolutePath().getParent());
+            String result = formatResult(resolvedFiles.size(), outcome, resolvedOutput);
+            if (recordIdsPath != null) {
+                result += "\nRecord IDs saved to " + recordIdsPath;
+            }
+            return result;
         }
 
         return "No records were signed successfully";
@@ -306,6 +315,21 @@ public class BatchSigningTool {
             .withManifest(manifest)
             .withSignature(provenanceSignature)
             .build();
+    }
+
+    private Path writeRecordIdsIfConfigured(
+        List<FileSigningResult> results, boolean createRecordIdsFile, Path outputDir
+    ) throws IOException {
+        if (!createRecordIdsFile) return null;
+        String timestamp = String.valueOf(java.time.Instant.now().toEpochMilli());
+        Path recordIdsPath = outputDir.resolve("record-ids-" + timestamp + ".txt");
+        List<String> ids = results.stream()
+            .filter(FileSigningResult::success)
+            .map(r -> r.recordId().toString())
+            .toList();
+        Files.writeString(recordIdsPath, String.join("\n", ids) + "\n");
+        log.info("Record IDs written to: {}", recordIdsPath);
+        return recordIdsPath;
     }
 
     private void writeContainer(List<ProvenanceRecord> records, Path outputPath) throws IOException {
