@@ -2,16 +2,15 @@ package com.guardtime.trace4eo.provenance.record;
 
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
 
-import java.nio.file.Path;
 import java.util.HexFormat;
 
 public record FileHashInfo(
-    Path path,
+    String path,
     HashAlgorithm hashAlgorithm,
     byte[] hashValue
 ) {
     public FileHashInfo {
-        if (path != null && path.isAbsolute()) {
+        if (path != null && path.startsWith("/")) {
             throw new IllegalArgumentException(
                 String.format("Path must be relative to /<record-id>/files/ directory in zip. Is actually %s", path)
             );

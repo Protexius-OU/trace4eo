@@ -35,10 +35,10 @@ public class FilesInfoBuilder {
 
     public FilesInfoBuilder addFile(Path filePath) throws IOException {
         validateFilePath(filePath);
-        return addFile(filePath, filePath.getFileName());
+        return addFile(filePath, filePath.getFileName().toString());
     }
 
-    public FilesInfoBuilder addFile(Path filePath, Path destinationPath) throws IOException {
+    public FilesInfoBuilder addFile(Path filePath, String destinationPath) throws IOException {
         validateFilePath(filePath);
         byte[] hashBytes;
         try {

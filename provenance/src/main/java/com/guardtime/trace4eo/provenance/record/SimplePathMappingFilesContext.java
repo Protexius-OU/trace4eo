@@ -9,7 +9,7 @@ import java.util.Map;
 
 public class SimplePathMappingFilesContext implements FilesContext {
 
-    private final Map<Path, Path> containerToFsMapping = new HashMap<>();
+    private final Map<String, Path> containerToFsMapping = new HashMap<>();
 
     public void addFileMapping(FileHashInfo source, Path destination) {
         containerToFsMapping.put(source.path(), destination);
