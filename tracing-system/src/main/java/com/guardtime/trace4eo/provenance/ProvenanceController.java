@@ -60,6 +60,11 @@ public class ProvenanceController {
         return provenanceService.getFilterOptions();
     }
 
+    @PostMapping("/validate-predecessors")
+    public List<UUID> findMissingPredecessors(@RequestBody List<UUID> ids) {
+        return provenanceService.findMissing(ids);
+    }
+
     @PostMapping
     public void save(@RequestBody ProvenanceRecord provenanceRecord) {
         provenanceService.save(provenanceRecord);
