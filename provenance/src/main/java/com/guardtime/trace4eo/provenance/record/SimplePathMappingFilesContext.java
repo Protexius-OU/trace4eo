@@ -9,7 +9,7 @@ import java.util.Map;
 
 public class SimplePathMappingFilesContext implements FilesContext {
 
-    private final Map<Path, Path> containerToFsMapping = new HashMap<>();
+    private final Map<String, Path> containerToFsMapping = new HashMap<>();
 
     public void addFileMapping(FileHashInfo source, Path destination) {
         containerToFsMapping.put(source.path(), destination);
@@ -19,7 +19,7 @@ public class SimplePathMappingFilesContext implements FilesContext {
     public InputStream getFileContents(FileHashInfo fileInfo) throws IOException {
         Path filePath = containerToFsMapping.get(fileInfo.path());
         if (filePath == null) {
-            throw new IOException("No file mapping found for: " + fileInfo.path());
+            throw new IOException(String.format("No file mapping found for: %s", fileInfo.path()));
         }
         return Files.newInputStream(filePath);
     }

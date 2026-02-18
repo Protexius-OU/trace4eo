@@ -14,7 +14,6 @@ import tools.jackson.databind.module.SimpleDeserializers;
 import tools.jackson.databind.module.SimpleModule;
 import tools.jackson.databind.module.SimpleSerializers;
 
-import java.nio.file.Path;
 import java.util.Base64;
 
 public class ProvenanceJsonMapper extends JsonMapper {
@@ -23,7 +22,6 @@ public class ProvenanceJsonMapper extends JsonMapper {
         super(JsonMapper.builder()
             .changeDefaultPropertyInclusion(incl -> incl.withValueInclusion(JsonInclude.Include.NON_NULL))
             .addModule(buildModule(byte[].class, new ByteArraySerializer(), new ByteArrayDeserializer()))
-            .addModule(buildModule(Path.class, new PathSerializer(), new PathDeserializer()))
             .addModule(buildModule(FilesInfo.class, new FilesInfoSerializer(), null))
         );
     }
@@ -59,21 +57,6 @@ public class ProvenanceJsonMapper extends JsonMapper {
         public byte[] deserialize(JsonParser p, DeserializationContext ctxt) {
             String text = p.getValueAsString();
             return text == null ? null : Base64.getDecoder().decode(text);
-        }
-    }
-
-    private static final class PathSerializer extends ValueSerializer<Path> {
-        @Override
-        public void serialize(Path value, JsonGenerator gen, SerializationContext ctxt) {
-            gen.writeString(value == null ? null : value.toString());
-        }
-    }
-
-    private static final class PathDeserializer extends ValueDeserializer<Path> {
-        @Override
-        public Path deserialize(JsonParser p, DeserializationContext ctxt) {
-            String text = p.getValueAsString();
-            return Path.of(text);
         }
     }
 

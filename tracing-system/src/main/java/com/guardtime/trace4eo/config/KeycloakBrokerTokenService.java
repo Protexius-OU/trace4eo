@@ -102,7 +102,7 @@ public class KeycloakBrokerTokenService {
         try {
             String[] parts = jwt.split("\\.");
             if (parts.length < 3) {
-                throw new IllegalArgumentException("Invalid JWT format: expected 3 parts, got " + parts.length);
+                throw new IllegalArgumentException(String.format("Invalid JWT format: expected 3 parts, got %d", parts.length));
             }
             byte[] payload = Base64.getUrlDecoder().decode(parts[1]);
             Map<String, Object> claims = MAPPER.readValue(payload, new TypeReference<>() {});
@@ -131,8 +131,8 @@ public class KeycloakBrokerTokenService {
             }
             if (response.statusCode() != 200) {
                 throw new RuntimeException(
-                    "Failed to retrieve broker token from Keycloak: HTTP "
-                    + response.statusCode() + " - " + response.body());
+                    String.format("Failed to retrieve broker token from Keycloak: HTTP %d - %s",
+                        response.statusCode(), response.body()));
             }
 
             return MAPPER.readValue(response.body(), new TypeReference<>() {});
@@ -177,9 +177,8 @@ public class KeycloakBrokerTokenService {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                throw new RuntimeException("Failed to refresh Sigstore token via Dex: HTTP "
-                    + response.statusCode() + " - " + response.body()
-                    + ". Please log in again.");
+                throw new RuntimeException(String.format("Failed to refresh Sigstore token via Dex: HTTP %d - %s. Please log in again.",
+                    response.statusCode(), response.body()));
             }
 
             Map<String, Object> tokenResponse = MAPPER.readValue(

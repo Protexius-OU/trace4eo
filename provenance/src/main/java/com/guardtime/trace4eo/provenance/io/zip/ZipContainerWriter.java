@@ -114,7 +114,7 @@ public class ZipContainerWriter implements ContainerWriter {
         }
         String filesDir = getContainerFilesPath(provenanceRecord.id());
         for (FileHashInfo file : provenanceRecord.filesInfo().files()) {
-            ZipEntry zipEntry = new ZipEntry(filesDir + file.path().getFileName());
+            ZipEntry zipEntry = new ZipEntry(filesDir + file.path());
             zipOut.putNextEntry(zipEntry);
             byte[] buffer = new byte[8192];
             int read;

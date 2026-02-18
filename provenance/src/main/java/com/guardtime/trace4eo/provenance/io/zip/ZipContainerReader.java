@@ -119,7 +119,7 @@ public class ZipContainerReader implements ContainerReader {
         private Path getComponentPathOrThrow(String componentName) {
             Path componentPath = recordDir.resolve(componentName);
             if (Files.notExists(componentPath)) {
-                throw new RuntimeException("Provenance record component not found: " + componentPath);
+                throw new RuntimeException(String.format("Provenance record component not found: %s", componentPath));
             }
             return componentPath;
         }

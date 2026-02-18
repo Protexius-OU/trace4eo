@@ -104,6 +104,7 @@ public class BatchSigningTool {
             ensureDirectoryExists(outputDir);
             Path resolvedOutput = resolveOutputPath(outputDir, dataId);
             writeContainer(outcome.records, resolvedOutput);
+            log.info("Provenance records saved to {}", resolvedOutput.toAbsolutePath());
             registerIfConfigured(outcome.records, registerUrl, keycloakUrl, realm, oidcToken);
             Path recordIdsPath = writeRecordIdsIfConfigured(
                 outcome.results, createRecordIdsFile, resolvedOutput.toAbsolutePath().getParent());
@@ -131,10 +132,10 @@ public class BatchSigningTool {
         }
         if (directory != null) {
             if (!Files.exists(directory)) {
-                throw new IllegalArgumentException("--directory does not exist: " + directory);
+                throw new IllegalArgumentException(String.format("--directory does not exist: %s", directory));
             }
             if (!Files.isDirectory(directory)) {
-                throw new IllegalArgumentException("--directory is not a directory: " + directory);
+                throw new IllegalArgumentException(String.format("--directory is not a directory: %s", directory));
             }
         }
     }
@@ -151,22 +152,21 @@ public class BatchSigningTool {
         try {
             return HashAlgorithm.valueOf(hashAlgorithm);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid --hash-algorithm: " + hashAlgorithm
-                + ". Supported values: " + java.util.Arrays.stream(HashAlgorithm.values())
-                    .map(Enum::name).toList());
+            throw new IllegalArgumentException(String.format("Invalid --hash-algorithm: %s. Supported values: %s",
+                hashAlgorithm, java.util.Arrays.stream(HashAlgorithm.values()).map(Enum::name).toList()));
         }
     }
 
     private void validateFilesExist(List<Path> files) {
         for (Path file : files) {
             if (!Files.exists(file)) {
-                throw new IllegalArgumentException("File does not exist: " + file);
+                throw new IllegalArgumentException(String.format("File does not exist: %s", file));
             }
             if (!Files.isRegularFile(file)) {
-                throw new IllegalArgumentException("Path is not a regular file: " + file);
+                throw new IllegalArgumentException(String.format("Path is not a regular file: %s", file));
             }
             if (!Files.isReadable(file)) {
-                throw new IllegalArgumentException("File is not readable: " + file);
+                throw new IllegalArgumentException(String.format("File is not readable: %s", file));
             }
         }
     }
@@ -177,10 +177,10 @@ public class BatchSigningTool {
         }
         if (Files.exists(outputDir)) {
             if (!Files.isDirectory(outputDir)) {
-                throw new IllegalArgumentException("--output is not a directory: " + outputDir);
+                throw new IllegalArgumentException(String.format("--output is not a directory: %s", outputDir));
             }
             if (!Files.isWritable(outputDir)) {
-                throw new IllegalArgumentException("--output directory is not writable: " + outputDir);
+                throw new IllegalArgumentException(String.format("--output directory is not writable: %s", outputDir));
             }
         } else {
             Path ancestor = outputDir.toAbsolutePath().getParent();
@@ -188,7 +188,7 @@ public class BatchSigningTool {
                 ancestor = ancestor.getParent();
             }
             if (ancestor != null && !Files.isWritable(ancestor)) {
-                throw new IllegalArgumentException("--output directory is not writable: " + ancestor);
+                throw new IllegalArgumentException(String.format("--output directory is not writable: %s", ancestor));
             }
         }
     }
@@ -197,7 +197,7 @@ public class BatchSigningTool {
         try {
             java.nio.file.FileSystems.getDefault().getPathMatcher("glob:" + pattern);
         } catch (java.util.regex.PatternSyntaxException e) {
-            throw new IllegalArgumentException("Invalid --pattern: " + pattern);
+            throw new IllegalArgumentException(String.format("Invalid --pattern: %s", pattern));
         }
     }
 
@@ -209,17 +209,18 @@ public class BatchSigningTool {
     ) {
         List<FileSigningResult> results = new ArrayList<>();
         List<ProvenanceRecord> records = new ArrayList<>();
+        log.info("Signing {} provenance record(s)...", files.size());
         for (Path file : files) {
             try {
                 ProvenanceRecord record = createSingleFileRecord(file, dataId, provenanceRecordType, algorithm, signer);
                 records.add(record);
                 results.add(FileSigningResult.success(file, record.id()));
-                log.info("Successfully signed: {}", file);
             } catch (Exception e) {
-                log.warn("Failed to sign file: {}", file, e);
+                log.warn("Failed to create provenance record for file: {}", file, e);
                 results.add(FileSigningResult.failure(file, e.getMessage()));
             }
         }
+        log.info("Successfully signed {}/{} provenance records", records.size(), files.size());
         return new SigningOutcome(results, records);
     }
 
@@ -236,10 +237,11 @@ public class BatchSigningTool {
         } else {
             log.warn("No OIDC token available for token exchange. Attempting registration without auth.");
         }
+        log.info("Registering {} provenance record(s) to tracing system at {}...", records.size(), registerUrl);
         List<String> failures = registrationClient.registerRecords(records, registerUrl, accessToken);
-        if (!failures.isEmpty()) {
-            log.warn("Registration completed with {} failure(s)", failures.size());
-        }
+        int successCount = records.size() - failures.size();
+        log.info("Successfully registered {}/{} provenance records to tracing system at {}",
+            successCount, records.size(), registerUrl);
     }
 
     private void ensureDirectoryExists(Path outputDir) throws IOException {

@@ -119,7 +119,7 @@ public class SigningTool {
                 try {
                     return new Predecessor(UUID.fromString(id.trim()));
                 } catch (IllegalArgumentException e) {
-                    throw new IllegalArgumentException("Invalid predecessor ID: " + id.trim());
+                    throw new IllegalArgumentException(String.format("Invalid predecessor ID: %s", id.trim()));
                 }
             })
             .toList();
@@ -140,13 +140,13 @@ public class SigningTool {
     private void validatePredecessorsFile(Path predecessorsFile) {
         if (predecessorsFile == null) return;
         if (!Files.exists(predecessorsFile)) {
-            throw new IllegalArgumentException("--predecessors-file does not exist: " + predecessorsFile);
+            throw new IllegalArgumentException(String.format("--predecessors-file does not exist: %s", predecessorsFile));
         }
         if (!Files.isRegularFile(predecessorsFile)) {
-            throw new IllegalArgumentException("--predecessors-file is not a regular file: " + predecessorsFile);
+            throw new IllegalArgumentException(String.format("--predecessors-file is not a regular file: %s", predecessorsFile));
         }
         if (!Files.isReadable(predecessorsFile)) {
-            throw new IllegalArgumentException("--predecessors-file is not readable: " + predecessorsFile);
+            throw new IllegalArgumentException(String.format("--predecessors-file is not readable: %s", predecessorsFile));
         }
     }
 
@@ -156,7 +156,7 @@ public class SigningTool {
         try {
             lines = Files.readAllLines(predecessorsFile);
         } catch (IOException e) {
-            throw new IllegalArgumentException("Cannot read --predecessors-file: " + predecessorsFile, e);
+            throw new IllegalArgumentException(String.format("Cannot read --predecessors-file: %s", predecessorsFile), e);
         }
         List<String> ids = lines.stream()
             .map(String::strip)
@@ -177,22 +177,21 @@ public class SigningTool {
         try {
             return HashAlgorithm.valueOf(hashAlgorithm);
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid --hash-algorithm: " + hashAlgorithm
-                + ". Supported values: " + java.util.Arrays.stream(HashAlgorithm.values())
-                    .map(Enum::name).toList());
+            throw new IllegalArgumentException(String.format("Invalid --hash-algorithm: %s. Supported values: %s",
+                hashAlgorithm, java.util.Arrays.stream(HashAlgorithm.values()).map(Enum::name).toList()));
         }
     }
 
     private void validateFilesExist(List<Path> files) {
         for (Path file : files) {
             if (!Files.exists(file)) {
-                throw new IllegalArgumentException("File does not exist: " + file);
+                throw new IllegalArgumentException(String.format("File does not exist: %s", file));
             }
             if (!Files.isRegularFile(file)) {
-                throw new IllegalArgumentException("Path is not a regular file: " + file);
+                throw new IllegalArgumentException(String.format("Path is not a regular file: %s", file));
             }
             if (!Files.isReadable(file)) {
-                throw new IllegalArgumentException("File is not readable: " + file);
+                throw new IllegalArgumentException(String.format("File is not readable: %s", file));
             }
         }
     }
@@ -203,10 +202,10 @@ public class SigningTool {
         }
         if (Files.exists(outputDir)) {
             if (!Files.isDirectory(outputDir)) {
-                throw new IllegalArgumentException("--output is not a directory: " + outputDir);
+                throw new IllegalArgumentException(String.format("--output is not a directory: %s", outputDir));
             }
             if (!Files.isWritable(outputDir)) {
-                throw new IllegalArgumentException("--output directory is not writable: " + outputDir);
+                throw new IllegalArgumentException(String.format("--output directory is not writable: %s", outputDir));
             }
         } else {
             Path ancestor = outputDir.toAbsolutePath().getParent();
@@ -214,7 +213,7 @@ public class SigningTool {
                 ancestor = ancestor.getParent();
             }
             if (ancestor != null && !Files.isWritable(ancestor)) {
-                throw new IllegalArgumentException("--output directory is not writable: " + ancestor);
+                throw new IllegalArgumentException(String.format("--output directory is not writable: %s", ancestor));
             }
         }
     }
@@ -237,7 +236,7 @@ public class SigningTool {
         List<UUID> ids = predecessors.stream().map(Predecessor::id).toList();
         List<UUID> missing = registrationClient.findMissingPredecessors(ids, registerUrl, accessToken);
         if (!missing.isEmpty()) {
-            throw new IllegalArgumentException("Predecessor records not found: " + missing);
+            throw new IllegalArgumentException(String.format("Predecessor records not found: %s", missing));
         }
     }
 
@@ -245,8 +244,11 @@ public class SigningTool {
         if (registerUrl == null || registerUrl.isBlank()) {
             return;
         }
+        log.info("Registering provenance record to tracing system at {}...", registerUrl);
         List<String> failures = registrationClient.registerRecords(List.of(record), registerUrl, accessToken);
-        if (!failures.isEmpty()) {
+        if (failures.isEmpty()) {
+            log.info("Successfully registered provenance record to tracing system at {}", registerUrl);
+        } else {
             log.warn("Registration failed: {}", failures.getFirst());
         }
     }
@@ -278,6 +280,7 @@ public class SigningTool {
         List<Path> files, String dataId, String provenanceRecordType,
         List<Predecessor> predecessors, HashAlgorithm algorithm, String oidcToken
     ) throws IOException {
+        log.info("Creating provenance record for {} file(s)...", files.size());
         Metadata metadata = new Metadata(dataId, provenanceRecordType, predecessors);
         FilesInfo filesInfo = new FilesInfoBuilder(algorithm)
             .addFiles(files)
@@ -287,6 +290,7 @@ public class SigningTool {
             .withMetadata(metadata)
             .build();
         byte[] manifestBytes = new JsonCanonicalizer(provenanceJsonMapper.writeValueAsBytes(manifest)).getEncodedUTF8();
+        log.info("Signing provenance record...");
         ProvenanceSignature provenanceSignature = signingService.sign(manifestBytes, oidcToken);
         return new ProvenanceRecordBuilder()
             .withMetadata(metadata)

@@ -95,7 +95,7 @@ public class ProvenanceService {
             throw new IllegalArgumentException("Manifest must not be null");
         }
         if (provenanceRegistry.get(record.id()).isPresent()) {
-            throw new IllegalArgumentException("Record with ID " + record.id() + " already exists");
+            throw new IllegalArgumentException(String.format("Record with ID %s already exists", record.id()));
         }
         validatePredecessorsExist(record);
     }
@@ -111,7 +111,7 @@ public class ProvenanceService {
         }
         List<UUID> missing = provenanceRegistry.findMissing(predecessorIds);
         if (!missing.isEmpty()) {
-            throw new IllegalArgumentException("Predecessor records not found: " + missing);
+            throw new IllegalArgumentException(String.format("Predecessor records not found: %s", missing));
         }
     }
 
