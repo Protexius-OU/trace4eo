@@ -37,7 +37,7 @@ class FilesInfoBuilderTest {
         assertEquals(1, filesInfo.files().size());
         FileHashInfo fileHashInfo = filesInfo.files().iterator().next();
         assertEquals(HashAlgorithm.SHA256, fileHashInfo.hashAlgorithm());
-        assertEquals(Path.of("test.txt"), fileHashInfo.path());
+        assertEquals("test.txt", fileHashInfo.path());
 
         byte[] expectedHash = MessageDigest.getInstance("SHA-256").digest(content);
         assertArrayEquals(expectedHash, fileHashInfo.hashValue());
@@ -98,11 +98,11 @@ class FilesInfoBuilderTest {
         Files.write(file, content);
 
         FilesInfo filesInfo = new FilesInfoBuilder(HashAlgorithm.SHA256)
-            .addFile(file, Path.of("custom/dest.txt"))
+            .addFile(file, "custom/dest.txt")
             .build();
 
         FileHashInfo fileHashInfo = filesInfo.files().iterator().next();
-        assertEquals(Path.of("custom/dest.txt"), fileHashInfo.path());
+        assertEquals("custom/dest.txt", fileHashInfo.path());
 
         byte[] expectedHash = MessageDigest.getInstance("SHA-256").digest(content);
         assertArrayEquals(expectedHash, fileHashInfo.hashValue());

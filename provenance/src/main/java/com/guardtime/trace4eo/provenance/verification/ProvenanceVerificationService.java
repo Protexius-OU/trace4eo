@@ -69,7 +69,7 @@ public class ProvenanceVerificationService {
         } catch (Exception e) {
             log.error("Failed to verify provenance signature", e);
             return new ProvenanceVerificationResult(ProvenanceVerificationError.SIGNATURE_VERIFICATION_FAILED,
-                "Signature verification failed: " + e.getMessage());
+                String.format("Signature verification failed: %s", e.getMessage()));
         }
     }
 

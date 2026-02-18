@@ -53,7 +53,7 @@ public class RecordRegistrationClient {
 
             if (response.statusCode() != 200) {
                 throw new RegistrationException(
-                    "Keycloak token exchange failed: HTTP " + response.statusCode() + " - " + response.body());
+                    String.format("Keycloak token exchange failed: HTTP %d - %s", response.statusCode(), response.body()));
             }
 
             Map<String, Object> tokenResponse = MAPPER.readValue(
@@ -70,7 +70,7 @@ public class RecordRegistrationClient {
             Thread.currentThread().interrupt();
             throw new RegistrationException("Token exchange with Keycloak interrupted", e);
         } catch (IOException e) {
-            throw new RegistrationException("Failed to exchange token with Keycloak at " + tokenUrl, e);
+            throw new RegistrationException(String.format("Failed to exchange token with Keycloak at %s", tokenUrl), e);
         }
     }
 
@@ -91,7 +91,7 @@ public class RecordRegistrationClient {
 
             if (response.statusCode() != 200) {
                 throw new RegistrationException(
-                    "Predecessor validation failed: HTTP " + response.statusCode() + " - " + response.body());
+                    String.format("Predecessor validation failed: HTTP %d - %s", response.statusCode(), response.body()));
             }
 
             return MAPPER.readValue(response.body(), new TypeReference<List<UUID>>() {});
@@ -101,7 +101,7 @@ public class RecordRegistrationClient {
             Thread.currentThread().interrupt();
             throw new RegistrationException("Predecessor validation interrupted", e);
         } catch (IOException e) {
-            throw new RegistrationException("Failed to validate predecessors at " + url, e);
+            throw new RegistrationException(String.format("Failed to validate predecessors at %s", url), e);
         }
     }
 
@@ -121,15 +121,14 @@ public class RecordRegistrationClient {
 
                 HttpResponse<String> response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
 
-                if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                    log.info("Registered record {} at {}", record.id(), registerUrl);
-                } else {
-                    String msg = "Failed to register record " + record.id() + ": HTTP " + response.statusCode();
+                if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                    String msg = String.format("Failed to register record %s: HTTP %d - %s",
+                        record.id(), response.statusCode(), response.body());
                     log.warn(msg);
                     failures.add(msg);
                 }
             } catch (Exception e) {
-                String msg = "Failed to register record " + record.id() + ": " + e.getMessage();
+                String msg = String.format("Failed to register record %s: %s", record.id(), e.getMessage());
                 log.error(msg, e);
                 failures.add(msg);
             }

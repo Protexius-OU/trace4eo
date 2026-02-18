@@ -41,7 +41,7 @@ public class ManifestBuilder {
 
             return new Manifest(metadataHashInfo, filesInfoHashInfo);
         } catch (NoSuchAlgorithmException e) {
-            throw new IOException("Unsupported hash algorithm: " + hashAlgorithm.getName(), e);
+            throw new IOException(String.format("Unsupported hash algorithm: %s", hashAlgorithm.getName()), e);
         }
     }
 
