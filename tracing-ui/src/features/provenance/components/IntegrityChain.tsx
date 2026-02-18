@@ -16,10 +16,6 @@ function findStepStatus(result: VerificationResult | null, name: VerificationSte
   return 'pass'
 }
 
-function truncateHash(base64: string | undefined): string {
-  if (!base64) return ''
-  return base64.length > 16 ? base64.substring(0, 16) + '\u2026' : base64
-}
 
 function connectorClass(status: Status): string {
   if (status === 'pass' || status === 'skipped') return 'pass'
@@ -107,7 +103,7 @@ export default function IntegrityChain({ record, verificationResult }: Props) {
             </div>
             {manifest && (
               <code className="ic-hash-value">
-                {manifest.metadataHashInfo.hashAlgorithm}: {truncateHash(manifest.metadataHashInfo.hashValue)}
+                {manifest.metadataHashInfo.hashAlgorithm}: {manifest.metadataHashInfo.hashValue}
               </code>
             )}
           </div>
@@ -118,7 +114,7 @@ export default function IntegrityChain({ record, verificationResult }: Props) {
             </div>
             {manifest && (
               <code className="ic-hash-value">
-                {manifest.filesHashInfo.hashAlgorithm}: {truncateHash(manifest.filesHashInfo.hashValue)}
+                {manifest.filesHashInfo.hashAlgorithm}: {manifest.filesHashInfo.hashValue}
               </code>
             )}
           </div>
