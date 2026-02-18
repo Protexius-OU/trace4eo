@@ -1,6 +1,7 @@
-package com.guardtime.trace4eo.signing;
+package com.guardtime.trace4eo.signing.registration;
 
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
+import com.guardtime.trace4eo.provenance.record.Predecessor;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,6 +103,35 @@ public class RecordRegistrationClient {
             throw new RegistrationException("Predecessor validation interrupted", e);
         } catch (IOException e) {
             throw new RegistrationException(String.format("Failed to validate predecessors at %s", url), e);
+        }
+    }
+
+    public String exchangeTokenIfConfigured(String registerUrl, String keycloakUrl, String realm, String oidcToken) {
+        if (registerUrl == null || registerUrl.isBlank()) return null;
+        if (oidcToken != null) return exchangeToken(keycloakUrl, realm, oidcToken);
+        log.warn("No OIDC token available for token exchange. Attempting registration without auth.");
+        return null;
+    }
+
+    public void validatePredecessorsExist(List<Predecessor> predecessors, String registerUrl, String accessToken) {
+        if (registerUrl == null || registerUrl.isBlank() || predecessors.isEmpty()) return;
+        List<UUID> ids = predecessors.stream().map(Predecessor::id).toList();
+        List<UUID> missing = findMissingPredecessors(ids, registerUrl, accessToken);
+        if (!missing.isEmpty()) {
+            throw new IllegalArgumentException(String.format("Predecessor records not found: %s", missing));
+        }
+    }
+
+    public void registerIfConfigured(List<ProvenanceRecord> records, String registerUrl, String accessToken) {
+        if (registerUrl == null || registerUrl.isBlank()) return;
+        log.info("Registering {} provenance record(s) to tracing system at {}...", records.size(), registerUrl);
+        List<String> failures = registerRecords(records, registerUrl, accessToken);
+        int successCount = records.size() - failures.size();
+        if (failures.isEmpty()) {
+            log.info("Successfully registered {} provenance record(s) to tracing system at {}", records.size(), registerUrl);
+        } else {
+            log.warn("Registered {}/{} provenance records to tracing system at {}; {} failed",
+                successCount, records.size(), registerUrl, failures.size());
         }
     }
 

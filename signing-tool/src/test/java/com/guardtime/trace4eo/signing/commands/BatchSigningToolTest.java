@@ -1,8 +1,10 @@
-package com.guardtime.trace4eo.signing;
+package com.guardtime.trace4eo.signing.commands;
 
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
+import com.guardtime.trace4eo.signing.RecordSigningService;
+import com.guardtime.trace4eo.signing.registration.RecordRegistrationClient;
 import dev.sigstore.KeylessSigner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,9 +17,11 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -55,8 +59,10 @@ class BatchSigningToolTest {
 
         mockHttpClient = mock(HttpClient.class);
         RecordRegistrationClient registrationClient = new RecordRegistrationClient(mockHttpClient, provenanceJsonMapper);
+        RecordSigningService recordSigningService = new RecordSigningService(mockSigningService, provenanceJsonMapper);
+        SigningInputValidator validator = new SigningInputValidator();
 
-        batchSigningTool = new BatchSigningTool(mockSigningService, provenanceJsonMapper, registrationClient, "test-token");
+        batchSigningTool = new BatchSigningTool(validator, recordSigningService, registrationClient, "test-token");
     }
 
     @Test
@@ -67,7 +73,7 @@ class BatchSigningToolTest {
         Files.writeString(file2, "content2");
         Path outputDir = tempDir.resolve("out");
 
-        String result = batchSigningTool.batchSign(
+        List<UUID> result = batchSigningTool.batchSign(
             List.of(file1.toString(), file2.toString()),
             null,
             "*",
@@ -79,7 +85,7 @@ class BatchSigningToolTest {
             null, "trace4eo", false
         );
 
-        assertTrue(result.contains("Signed 2/2 files"));
+        assertEquals(2, result.size());
         Path expectedFile = outputDir.resolve("batch-2024.zip");
         assertTrue(Files.exists(expectedFile));
         assertTrue(Files.size(expectedFile) > 0);
@@ -94,7 +100,7 @@ class BatchSigningToolTest {
         Files.writeString(inputDir.resolve("other.txt"), "other");
         Path outputDir = tempDir.resolve("out");
 
-        String result = batchSigningTool.batchSign(
+        List<UUID> result = batchSigningTool.batchSign(
             null,
             inputDir,
             "*.jpg",
@@ -106,7 +112,7 @@ class BatchSigningToolTest {
             null, "trace4eo", false
         );
 
-        assertTrue(result.contains("Signed 2/2 files"));
+        assertEquals(2, result.size());
         assertTrue(Files.exists(outputDir.resolve("acquisition-2024.zip")));
     }
 
@@ -116,7 +122,7 @@ class BatchSigningToolTest {
         Files.writeString(file1, "content1");
 
         // Change working directory effect: pass null for output, file gets created in CWD
-        String result = batchSigningTool.batchSign(
+        List<UUID> result = batchSigningTool.batchSign(
             List.of(file1.toString()),
             null,
             "*",
@@ -128,8 +134,8 @@ class BatchSigningToolTest {
             null, "trace4eo", false
         );
 
-        assertTrue(result.contains("Signed 1/1 files"));
-        assertTrue(result.contains("my-data-id.zip"));
+        assertEquals(1, result.size());
+        assertTrue(Files.exists(Path.of("my-data-id.zip")));
         // Clean up default output file
         Files.deleteIfExists(Path.of("my-data-id.zip"));
     }
@@ -140,7 +146,7 @@ class BatchSigningToolTest {
         Files.writeString(file1, "content1");
         Path nestedDir = tempDir.resolve("nested/output");
 
-        String result = batchSigningTool.batchSign(
+        List<UUID> result = batchSigningTool.batchSign(
             List.of(file1.toString()),
             null,
             "*",
@@ -152,7 +158,7 @@ class BatchSigningToolTest {
             null, "trace4eo", false
         );
 
-        assertTrue(result.contains("Signed 1/1 files"));
+        assertEquals(1, result.size());
         assertTrue(Files.isDirectory(nestedDir));
         assertTrue(Files.exists(nestedDir.resolve("batch-2024.zip")));
     }
@@ -205,7 +211,7 @@ class BatchSigningToolTest {
             .thenReturn(mockResponse)
             .thenReturn(mockResponse);
 
-        String result = batchSigningTool.batchSign(
+        List<UUID> result = batchSigningTool.batchSign(
             List.of(file1.toString(), file2.toString()),
             null,
             "*",
@@ -217,7 +223,7 @@ class BatchSigningToolTest {
             "http://localhost:8180", "trace4eo", false
         );
 
-        assertTrue(result.contains("Signed 2/2"));
+        assertEquals(2, result.size());
         // Token exchange + 2 record registrations = 3 HTTP calls
         verify(mockHttpClient, times(3))
             .send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
@@ -238,7 +244,7 @@ class BatchSigningToolTest {
             .thenReturn(tokenResponse)
             .thenReturn(mockResponse);
 
-        String result = batchSigningTool.batchSign(
+        List<UUID> result = batchSigningTool.batchSign(
             List.of(file1.toString()),
             null,
             "*",
@@ -250,7 +256,7 @@ class BatchSigningToolTest {
             "http://localhost:8180", "trace4eo", false
         );
 
-        assertTrue(result.contains("Signed 1/1"));
+        assertEquals(1, result.size());
         // Token exchange + 1 registration attempt = 2 HTTP calls
         verify(mockHttpClient, times(2))
             .send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
@@ -270,7 +276,7 @@ class BatchSigningToolTest {
             .thenReturn(tokenResponse)
             .thenThrow(new IOException("Connection refused"));
 
-        String result = batchSigningTool.batchSign(
+        List<UUID> result = batchSigningTool.batchSign(
             List.of(file1.toString()),
             null,
             "*",
@@ -282,7 +288,7 @@ class BatchSigningToolTest {
             "http://localhost:8180", "trace4eo", false
         );
 
-        assertTrue(result.contains("Signed 1/1"));
+        assertEquals(1, result.size());
         assertTrue(Files.exists(tempDir.resolve("batch-2024.zip")));
     }
 
@@ -443,7 +449,7 @@ class BatchSigningToolTest {
             .thenReturn(tokenResponse)
             .thenReturn(registerResponse);
 
-        String result = batchSigningTool.batchSign(
+        List<UUID> result = batchSigningTool.batchSign(
             List.of(file1.toString()),
             null,
             "*",
@@ -455,7 +461,7 @@ class BatchSigningToolTest {
             "http://localhost:8180", "trace4eo", false
         );
 
-        assertTrue(result.contains("Signed 1/1"));
+        assertEquals(1, result.size());
         // Token exchange + record registration = 2 HTTP calls
         verify(mockHttpClient, times(2))
             .send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
@@ -469,7 +475,7 @@ class BatchSigningToolTest {
         Files.writeString(file2, "content2");
         Path outputDir = tempDir.resolve("out");
 
-        String result = batchSigningTool.batchSign(
+        List<UUID> result = batchSigningTool.batchSign(
             List.of(file1.toString(), file2.toString()),
             null,
             "*",
@@ -481,7 +487,7 @@ class BatchSigningToolTest {
             null, "trace4eo", true
         );
 
-        assertTrue(result.contains("Record IDs saved to"));
+        assertEquals(2, result.size());
         List<Path> textFiles;
         try (var stream = Files.list(outputDir)) {
             textFiles = stream.filter(p -> p.getFileName().toString().startsWith("record-ids-")
@@ -498,22 +504,22 @@ class BatchSigningToolTest {
         Path file1 = tempDir.resolve("file1.txt");
         Files.writeString(file1, "content1");
 
-        String result = batchSigningTool.batchSign(
+        List<UUID> result = batchSigningTool.batchSign(
             List.of(file1.toString()),
             null, "*", "test-type", "cwd-record-ids-test",
             null, "SHA256", null, null, "trace4eo", true
         );
 
-        assertTrue(result.contains("Record IDs saved to"));
-        String prefix = "Record IDs saved to ";
-        String recordIdsLine = result.lines()
-            .filter(l -> l.startsWith(prefix))
-            .findFirst().orElseThrow();
-        Path recordIdsPath = Path.of(recordIdsLine.substring(prefix.length()));
-        assertTrue(Files.exists(recordIdsPath));
-        List<String> ids = Files.readAllLines(recordIdsPath).stream().filter(l -> !l.isBlank()).toList();
+        assertEquals(1, result.size());
+        List<Path> recordIdsFiles;
+        try (var stream = Files.list(Path.of("."))) {
+            recordIdsFiles = stream.filter(p -> p.getFileName().toString().startsWith("record-ids-")
+                && p.getFileName().toString().endsWith(".txt")).toList();
+        }
+        assertFalse(recordIdsFiles.isEmpty());
+        List<String> ids = Files.readAllLines(recordIdsFiles.get(0)).stream().filter(l -> !l.isBlank()).toList();
         assertEquals(1, ids.size());
-        Files.deleteIfExists(recordIdsPath);
+        for (Path f : recordIdsFiles) Files.deleteIfExists(f);
         Files.deleteIfExists(Path.of("cwd-record-ids-test.zip"));
     }
 
@@ -522,7 +528,7 @@ class BatchSigningToolTest {
         Path file1 = tempDir.resolve("file1.txt");
         Files.writeString(file1, "content1");
 
-        batchSigningTool.batchSign(
+        List<UUID> result = batchSigningTool.batchSign(
             List.of(file1.toString()),
             null,
             "*",
@@ -534,10 +540,11 @@ class BatchSigningToolTest {
             null, "trace4eo", false
         );
 
+        assertEquals(1, result.size());
         long fileCount;
         try (var stream = Files.list(tempDir)) {
             fileCount = stream.filter(p -> p.getFileName().toString().startsWith("record-ids-")).count();
         }
-        assertTrue(fileCount == 0);
+        assertEquals(0, fileCount);
     }
 }
