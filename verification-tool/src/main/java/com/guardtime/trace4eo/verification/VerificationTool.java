@@ -19,8 +19,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Base64;
-import java.util.HexFormat;
 import java.util.List;
 
 @Component
@@ -41,7 +39,7 @@ public class VerificationTool {
         @Option(longName = "text", description = "Path to input file", required = true) Path file,
         @Option(longName = "signature", description = "Path to signature file", required = true) Path signaturePath
     ) {
-        byte[] inputBytes = resolveInput(file, null, null);
+        byte[] inputBytes = resolveInput(file);
         ProvenanceSignature signature = provenanceJsonMapper.readValue(signaturePath, ProvenanceSignature.class);
         return verificationService.verify(signature, inputBytes);
     }
@@ -66,24 +64,15 @@ public class VerificationTool {
         }
     }
 
-    private byte[] resolveInput(Path filePath, String hex, String base64) {
-        if (filePath != null) {
-            if (Files.notExists(filePath)) {
-                throw new IllegalArgumentException("File does not exist");
-            }
-            try {
-                return Files.readAllBytes(filePath);
-            } catch (IOException e) {
-                log.warn("Failed to read file {}", filePath, e);
-                throw new RuntimeException(e);
-            }
+    private byte[] resolveInput(Path filePath) {
+        if (Files.notExists(filePath)) {
+            throw new IllegalArgumentException("File does not exist");
         }
-        if (hex != null) {
-            return HexFormat.of().parseHex(hex);
+        try {
+            return Files.readAllBytes(filePath);
+        } catch (IOException e) {
+            log.warn("Failed to read file {}", filePath, e);
+            throw new RuntimeException(e);
         }
-        if (base64 != null) {
-            return Base64.getDecoder().decode(base64);
-        }
-        throw new IllegalArgumentException("Input data was missing");
     }
 }

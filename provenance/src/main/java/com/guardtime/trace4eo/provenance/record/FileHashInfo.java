@@ -2,7 +2,7 @@ package com.guardtime.trace4eo.provenance.record;
 
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
 
-import java.util.HexFormat;
+import java.util.Base64;
 
 public record FileHashInfo(
     String path,
@@ -24,6 +24,6 @@ public record FileHashInfo(
     @Override
     public String toString() {
         return String.format("FileHashInfo[path=%s, hashAlgorithm=%s, hashValue=%s]",
-            path, hashAlgorithm, HexFormat.of().formatHex(hashValue));
+            path, hashAlgorithm, Base64.getEncoder().encodeToString(hashValue));
     }
 }
