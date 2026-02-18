@@ -13,7 +13,7 @@ public record FileHashInfo(
     public FileHashInfo {
         if (path != null && path.isAbsolute()) {
             throw new IllegalArgumentException(
-                "Path must be relative to /<record-id>/files/ directory in zip. Is actually " + path
+                String.format("Path must be relative to /<record-id>/files/ directory in zip. Is actually %s", path)
             );
         }
     }
@@ -24,7 +24,7 @@ public record FileHashInfo(
 
     @Override
     public String toString() {
-        return "FileHashInfo[path=" + path + ", hashAlgorithm=" + hashAlgorithm
-            + ", hashValue=" + HexFormat.of().formatHex(hashValue) + "]";
+        return String.format("FileHashInfo[path=%s, hashAlgorithm=%s, hashValue=%s]",
+            path, hashAlgorithm, HexFormat.of().formatHex(hashValue));
     }
 }

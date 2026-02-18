@@ -95,7 +95,7 @@ public class UploadController {
                     try {
                         predecessors.add(new Predecessor(UUID.fromString(id.trim())));
                     } catch (IllegalArgumentException e) {
-                        throw new IllegalArgumentException("Invalid predecessor ID: " + id.trim());
+                        throw new IllegalArgumentException(String.format("Invalid predecessor ID: %s", id.trim()));
                     }
                 }
             }

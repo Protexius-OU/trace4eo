@@ -18,12 +18,8 @@ public record ProvenanceSignature(
 
     @Override
     public String toString() {
-        return "ProvenanceSignature["
-            + "bytes=" + formatBytes()
-            + ", signingTime=" + signingTime
-            + ", hashAlgorithm=" + hashAlgorithm
-            + ", details=" + details
-            + "]";
+        return String.format("ProvenanceSignature[bytes=%s, signingTime=%s, hashAlgorithm=%s, details=%s]",
+            formatBytes(), signingTime, hashAlgorithm, details);
     }
 
     private String formatBytes() {
@@ -34,6 +30,6 @@ public record ProvenanceSignature(
         if (base64.length() <= 20) {
             return base64;
         }
-        return base64.substring(0, 20) + "...(" + bytes.length + " bytes)";
+        return String.format("%s...(%d bytes)", base64.substring(0, 20), bytes.length);
     }
 }

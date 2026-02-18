@@ -28,7 +28,7 @@ public class VerificationToolConfiguration {
                 shellRunner.run(args.getSourceArgs());
             } catch (CommandExecutionException e) {
                 Throwable root = rootCause(e);
-                System.err.println("Error: " + root.getMessage());
+                System.err.println(String.format("Error: %s", root.getMessage()));
                 System.exit(1);
             }
         };
