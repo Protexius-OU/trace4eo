@@ -36,17 +36,18 @@ Create a provenance record containing multiple files with metadata. The record i
 
 **Options:**
 
-| Option                     | Description                                                 | Default           |
-|----------------------------|-------------------------------------------------------------|-------------------|
-| `--files`                  | Files to include in the record                              | Required          |
-| `--provenance-record-type` | Type of provenance record                                   | Required          |
-| `--data-id`                | Identifier for the data                                     | Required          |
-| `--predecessors`           | UUIDs of predecessor records                                | None              |
-| `--hash-algorithm`         | Hash algorithm to use                                       | SHA256            |
-| `--output`                 | Output directory for ZIP file                               | Current directory |
-| `--register-url`           | Tracing backend URL to register provenance records          | None              |
-| `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set) | None              |
-| `--realm`                  | Keycloak realm                                              | trace4eo          |
+| Option                     | Description                                                                                                                                                                                                       | Default           |
+|----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|
+| `--files`                  | Files to include in the record                                                                                                                                                                                    | Required          |
+| `--provenance-record-type` | Type of provenance record                                                                                                                                                                                         | Required          |
+| `--data-id`                | Identifier for the data                                                                                                                                                                                           | Required          |
+| `--predecessors`           | UUIDs of predecessor records                                                                                                                                                                                      | None              |
+| `--predecessors-file`      | Path to a plain-text file of predecessor record IDs, one UUID per line (as produced by `batch-sign --create-record-ids-file`); merged with `--predecessors`. Blank lines and lines starting with `#` are ignored. | None              |
+| `--hash-algorithm`         | Hash algorithm to use                                                                                                                                                                                             | SHA256            |
+| `--output`                 | Output directory for ZIP file                                                                                                                                                                                     | Current directory |
+| `--register-url`           | Tracing backend URL to register provenance records                                                                                                                                                                | None              |
+| `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set)                                                                                                                                                       | None              |
+| `--realm`                  | Keycloak realm                                                                                                                                                                                                    | trace4eo          |
 
 **Examples:**
 
@@ -73,18 +74,20 @@ Create and register with a tracing system:
 Sign multiple files, creating one provenance record per file and packaging them into a ZIP container.
 
 **Options:**
-| Option                     | Description                                                               | Default           |
-|----------------------------|---------------------------------------------------------------------------|-------------------|
-| `--files`                  | Explicit list of files to sign (either this or `--directory` is required) | None              |
-| `--directory`              | Directory containing files to sign (either this or `--files` is required) | None              |
-| `--pattern`                | Glob pattern for files in directory                                       | `*`               |
-| `--provenance-record-type` | Type of provenance record                                                 | Required          |
-| `--data-id`                | Base data ID (files get `<data-id>/<filename>`)                           | Required          |
-| `--output`                 | Output directory for ZIP file                                             | Current directory |
-| `--hash-algorithm`         | Hash algorithm to use                                                     | SHA256            |
-| `--register-url`           | Tracing backend URL to register provenance records                        | None              |
-| `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set)               | None              |
-| `--realm`                  | Keycloak realm                                                            | trace4eo          |
+
+| Option | Description                                                                                                                                                                                          | Default           |
+|----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|
+| `--files`                  | Explicit list of files to sign (either this or `--directory` is required)                                                                                                                            | None              |
+| `--directory`              | Directory containing files to sign (either this or `--files` is required)                                                                                                                            | None              |
+| `--pattern`                | Glob pattern for files in directory                                                                                                                                                                  | `*`               |
+| `--provenance-record-type` | Type of provenance record                                                                                                                                                                            | Required          |
+| `--data-id`                | Base data ID (files get `<data-id>/<filename>`)                                                                                                                                                      | Required          |
+| `--output`                 | Output directory for ZIP file                                                                                                                                                                        | Current directory |
+| `--hash-algorithm`         | Hash algorithm to use                                                                                                                                                                                | SHA256            |
+| `--register-url`           | Tracing backend URL to register provenance records                                                                                                                                                   | None              |
+| `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set)                                                                                                                                          | None              |
+| `--realm`                  | Keycloak realm                                                                                                                                                                                       | trace4eo          |
+| `--create-record-ids-file` | Write a plain-text file alongside the ZIP container with the IDs of all successfully signed provenance records, one UUID per line (written to `--output` directory, or current directory if omitted) | false             |
 
 **Examples:**
 
@@ -120,6 +123,27 @@ Sign and register with a tracing system:
   --output /data/output \
   --register-url http://localhost:8080/api/provenance \
   --keycloak-url http://localhost:8180"
+```
+
+Capture record IDs for use as predecessors in a follow-up record:
+
+```bash
+# Step 1: sign the source files and capture their record IDs
+./gradlew :signing-tool:bootRun --args="batch-sign \
+  --directory /data/raw \
+  --pattern '*.tif' \
+  --provenance-record-type raw-imagery \
+  --data-id batch-2024-01 \
+  --output /data/output \
+  --create-record-ids-file"
+
+# Step 2: create a derived record referencing the batch records as predecessors
+./gradlew :signing-tool:bootRun --args="create-provenance-record \
+  --files /data/processed/result.tif \
+  --provenance-record-type processed-imagery \
+  --data-id processed-2024-01 \
+  --predecessors-file /data/output/record-ids-1708300000000.txt \
+  --output /data/output"
 ```
 
 ## Notes
