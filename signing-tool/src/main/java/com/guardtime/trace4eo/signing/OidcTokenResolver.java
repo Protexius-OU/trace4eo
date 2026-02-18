@@ -10,17 +10,17 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-class OidcTokenResolver {
+public class OidcTokenResolver {
 
     private static final Logger log = LoggerFactory.getLogger(OidcTokenResolver.class);
 
     private final String oidcTokenOverride;
 
-    OidcTokenResolver(String oidcTokenOverride) {
+    public OidcTokenResolver(String oidcTokenOverride) {
         this.oidcTokenOverride = oidcTokenOverride;
     }
 
-    String resolve() {
+    public String resolve() {
         if (oidcTokenOverride != null) {
             return oidcTokenOverride;
         }
