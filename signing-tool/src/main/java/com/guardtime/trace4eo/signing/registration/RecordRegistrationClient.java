@@ -126,13 +126,12 @@ public class RecordRegistrationClient {
         if (registerUrl == null || registerUrl.isBlank()) return;
         log.info("Registering {} provenance record(s) to tracing system at {}...", records.size(), registerUrl);
         List<String> failures = registerRecords(records, registerUrl, accessToken);
-        int successCount = records.size() - failures.size();
-        if (failures.isEmpty()) {
-            log.info("Successfully registered {} provenance record(s) to tracing system at {}", records.size(), registerUrl);
-        } else {
-            log.warn("Registered {}/{} provenance records to tracing system at {}; {} failed",
-                successCount, records.size(), registerUrl, failures.size());
+        if (!failures.isEmpty()) {
+            int successCount = records.size() - failures.size();
+            log.warn("Registered {}/{} provenance records to tracing system.", successCount, records.size());
+            return;
         }
+        log.info("Successfully registered {} provenance record(s) to tracing system.", records.size());
     }
 
     public List<String> registerRecords(List<ProvenanceRecord> records, String registerUrl, String accessToken) {
