@@ -18,12 +18,12 @@ public record ProvenanceSignature(
 
     @Override
     public String toString() {
-        return "ProvenanceSignature("
+        return "ProvenanceSignature["
             + "bytes=" + formatBytes()
             + ", signingTime=" + signingTime
             + ", hashAlgorithm=" + hashAlgorithm
             + ", details=" + details
-            + ")";
+            + "]";
     }
 
     private String formatBytes() {

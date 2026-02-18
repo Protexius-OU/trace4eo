@@ -61,24 +61,14 @@ public class SigningTool {
         this.oidcTokenResolver = new OidcTokenResolver(oidcToken);
     }
 
-    @Command(name = "create-provenance-record", description = "Create and sign provenance record",
-        help = """
-            Create a signed provenance record from one or more input files.
-
-            The command hashes the input files, builds a provenance record with the given
-            metadata, signs it using Sigstore OIDC, and writes the result as a ZIP container.
-
-            Examples:
-              create-provenance-record --files image.tif --provenance-record-type RAW \\
-                --data-id satellite/scene-001 --output ./out
-              create-provenance-record --files a.tif,b.tif --provenance-record-type PROCESSED \\
-                --data-id satellite/scene-002 --predecessors 550e8400-e29b-41d4-a716-446655440000 \\
-                --hash-algorithm SHA512 --output ./out --register-url http://localhost:8080/api/provenance
-            """)
+    @Command(name = "create-provenance-record", description = "Create and sign provenance record")
     public ProvenanceRecord createProvenanceRecord(
-        @Option(longName = "files", description = "Files to be included in provenance record") List<String> files,
-        @Option(longName = "provenance-record-type", description = "Provenance record type") String provenanceRecordType,
-        @Option(longName = "data-id", description = "Provenance record data ID") String dataId,
+        @Option(longName = "files", description = "Files to be included in provenance record",
+            required = true) List<String> files,
+        @Option(longName = "provenance-record-type", description = "Provenance record type",
+            required = true) String provenanceRecordType,
+        @Option(longName = "data-id", description = "Provenance record data ID",
+            required = true) String dataId,
         @Option(longName = "predecessors", description = "Provenance record predecessor IDs (UUIDs)") List<String> predecessors,
         @Option(longName = "hash-algorithm", description = "Hash algorithm (SHA256, SHA384, SHA512)",
             defaultValue = "SHA256") String hashAlgorithm,
