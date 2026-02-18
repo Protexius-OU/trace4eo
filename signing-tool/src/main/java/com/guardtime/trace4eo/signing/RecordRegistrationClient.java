@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 public class RecordRegistrationClient {
@@ -70,6 +71,37 @@ public class RecordRegistrationClient {
             throw new RegistrationException("Token exchange with Keycloak interrupted", e);
         } catch (IOException e) {
             throw new RegistrationException("Failed to exchange token with Keycloak at " + tokenUrl, e);
+        }
+    }
+
+    public List<UUID> findMissingPredecessors(List<UUID> ids, String registerUrl, String accessToken) {
+        String url = registerUrl + "/validate-predecessors";
+        try {
+            String json = MAPPER.writeValueAsString(ids);
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json));
+
+            if (accessToken != null) {
+                requestBuilder.header("Authorization", "Bearer " + accessToken);
+            }
+
+            HttpResponse<String> response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                throw new RegistrationException(
+                    "Predecessor validation failed: HTTP " + response.statusCode() + " - " + response.body());
+            }
+
+            return MAPPER.readValue(response.body(), new TypeReference<List<UUID>>() {});
+        } catch (RegistrationException e) {
+            throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RegistrationException("Predecessor validation interrupted", e);
+        } catch (IOException e) {
+            throw new RegistrationException("Failed to validate predecessors at " + url, e);
         }
     }
 

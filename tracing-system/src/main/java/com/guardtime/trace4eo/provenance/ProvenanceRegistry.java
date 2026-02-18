@@ -77,17 +77,19 @@ public class ProvenanceRegistry {
         }
     }
 
-    public boolean allExist(Collection<UUID> ids) {
+    public List<UUID> findMissing(Collection<UUID> ids) {
         if (ids.isEmpty()) {
-            return true;
+            return List.of();
         }
         Set<UUID> uniqueIds = Set.copyOf(ids);
-        long count = jdbcClient.sql(
-                "select count(*) from provenance_record where id in (:ids)")
+        List<UUID> existing = jdbcClient.sql(
+                "select id from provenance_record where id in (:ids)")
             .param("ids", uniqueIds)
-            .query(Long.class)
-            .single();
-        return count == uniqueIds.size();
+            .query(UUID.class)
+            .list();
+        return uniqueIds.stream()
+            .filter(id -> !existing.contains(id))
+            .toList();
     }
 
     public Optional<ProvenanceRecord> get(UUID id) {

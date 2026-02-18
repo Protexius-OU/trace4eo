@@ -211,6 +211,64 @@ class ProvenanceControllerIntegrationTest {
     }
 
     @Test
+    void validatePredecessorsReturnsEmptyListWhenAllExist() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        ProvenanceRecord record1 = createTestRecord(id1, "data-" + id1, "test-type", null, Collections.emptyList());
+        ProvenanceRecord record2 = createTestRecord(id2, "data-" + id2, "test-type", null, Collections.emptyList());
+        restTemplate.postForEntity("/api/provenance", record1, Void.class);
+        restTemplate.postForEntity("/api/provenance", record2, Void.class);
+
+        ResponseEntity<UUID[]> response = restTemplate.postForEntity(
+            "/api/provenance/validate-predecessors",
+            List.of(id1, id2),
+            UUID[].class
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(0, response.getBody().length);
+    }
+
+    @Test
+    void validatePredecessorsReturnsMissingIds() {
+        UUID existingId = UUID.randomUUID();
+        UUID missingId1 = UUID.randomUUID();
+        UUID missingId2 = UUID.randomUUID();
+        ProvenanceRecord record = createTestRecord(existingId, "data-" + existingId, "test-type", null, Collections.emptyList());
+        restTemplate.postForEntity("/api/provenance", record, Void.class);
+
+        ResponseEntity<UUID[]> response = restTemplate.postForEntity(
+            "/api/provenance/validate-predecessors",
+            List.of(existingId, missingId1, missingId2),
+            UUID[].class
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(2, response.getBody().length);
+        List<UUID> missing = List.of(response.getBody());
+        assertTrue(missing.contains(missingId1));
+        assertTrue(missing.contains(missingId2));
+    }
+
+    @Test
+    void validatePredecessorsReturnsAllWhenNoneExist() {
+        UUID missingId = UUID.randomUUID();
+
+        ResponseEntity<UUID[]> response = restTemplate.postForEntity(
+            "/api/provenance/validate-predecessors",
+            List.of(missingId),
+            UUID[].class
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(1, response.getBody().length);
+        assertEquals(missingId, response.getBody()[0]);
+    }
+
+    @Test
     void saveWithNonExistingPredecessorReturns400() {
         UUID id = UUID.randomUUID();
         UUID nonExistingPredecessorId = UUID.randomUUID();

@@ -401,42 +401,49 @@ class ProvenanceRegistryTest {
     }
 
     @Test
-    void allExistReturnsTrueWhenAllExist() {
+    void findMissingReturnsEmptyWhenAllExist() {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
         createRecordWithId(id1);
         createRecordWithId(id2);
 
-        assertTrue(provenanceRegistry.allExist(List.of(id1, id2)));
+        assertTrue(provenanceRegistry.findMissing(List.of(id1, id2)).isEmpty());
     }
 
     @Test
-    void allExistReturnsFalseWhenSomeMissing() {
+    void findMissingReturnsMissingIds() {
         UUID existingId = UUID.randomUUID();
+        UUID missingId = UUID.randomUUID();
         createRecordWithId(existingId);
 
-        assertFalse(provenanceRegistry.allExist(List.of(existingId, UUID.randomUUID())));
+        List<UUID> missing = provenanceRegistry.findMissing(List.of(existingId, missingId));
+        assertEquals(1, missing.size());
+        assertEquals(missingId, missing.getFirst());
     }
 
     @Test
-    void allExistReturnsFalseWhenNoneExist() {
-        assertFalse(provenanceRegistry.allExist(List.of(UUID.randomUUID(), UUID.randomUUID())));
+    void findMissingReturnsAllWhenNoneExist() {
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        List<UUID> missing = provenanceRegistry.findMissing(List.of(id1, id2));
+        assertEquals(2, missing.size());
+        assertTrue(missing.contains(id1));
+        assertTrue(missing.contains(id2));
     }
 
     @Test
-    void allExistHandlesDuplicateIds() {
+    void findMissingHandlesDuplicateIds() {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
         createRecordWithId(id1);
         createRecordWithId(id2);
 
-        // Without dedup, size=3 != count=2 would incorrectly return false
-        assertTrue(provenanceRegistry.allExist(List.of(id1, id2, id1)));
+        assertTrue(provenanceRegistry.findMissing(List.of(id1, id2, id1)).isEmpty());
     }
 
     @Test
-    void allExistReturnsTrueForEmptyInput() {
-        assertTrue(provenanceRegistry.allExist(List.of()));
+    void findMissingReturnsEmptyForEmptyInput() {
+        assertTrue(provenanceRegistry.findMissing(List.of()).isEmpty());
     }
 
     private void createRecordWithId(UUID id) {
