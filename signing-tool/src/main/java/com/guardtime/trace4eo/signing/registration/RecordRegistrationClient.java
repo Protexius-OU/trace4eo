@@ -1,4 +1,4 @@
-package com.guardtime.trace4eo.signing;
+package com.guardtime.trace4eo.signing.registration;
 
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.record.Predecessor;

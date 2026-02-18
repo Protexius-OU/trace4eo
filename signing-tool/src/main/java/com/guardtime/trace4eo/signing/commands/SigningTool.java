@@ -1,8 +1,13 @@
-package com.guardtime.trace4eo.signing;
+package com.guardtime.trace4eo.signing.commands;
 
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.record.Predecessor;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
+import com.guardtime.trace4eo.signing.OidcTokenResolver;
+import com.guardtime.trace4eo.signing.RecordSigningService;
+import com.guardtime.trace4eo.signing.SigningInputValidator;
+import com.guardtime.trace4eo.signing.UnsignedRecord;
+import com.guardtime.trace4eo.signing.registration.RecordRegistrationClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

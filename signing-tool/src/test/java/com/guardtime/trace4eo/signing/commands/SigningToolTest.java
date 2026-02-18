@@ -1,10 +1,13 @@
-package com.guardtime.trace4eo.signing;
+package com.guardtime.trace4eo.signing.commands;
 
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import com.guardtime.trace4eo.provenance.record.Predecessor;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
+import com.guardtime.trace4eo.signing.RecordSigningService;
+import com.guardtime.trace4eo.signing.SigningInputValidator;
+import com.guardtime.trace4eo.signing.registration.RecordRegistrationClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
