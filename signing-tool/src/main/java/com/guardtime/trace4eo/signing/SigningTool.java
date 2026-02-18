@@ -244,8 +244,11 @@ public class SigningTool {
         if (registerUrl == null || registerUrl.isBlank()) {
             return;
         }
+        log.info("Registering provenance record to tracing system at {}...", registerUrl);
         List<String> failures = registrationClient.registerRecords(List.of(record), registerUrl, accessToken);
-        if (!failures.isEmpty()) {
+        if (failures.isEmpty()) {
+            log.info("Successfully registered provenance record to tracing system at {}", registerUrl);
+        } else {
             log.warn("Registration failed: {}", failures.getFirst());
         }
     }
@@ -277,6 +280,7 @@ public class SigningTool {
         List<Path> files, String dataId, String provenanceRecordType,
         List<Predecessor> predecessors, HashAlgorithm algorithm, String oidcToken
     ) throws IOException {
+        log.info("Creating provenance record for {} file(s)...", files.size());
         Metadata metadata = new Metadata(dataId, provenanceRecordType, predecessors);
         FilesInfo filesInfo = new FilesInfoBuilder(algorithm)
             .addFiles(files)
@@ -286,6 +290,7 @@ public class SigningTool {
             .withMetadata(metadata)
             .build();
         byte[] manifestBytes = new JsonCanonicalizer(provenanceJsonMapper.writeValueAsBytes(manifest)).getEncodedUTF8();
+        log.info("Signing provenance record...");
         ProvenanceSignature provenanceSignature = signingService.sign(manifestBytes, oidcToken);
         return new ProvenanceRecordBuilder()
             .withMetadata(metadata)

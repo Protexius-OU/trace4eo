@@ -104,6 +104,7 @@ public class BatchSigningTool {
             ensureDirectoryExists(outputDir);
             Path resolvedOutput = resolveOutputPath(outputDir, dataId);
             writeContainer(outcome.records, resolvedOutput);
+            log.info("Provenance records saved to {}", resolvedOutput.toAbsolutePath());
             registerIfConfigured(outcome.records, registerUrl, keycloakUrl, realm, oidcToken);
             Path recordIdsPath = writeRecordIdsIfConfigured(
                 outcome.results, createRecordIdsFile, resolvedOutput.toAbsolutePath().getParent());
@@ -208,13 +209,14 @@ public class BatchSigningTool {
     ) {
         List<FileSigningResult> results = new ArrayList<>();
         List<ProvenanceRecord> records = new ArrayList<>();
+        log.info("Signing {} provenance record(s)...", files.size());
         for (Path file : files) {
             try {
                 ProvenanceRecord record = createSingleFileRecord(file, dataId, provenanceRecordType, algorithm, signer);
                 records.add(record);
                 results.add(FileSigningResult.success(file, record.id()));
             } catch (Exception e) {
-                log.warn("Failed to sign file: {}", file, e);
+                log.warn("Failed to create provenance record for file: {}", file, e);
                 results.add(FileSigningResult.failure(file, e.getMessage()));
             }
         }
@@ -235,9 +237,11 @@ public class BatchSigningTool {
         } else {
             log.warn("No OIDC token available for token exchange. Attempting registration without auth.");
         }
+        log.info("Registering {} provenance record(s) to tracing system at {}...", records.size(), registerUrl);
         List<String> failures = registrationClient.registerRecords(records, registerUrl, accessToken);
         int successCount = records.size() - failures.size();
-        log.info("Successfully registered {}/{} provenance records to Tracing System", successCount, records.size());
+        log.info("Successfully registered {}/{} provenance records to tracing system at {}",
+            successCount, records.size(), registerUrl);
     }
 
     private void ensureDirectoryExists(Path outputDir) throws IOException {
