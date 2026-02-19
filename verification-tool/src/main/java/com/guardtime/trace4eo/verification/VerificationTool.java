@@ -19,7 +19,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class VerificationTool {
@@ -46,22 +50,97 @@ public class VerificationTool {
 
     @Command(name = "verify-provenance-record", description = "Verify provenance record")
     public List<ProvenanceVerificationResult> verify(
-        @Option(longName = "file", description = "Path to provenance record", required = true) Path provenanceRecordPath
+        @Option(longName = "file", description = "Path to provenance record", required = true) Path provenanceRecordPath,
+        @Option(longName = "file-hash", description = "File hash as <path>=<base64>") String fileHash,
+        @Option(longName = "file-hashes", description = "Path to hash file with one <path>=<base64> per line")
+            Path fileHashesPath
     ) {
+        Map<String, byte[]> hashes = resolveFileHashes(fileHash, fileHashesPath);
+        Container container = readContainer(provenanceRecordPath);
+        return verifyAll(container.provenanceRecords(), hashes);
+    }
+
+    private Map<String, byte[]> resolveFileHashes(String fileHash, Path fileHashesPath) {
+        Map<String, byte[]> hashes = new LinkedHashMap<>();
+        if (fileHash != null) {
+            Map.Entry<String, byte[]> entry = parseInlineHash(fileHash);
+            hashes.put(entry.getKey(), entry.getValue());
+        }
+        if (fileHashesPath != null) {
+            hashes.putAll(parseHashManifest(fileHashesPath));
+        }
+        return hashes;
+    }
+
+    private Map.Entry<String, byte[]> parseInlineHash(String entry) {
+        int eqIdx = entry.indexOf('=');
+        if (eqIdx < 0) {
+            throw new IllegalArgumentException(
+                String.format("Invalid hash entry '%s': expected format <path>=<base64>", entry));
+        }
+        String path = entry.substring(0, eqIdx);
+        if (path.isBlank()) {
+            throw new IllegalArgumentException(
+                String.format("Invalid hash entry '%s': path component must not be blank", entry));
+        }
+        String base64 = entry.substring(eqIdx + 1);
+        byte[] bytes;
+        try {
+            bytes = Base64.getDecoder().decode(base64);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(
+                String.format("Invalid base64 hash for '%s': %s", path, e.getMessage()), e);
+        }
+        return Map.entry(path, bytes);
+    }
+
+    private Map<String, byte[]> parseHashManifest(Path path) {
+        if (Files.notExists(path)) {
+            throw new IllegalArgumentException("Hash file not found: " + path);
+        }
+        List<String> lines;
+        try {
+            lines = Files.readAllLines(path);
+        } catch (IOException e) {
+            log.error("Failed to read hash file {}", path, e);
+            throw new RuntimeException("Failed to read hash file: " + path, e);
+        }
+        Map<String, byte[]> hashes = new LinkedHashMap<>();
+        for (String line : lines) {
+            if (line.isBlank() || line.startsWith("#")) {
+                continue;
+            }
+            Map.Entry<String, byte[]> entry = parseInlineHash(line);
+            hashes.put(entry.getKey(), entry.getValue());
+        }
+        return hashes;
+    }
+
+    private Container readContainer(Path provenanceRecordPath) {
+        if (Files.notExists(provenanceRecordPath)) {
+            throw new IllegalArgumentException("Provenance record file not found: " + provenanceRecordPath);
+        }
         try {
             ContainerReader reader = provenanceRecordPath.toString().endsWith(".zip")
                 ? new ZipContainerReader(provenanceJsonMapper)
                 : new JsonContainerReader(provenanceJsonMapper);
-            Container container = reader.read(provenanceRecordPath);
-            List<ProvenanceVerificationResult> results = new ArrayList<>();
-            for (ProvenanceRecord provenanceRecord : container.provenanceRecords()) {
-                results.add(verificationService.verify(provenanceRecord));
-            }
-            return results;
+            return reader.read(provenanceRecordPath);
         } catch (IOException e) {
             log.error("Failed to read container", e);
             throw new RuntimeException(e);
         }
+    }
+
+    private List<ProvenanceVerificationResult> verifyAll(Collection<ProvenanceRecord> records, Map<String, byte[]> hashes) {
+        List<ProvenanceVerificationResult> results = new ArrayList<>();
+        for (ProvenanceRecord record : records) {
+            if (hashes.isEmpty()) {
+                results.add(verificationService.verify(record));
+            } else {
+                results.add(verificationService.verifyWithFileHashes(record, hashes));
+            }
+        }
+        return results;
     }
 
     private byte[] resolveInput(Path filePath) {

@@ -32,12 +32,15 @@ public final class TestUtils {
     private static int fixtureIndex;
 
     public static ProvenanceRecord createProvenanceRecord(String filePath) throws IOException {
+        return createProvenanceRecord(filePath, HashAlgorithm.SHA256);
+    }
+
+    public static ProvenanceRecord createProvenanceRecord(String filePath, HashAlgorithm algorithm) throws IOException {
         Metadata metadata = new Metadata("data-id", "container-type", List.of());
-        HashAlgorithm hashAlgorithm = HashAlgorithm.SHA256;
-        FilesInfo filesInfo = new FilesInfoBuilder(hashAlgorithm)
+        FilesInfo filesInfo = new FilesInfoBuilder(algorithm)
             .addFile(Path.of(filePath))
             .build();
-        Manifest manifest = new ManifestBuilder(hashAlgorithm, MAPPER)
+        Manifest manifest = new ManifestBuilder(algorithm, MAPPER)
             .withFilesInfo(filesInfo)
             .withMetadata(metadata)
             .build();

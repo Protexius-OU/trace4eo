@@ -1,0 +1,4 @@
+# SHA-256 hashes
+# test.txt hash matches the value stored in provenance-record.json (SHA-256 of empty bytes)
+test.txt=47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=
+data.txt=40eLN3mAv/Y2AgfxI9QKW8oTebKWdmkC421KLixCwbY=
