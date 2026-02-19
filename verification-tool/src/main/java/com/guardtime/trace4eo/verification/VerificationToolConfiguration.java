@@ -21,6 +21,16 @@ public class VerificationToolConfiguration {
         return new ProvenanceVerificationService();
     }
 
+    @Bean("text")
+    public VerificationResultFormatter textVerificationResultFormatter() {
+        return new TextVerificationResultFormatter();
+    }
+
+    @Bean("json")
+    public VerificationResultFormatter jsonVerificationResultFormatter(ProvenanceJsonMapper provenanceJsonMapper) {
+        return new JsonVerificationResultFormatter(provenanceJsonMapper);
+    }
+
     @Bean
     public ApplicationRunner springShellApplicationRunner(ShellRunner shellRunner) {
         return args -> {

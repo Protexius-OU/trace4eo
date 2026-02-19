@@ -1,14 +1,24 @@
 package com.guardtime.trace4eo.provenance.verification;
 
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
+import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import com.guardtime.trace4eo.provenance.io.TestUtils;
 import com.guardtime.trace4eo.provenance.record.FileHashInfo;
+import com.guardtime.trace4eo.provenance.record.FilesInfo;
+import com.guardtime.trace4eo.provenance.record.FilesInfoBuilder;
+import com.guardtime.trace4eo.provenance.record.Manifest;
+import com.guardtime.trace4eo.provenance.record.ManifestBuilder;
+import com.guardtime.trace4eo.provenance.record.Metadata;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
+import com.guardtime.trace4eo.provenance.record.ProvenanceRecordBuilder;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import static com.guardtime.trace4eo.provenance.io.TestUtils.TEST_BYTES_1;
@@ -87,8 +97,8 @@ class ProvenanceVerificationServiceTest {
             "Expected a failed FILE_CONTENTS step");
         assertTrue(result.steps().stream()
             .filter(s -> s.name() == VerificationStepName.FILE_CONTENTS)
-            .anyMatch(s -> s.errorMessage() != null && s.errorMessage().contains("hash mismatch")),
-            "Expected 'hash mismatch' in FILE_CONTENTS error message");
+            .anyMatch(s -> s.errorMessage() != null && s.errorMessage().contains("hash does not match")),
+            "Expected 'hash does not match' in FILE_CONTENTS error message");
     }
 
     @Test
@@ -119,6 +129,40 @@ class ProvenanceVerificationServiceTest {
         assertTrue(result.steps().stream()
             .anyMatch(s -> s.name() == VerificationStepName.FILE_CONTENTS && s.status()),
             "Expected FILE_CONTENTS to pass for SHA-512 record");
+    }
+
+    @Test
+    void verifyWithFileHashesReportsAllMismatches() throws IOException {
+        Metadata metadata = new Metadata("data-id", "container-type", List.of());
+        FilesInfo filesInfo = new FilesInfoBuilder(HashAlgorithm.SHA256)
+            .addFile(Path.of(TestUtils.TEST_FILE_1))
+            .addFile(Path.of(TestUtils.TEST_FILE_2))
+            .build();
+        Manifest manifest = new ManifestBuilder(HashAlgorithm.SHA256, new ProvenanceJsonMapper())
+            .withFilesInfo(filesInfo)
+            .withMetadata(metadata)
+            .build();
+        ProvenanceRecord record = new ProvenanceRecordBuilder()
+            .withMetadata(metadata)
+            .withFilesInfo(filesInfo)
+            .withManifest(manifest)
+            .withSignature(TestUtils.loadFixtureSignature("signature1.json"))
+            .build();
+        Map<String, byte[]> wrongHashes = new LinkedHashMap<>();
+        for (FileHashInfo fhi : record.filesInfo().files()) {
+            wrongHashes.put(fhi.path(), new byte[32]);
+        }
+
+        ProvenanceVerificationResult result = verificationService.verifyWithFileHashes(record, wrongHashes);
+
+        assertFalse(result.status());
+        VerificationStep fileContentsStep = result.steps().stream()
+            .filter(s -> s.name() == VerificationStepName.FILE_CONTENTS)
+            .findFirst().orElseThrow();
+        assertFalse(fileContentsStep.status());
+        record.filesInfo().files().forEach(fhi ->
+            assertTrue(fileContentsStep.errorMessage().contains(fhi.path()),
+                "Error message should mention mismatching file: " + fhi.path()));
     }
 
     @Test

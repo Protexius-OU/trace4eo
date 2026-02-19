@@ -28,6 +28,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -107,18 +108,20 @@ public class ProvenanceVerificationService {
         }
 
         // Step 3: Verify file content hashes (if available)
-        ProvenanceVerificationResult filesResult = verifyFiles(provenanceRecord.filesInfo());
-        if (filesResult.status()) {
-            if (provenanceRecord.filesInfo().filesContext() != null) {
+        if (provenanceRecord.filesInfo().filesContext() == null) {
+            steps.add(VerificationStep.success(VerificationStepName.FILE_CONTENTS,
+                "File content verification skipped (files not available)"));
+        } else {
+            List<String> fileMismatches = collectFileMismatches(provenanceRecord.filesInfo());
+            if (fileMismatches.isEmpty()) {
                 steps.add(VerificationStep.success(VerificationStepName.FILE_CONTENTS,
                     "All file content hashes verified"));
             } else {
-                steps.add(VerificationStep.success(VerificationStepName.FILE_CONTENTS,
-                    "File content verification skipped (files not available)"));
+                int total = provenanceRecord.filesInfo().files().size();
+                steps.add(VerificationStep.failure(VerificationStepName.FILE_CONTENTS,
+                    String.format("%d of %d file content hashes verified", total - fileMismatches.size(), total),
+                    String.join("\n", fileMismatches)));
             }
-        } else {
-            steps.add(VerificationStep.failure(VerificationStepName.FILE_CONTENTS,
-                "File content hash verification", filesResult.errorMessage()));
         }
 
         // Step 4: Verify signature against manifest
@@ -160,17 +163,18 @@ public class ProvenanceVerificationService {
             steps.add(VerificationStep.success(VerificationStepName.FILE_CONTENTS,
                 "File content verification skipped (no hashes provided)"));
         } else {
-            ProvenanceVerificationResult fileHashResult = verifyProvidedFileHashes(record.filesInfo(), providedHashes);
-            if (fileHashResult.status()) {
-                int m = record.filesInfo().files().size();
-                long n = record.filesInfo().files().stream()
-                    .filter(f -> providedHashes.containsKey(f.path()))
-                    .count();
+            int total = record.filesInfo().files().size();
+            long provided = record.filesInfo().files().stream()
+                .filter(f -> providedHashes.containsKey(f.path()))
+                .count();
+            List<String> mismatches = collectProvidedHashMismatches(record.filesInfo(), providedHashes);
+            if (mismatches.isEmpty()) {
                 steps.add(VerificationStep.success(VerificationStepName.FILE_CONTENTS,
-                    String.format("%d of %d file content hashes verified", n, m)));
+                    String.format("%d of %d file content hashes verified", provided, total)));
             } else {
                 steps.add(VerificationStep.failure(VerificationStepName.FILE_CONTENTS,
-                    "File content hash verification", fileHashResult.errorMessage()));
+                    String.format("%d of %d file content hashes verified", provided - mismatches.size(), total),
+                    String.join("\n", mismatches)));
             }
         }
 
@@ -187,7 +191,8 @@ public class ProvenanceVerificationService {
         return new ProvenanceVerificationResult(steps);
     }
 
-    private ProvenanceVerificationResult verifyProvidedFileHashes(FilesInfo filesInfo, Map<String, byte[]> providedHashes) {
+    private List<String> collectProvidedHashMismatches(FilesInfo filesInfo, Map<String, byte[]> providedHashes) {
+        List<String> mismatches = new ArrayList<>();
         for (FileHashInfo fileHashInfo : filesInfo.files()) {
             String path = fileHashInfo.path();
             if (!providedHashes.containsKey(path)) {
@@ -195,16 +200,17 @@ public class ProvenanceVerificationService {
             }
             byte[] provided = providedHashes.get(path);
             if (provided.length != fileHashInfo.hashValue().length) {
-                return new ProvenanceVerificationResult(ProvenanceVerificationError.HASH_MISMATCH,
-                    String.format("File %s: provided hash length (%d bytes) does not match expected length for %s (%d bytes)",
-                        path, provided.length, fileHashInfo.hashAlgorithm().getName(), fileHashInfo.hashValue().length));
-            }
-            if (!Arrays.equals(provided, fileHashInfo.hashValue())) {
-                return new ProvenanceVerificationResult(ProvenanceVerificationError.HASH_MISMATCH,
-                    String.format("File %s hash mismatch", path));
+                mismatches.add(String.format(
+                    "%s: provided hash length (%d bytes) does not match expected length for %s (%d bytes)",
+                    path, provided.length, fileHashInfo.hashAlgorithm().getName(), fileHashInfo.hashValue().length));
+            } else if (!Arrays.equals(provided, fileHashInfo.hashValue())) {
+                mismatches.add(String.format("%s: hash does not match\n  expected: %s\n  actual:   %s",
+                    path,
+                    Base64.getEncoder().encodeToString(fileHashInfo.hashValue()),
+                    Base64.getEncoder().encodeToString(provided)));
             }
         }
-        return new ProvenanceVerificationResult();
+        return mismatches;
     }
 
     private ProvenanceVerificationResult verifySignature(ProvenanceRecord provenanceRecord) {
@@ -268,35 +274,33 @@ public class ProvenanceVerificationService {
         return new ProvenanceVerificationResult();
     }
 
-    // TODO: revisit file content verification when filesContext is null - should this be an error or warning?
-    private ProvenanceVerificationResult verifyFiles(FilesInfo filesInfo) {
-        if (filesInfo.filesContext() == null) {
-            log.debug("Skipping file content verification - no filesContext available");
-            return new ProvenanceVerificationResult();
-        }
+    private List<String> collectFileMismatches(FilesInfo filesInfo) {
+        List<String> mismatches = new ArrayList<>();
         for (FileHashInfo file : filesInfo.files()) {
             log.info("Verifying file {}", file);
             MessageDigest md;
             try {
                 md = MessageDigest.getInstance(file.hashAlgorithm().getName());
             } catch (NoSuchAlgorithmException e) {
-                return new ProvenanceVerificationResult(ProvenanceVerificationError.UNSUPPORTED_HASH_ALGORITHM,
-                    String.format("Hash algorithm %s is not supported.", file.hashAlgorithm().name()));
+                mismatches.add(String.format("%s: hash algorithm %s is not supported", file.path(), file.hashAlgorithm().name()));
+                continue;
             }
             try (InputStream fileContentsStream = filesInfo.filesContext().getFileContents(file)) {
                 try (DigestInputStream digestInputStream = new DigestInputStream(fileContentsStream, md)) {
                     digestInputStream.transferTo(OutputStream.nullOutputStream());
-                    if (!Arrays.equals(md.digest(), file.hashValue())) {
-                        String msg = String.format("File %s hash mismatch", file.path());
-                        return new ProvenanceVerificationResult(ProvenanceVerificationError.HASH_MISMATCH, msg);
+                    byte[] actual = md.digest();
+                    if (!Arrays.equals(actual, file.hashValue())) {
+                        mismatches.add(String.format("%s: hash does not match\n  expected: %s\n  actual:   %s",
+                            file.path(),
+                            Base64.getEncoder().encodeToString(file.hashValue()),
+                            Base64.getEncoder().encodeToString(actual)));
                     }
                 }
             } catch (IOException e) {
-                String msg = String.format("Failed to verify file %s", file.path());
-                log.error(msg, e);
-                return new ProvenanceVerificationResult(ProvenanceVerificationError.UNKNOWN_ERROR, msg);
+                log.error("Failed to verify file {}", file.path(), e);
+                mismatches.add(String.format("%s: failed to read file", file.path()));
             }
         }
-        return new ProvenanceVerificationResult();
+        return mismatches;
     }
 }
