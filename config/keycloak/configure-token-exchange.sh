@@ -35,14 +35,16 @@ echo "Creating client policy for '${CLIENT_ID}'..."
 EXISTING=$(curl -sf "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${RM_CLIENT_ID}/authz/resource-server/policy/client?name=token-exchange-for-${CLIENT_ID}" \
   -H "${AUTH}" || echo "[]")
 
-if echo "${EXISTING}" | python3 -c "import sys,json; d=json.load(sys.stdin); exit(0 if isinstance(d,dict) and d.get('id') else 1)" 2>/dev/null; then
-  POLICY_ID=$(echo "${EXISTING}" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+if echo "${EXISTING}" | python3 -c "import sys,json; d=json.load(sys.stdin); d=d[0] if isinstance(d,list) and len(d)>0 else d; exit(0 if isinstance(d,dict) and d.get('id') else 1)" 2>/dev/null; then
+  POLICY_ID=$(echo "${EXISTING}" | python3 -c "import sys,json; d=json.load(sys.stdin); d=d[0] if isinstance(d,list) else d; print(d['id'])")
   echo "Policy already exists: ${POLICY_ID}"
 else
-  POLICY_ID=$(curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${RM_CLIENT_ID}/authz/resource-server/policy/client" \
+  curl -sf -X POST "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${RM_CLIENT_ID}/authz/resource-server/policy/client" \
     -H "${AUTH}" -H "Content-Type: application/json" \
     -d "{\"type\":\"client\",\"name\":\"token-exchange-for-${CLIENT_ID}\",\"clients\":[\"${CLIENT_ID}\"]}" \
-    | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+    > /dev/null
+  POLICY_ID=$(curl -sf "${KEYCLOAK_URL}/admin/realms/${REALM}/clients/${RM_CLIENT_ID}/authz/resource-server/policy/client?name=token-exchange-for-${CLIENT_ID}" \
+    -H "${AUTH}" | python3 -c "import sys,json; d=json.load(sys.stdin); d=d[0] if isinstance(d,list) else d; print(d['id'])")
   echo "Created policy: ${POLICY_ID}"
 fi
 
