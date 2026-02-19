@@ -32,32 +32,50 @@ public class VerificationTool {
 
     private final ProvenanceVerificationService verificationService;
     private final ProvenanceJsonMapper provenanceJsonMapper;
+    private final Map<String, VerificationResultFormatter> formatters;
 
-    public VerificationTool(ProvenanceVerificationService verificationService, ProvenanceJsonMapper provenanceJsonMapper) {
+    public VerificationTool(
+        ProvenanceVerificationService verificationService,
+        ProvenanceJsonMapper provenanceJsonMapper,
+        Map<String, VerificationResultFormatter> formatters
+    ) {
         this.verificationService = verificationService;
         this.provenanceJsonMapper = provenanceJsonMapper;
+        this.formatters = formatters;
     }
 
     @Command(name = "verify", description = "Verify input data against signature")
-    public ProvenanceVerificationResult verify(
+    public String verify(
         @Option(longName = "text", description = "Path to input file", required = true) Path file,
-        @Option(longName = "signature", description = "Path to signature file", required = true) Path signaturePath
+        @Option(longName = "signature", description = "Path to signature file", required = true) Path signaturePath,
+        @Option(longName = "format", description = "Output format: text (default) or json", defaultValue = "text") String format
     ) {
         byte[] inputBytes = resolveInput(file);
         ProvenanceSignature signature = provenanceJsonMapper.readValue(signaturePath, ProvenanceSignature.class);
-        return verificationService.verify(signature, inputBytes);
+        ProvenanceVerificationResult result = verificationService.verify(signature, inputBytes);
+        return resolveFormatter(format).format(result);
     }
 
     @Command(name = "verify-provenance-record", description = "Verify provenance record")
-    public List<ProvenanceVerificationResult> verify(
+    public String verify(
         @Option(longName = "file", description = "Path to provenance record", required = true) Path provenanceRecordPath,
         @Option(longName = "file-hash", description = "File hash as <path>=<base64>") String fileHash,
         @Option(longName = "file-hashes", description = "Path to hash file with one <path>=<base64> per line")
-            Path fileHashesPath
+            Path fileHashesPath,
+        @Option(longName = "format", description = "Output format: text (default) or json", defaultValue = "text") String format
     ) {
         Map<String, byte[]> hashes = resolveFileHashes(fileHash, fileHashesPath);
         Container container = readContainer(provenanceRecordPath);
-        return verifyAll(container.provenanceRecords(), hashes);
+        List<ProvenanceVerificationResult> results = verifyAll(container.provenanceRecords(), hashes);
+        return resolveFormatter(format).format(results);
+    }
+
+    private VerificationResultFormatter resolveFormatter(String format) {
+        VerificationResultFormatter formatter = formatters.get(format);
+        if (formatter == null) {
+            throw new IllegalArgumentException("Unknown output format: " + format);
+        }
+        return formatter;
     }
 
     private Map<String, byte[]> resolveFileHashes(String fileHash, Path fileHashesPath) {

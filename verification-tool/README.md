@@ -24,10 +24,11 @@ Verify input data against a signature file.
 
 **Options:**
 
-| Option        | Description                      |
-|---------------|----------------------------------|
-| `--text`      | Path to the input file to verify |
-| `--signature` | Path to the signature file       |
+| Option        | Description                               |
+|---------------|-------------------------------------------|
+| `--text`      | Path to the input file to verify          |
+| `--signature` | Path to the signature file                |
+| `--format`    | Output format: `text` (default) or `json` |
 
 **Example:**
 
@@ -49,29 +50,22 @@ verification steps for each record in the container:
 
 **Options:**
 
-| Option          | Description                                                            |
-|-----------------|------------------------------------------------------------------------|
-| `--file`        | Path to the provenance record container file                           |
-| `--file-hash`   | Single file hash as `<path>=<base64>` (optional)                       |
+| Option          | Description                                                        |
+|-----------------|--------------------------------------------------------------------|
+| `--file`        | Path to the provenance record container file                       |
+| `--file-hash`   | Single file hash as `<path>=<base64>` (optional)                   |
 | `--file-hashes` | Path to a hash file with one `<path>=<base64>` per line (optional) |
+| `--format`      | Output format: `text` (default) or `json`                          |
 
 Both `--file-hash` and `--file-hashes` are optional and can be combined; their entries are merged before verification.
 Files in the record for which no hash is provided are skipped.
 
-**Example — inline (single file):**
+**Example — single file:**
 
 ```bash
 ./gradlew :verification-tool:bootRun --args="verify-provenance-record \
   --file provenance.zip \
   --file-hash data.csv=47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
-```
-
-**Example — hash file (multiple files):**
-
-```bash
-./gradlew :verification-tool:bootRun --args="verify-provenance-record \
-  --file provenance.zip \
-  --file-hashes hashes.txt"
 ```
 
 **Hash file format (`hashes.txt`):**
