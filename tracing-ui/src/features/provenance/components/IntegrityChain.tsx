@@ -136,11 +136,22 @@ export default function IntegrityChain({ record, verificationResult }: Props) {
             <span className="ic-node-title">Metadata</span>
           </div>
           <div className="ic-node-body">
-            <div><strong>{metadata.dataId}</strong></div>
-            <div>{metadata.dataType}</div>
-            {metadata.predecessors.length > 0 && (
-              <div>{metadata.predecessors.length} predecessor(s)</div>
-            )}
+            <div className="ic-field">
+              <span className="ic-field-label">Data ID</span>
+              <strong className="ic-field-value">{metadata.dataId}</strong>
+            </div>
+            <div className="ic-field">
+              <span className="ic-field-label">Data Type</span>
+              <span className="ic-field-value">{metadata.dataType}</span>
+            </div>
+            <div className="ic-field">
+              <span className="ic-field-label">Predecessors</span>
+              <span className="ic-field-value">
+                {metadata.predecessors.length === 0
+                  ? 'None — this is a root record'
+                  : `${metadata.predecessors.length} predecessor(s)`}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -157,7 +168,10 @@ export default function IntegrityChain({ record, verificationResult }: Props) {
             {filesInfo?.files.map(file => (
               <div key={file.path} className="ic-file">
                 <StatusIcon status={filesNodeStatus} />
-                <span className="ic-file-path">{file.path}</span>
+                <div className="ic-file-info">
+                  <span className="ic-file-path">{file.path}</span>
+                  <code className="ic-hash-value">{file.hashAlgorithm}: {file.hashValue}</code>
+                </div>
               </div>
             ))}
             {fileContentsStatus === 'skipped' && (

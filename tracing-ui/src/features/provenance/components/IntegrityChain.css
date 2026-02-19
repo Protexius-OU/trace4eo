@@ -203,11 +203,39 @@
   gap: 0.5rem;
 }
 
+/* Metadata fields */
+.ic-field {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.ic-field-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.ic-field-value {
+  color: #333;
+}
+
 /* Files */
 .ic-file {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.25rem;
+}
+
+.ic-file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
 }
 
 .ic-file-path {
