@@ -29,6 +29,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class ProvenanceVerificationService {
 
@@ -131,6 +132,79 @@ public class ProvenanceVerificationService {
         }
 
         return new ProvenanceVerificationResult(steps);
+    }
+
+    public ProvenanceVerificationResult verifyWithFileHashes(ProvenanceRecord record, Map<String, byte[]> providedHashes) {
+        List<VerificationStep> steps = new ArrayList<>();
+
+        // Step 1: Verify FilesInfo hash
+        ProvenanceVerificationResult filesInfoResult = verifyFilesInfo(record.manifest(), record.filesInfo());
+        if (filesInfoResult.status()) {
+            steps.add(VerificationStep.success(VerificationStepName.FILES_INFO, "Files info hash matches manifest"));
+        } else {
+            steps.add(VerificationStep.failure(VerificationStepName.FILES_INFO,
+                "Files info hash verification", filesInfoResult.errorMessage()));
+        }
+
+        // Step 2: Verify Metadata hash
+        ProvenanceVerificationResult metadataResult = verifyMetadata(record.manifest(), record.metadata());
+        if (metadataResult.status()) {
+            steps.add(VerificationStep.success(VerificationStepName.METADATA, "Metadata hash matches manifest"));
+        } else {
+            steps.add(VerificationStep.failure(VerificationStepName.METADATA,
+                "Metadata hash verification", metadataResult.errorMessage()));
+        }
+
+        // Step 3: Verify provided file hashes
+        if (providedHashes.isEmpty()) {
+            steps.add(VerificationStep.success(VerificationStepName.FILE_CONTENTS,
+                "File content verification skipped (no hashes provided)"));
+        } else {
+            ProvenanceVerificationResult fileHashResult = verifyProvidedFileHashes(record.filesInfo(), providedHashes);
+            if (fileHashResult.status()) {
+                int m = record.filesInfo().files().size();
+                long n = record.filesInfo().files().stream()
+                    .filter(f -> providedHashes.containsKey(f.path()))
+                    .count();
+                steps.add(VerificationStep.success(VerificationStepName.FILE_CONTENTS,
+                    String.format("%d of %d file content hashes verified", n, m)));
+            } else {
+                steps.add(VerificationStep.failure(VerificationStepName.FILE_CONTENTS,
+                    "File content hash verification", fileHashResult.errorMessage()));
+            }
+        }
+
+        // Step 4: Verify signature against manifest
+        ProvenanceVerificationResult signatureResult = verifySignature(record);
+        if (signatureResult.status()) {
+            steps.add(VerificationStep.success(VerificationStepName.SIGNATURE,
+                "Signature verified against manifest"));
+        } else {
+            steps.add(VerificationStep.failure(VerificationStepName.SIGNATURE,
+                "Signature verification", signatureResult.errorMessage()));
+        }
+
+        return new ProvenanceVerificationResult(steps);
+    }
+
+    private ProvenanceVerificationResult verifyProvidedFileHashes(FilesInfo filesInfo, Map<String, byte[]> providedHashes) {
+        for (FileHashInfo fileHashInfo : filesInfo.files()) {
+            String path = fileHashInfo.path();
+            if (!providedHashes.containsKey(path)) {
+                continue;
+            }
+            byte[] provided = providedHashes.get(path);
+            if (provided.length != fileHashInfo.hashValue().length) {
+                return new ProvenanceVerificationResult(ProvenanceVerificationError.HASH_MISMATCH,
+                    String.format("File %s: provided hash length (%d bytes) does not match expected length for %s (%d bytes)",
+                        path, provided.length, fileHashInfo.hashAlgorithm().getName(), fileHashInfo.hashValue().length));
+            }
+            if (!Arrays.equals(provided, fileHashInfo.hashValue())) {
+                return new ProvenanceVerificationResult(ProvenanceVerificationError.HASH_MISMATCH,
+                    String.format("File %s hash mismatch", path));
+            }
+        }
+        return new ProvenanceVerificationResult();
     }
 
     private ProvenanceVerificationResult verifySignature(ProvenanceRecord provenanceRecord) {

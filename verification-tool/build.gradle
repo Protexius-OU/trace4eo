@@ -27,6 +27,9 @@ dependencies {
 
     errorprone(libs.error.prone.core)
     rewrite(libs.rewrite.static.analysis)
+
+    testImplementation(platform(SpringBootPlugin.BOM_COORDINATES))
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
 java {
