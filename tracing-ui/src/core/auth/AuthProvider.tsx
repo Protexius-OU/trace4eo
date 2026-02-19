@@ -10,6 +10,9 @@ const oidcConfig = {
   scope: 'openid email profile',
   automaticSilentRenew: true,
   userStore: new WebStorageStateStore({ store: window.localStorage }),
+  onSigninCallback: (): void => {
+    window.history.replaceState({}, document.title, window.location.pathname)
+  },
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
