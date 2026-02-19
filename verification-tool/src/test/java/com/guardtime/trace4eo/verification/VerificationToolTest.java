@@ -15,9 +15,7 @@ import com.guardtime.trace4eo.provenance.record.ManifestBuilder;
 import com.guardtime.trace4eo.provenance.record.Metadata;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecordBuilder;
-import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationResult;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationService;
-import com.guardtime.trace4eo.provenance.verification.VerificationStepName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -27,10 +25,9 @@ import java.nio.file.Path;
 import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.SequencedSet;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -48,18 +45,22 @@ class VerificationToolTest {
 
     private final ProvenanceJsonMapper provenanceJsonMapper = new ProvenanceJsonMapper();
     private final ProvenanceVerificationService verificationService = new ProvenanceVerificationService();
-    private final VerificationTool verificationTool = new VerificationTool(verificationService, provenanceJsonMapper);
+    private final Map<String, VerificationResultFormatter> formatters = Map.of(
+        "text", new TextVerificationResultFormatter(),
+        "json", new JsonVerificationResultFormatter(provenanceJsonMapper)
+    );
+    private final VerificationTool verificationTool = new VerificationTool(verificationService, provenanceJsonMapper, formatters);
 
     @Test
     void verifyValidSignature() {
-        ProvenanceVerificationResult result = verificationTool.verify(Path.of(TEST_FILE), Path.of(SIGNATURE_FILE));
-        assertTrue(result.status());
+        String result = verificationTool.verify(Path.of(TEST_FILE), Path.of(SIGNATURE_FILE), "text");
+        assertTrue(result.contains("PASSED"));
     }
 
     @Test
     void verifyInvalidSignature() {
-        ProvenanceVerificationResult result = verificationTool.verify(Path.of(OTHER_FILE), Path.of(SIGNATURE_FILE));
-        assertFalse(result.status());
+        String result = verificationTool.verify(Path.of(OTHER_FILE), Path.of(SIGNATURE_FILE), "text");
+        assertTrue(result.contains("FAILED"));
     }
 
     // SHA-256 of empty bytes (content of test.txt in provenance-record.json), base64-encoded
@@ -69,11 +70,8 @@ class VerificationToolTest {
 
     @Test
     void verifyProvenanceRecord() {
-        List<ProvenanceVerificationResult> results = verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), null, null);
-        assertEquals(1, results.size());
-        ProvenanceVerificationResult result = results.getFirst();
-        assertTrue(result.status(), () -> String.format(
-            "Verification failed: %s - %s", result.error(), result.errorMessage()));
+        String result = verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), null, null, "text");
+        assertTrue(result.contains("PASSED"), () -> "Expected PASSED, got: " + result);
     }
 
     @Test
@@ -84,152 +82,134 @@ class VerificationToolTest {
         new ZipContainerWriter(provenanceJsonMapper)
             .writeTo(container, Files.newOutputStream(zipPath));
 
-        List<ProvenanceVerificationResult> results = verificationTool.verify(zipPath, null, null);
-        assertEquals(1, results.size());
-        ProvenanceVerificationResult result = results.getFirst();
-        assertTrue(result.status(), () -> String.format(
-            "Verification failed: %s - %s", result.error(), result.errorMessage()));
+        String result = verificationTool.verify(zipPath, null, null, "text");
+        assertTrue(result.contains("PASSED"), () -> "Expected PASSED, got: " + result);
     }
 
     @Test
     void verifyProvenanceRecordWithInvalidSignature() {
-        List<ProvenanceVerificationResult> results = verificationTool.verify(
-            Path.of(INVALID_SIGNATURE_PROVENANCE_RECORD_FILE), null, null);
-        assertEquals(1, results.size());
-        assertFalse(results.getFirst().status());
-        assertTrue(results.getFirst().steps().stream()
-            .anyMatch(s -> s.name() == VerificationStepName.SIGNATURE
-                && !s.status()),
-            "Expected a failed SIGNATURE verification step");
+        String result = verificationTool.verify(
+            Path.of(INVALID_SIGNATURE_PROVENANCE_RECORD_FILE), null, null, "text");
+        assertTrue(result.contains("FAILED"));
+        assertTrue(result.contains("[FAIL]"));
+        assertTrue(result.contains("Signature"));
     }
 
     @Test
     void verifyProvenanceRecordWithInvalidContents() {
-        List<ProvenanceVerificationResult> results = verificationTool.verify(
-            Path.of(INVALID_CONTENTS_PROVENANCE_RECORD_FILE), null, null);
-        assertEquals(1, results.size());
-        assertFalse(results.getFirst().status());
-        assertTrue(results.getFirst().steps().stream()
-            .anyMatch(s -> s.name() == VerificationStepName.FILES_INFO
-                && !s.status()),
-            "Expected a failed FILES_INFO verification step");
+        String result = verificationTool.verify(
+            Path.of(INVALID_CONTENTS_PROVENANCE_RECORD_FILE), null, null, "text");
+        assertTrue(result.contains("FAILED"));
+        assertTrue(result.contains("[FAIL]"));
+        assertTrue(result.contains("Files Info"));
     }
 
     @Test
     void verifyProvenanceRecordWithCorrectInlineHash() {
-        List<ProvenanceVerificationResult> results = verificationTool.verify(
-            Path.of(PROVENANCE_RECORD_FILE), "test.txt=" + EMPTY_SHA256_B64, null);
-        assertEquals(1, results.size());
-        ProvenanceVerificationResult result = results.getFirst();
-        assertTrue(result.status(), () -> String.format(
-            "Verification failed: %s - %s", result.error(), result.errorMessage()));
-        assertTrue(result.steps().stream()
-            .anyMatch(s -> s.name() == VerificationStepName.FILE_CONTENTS && s.status()),
-            "Expected a passing FILE_CONTENTS step");
+        String result = verificationTool.verify(
+            Path.of(PROVENANCE_RECORD_FILE), "test.txt=" + EMPTY_SHA256_B64, null, "text");
+        assertTrue(result.contains("PASSED"), () -> "Expected PASSED, got: " + result);
+        assertTrue(result.contains("[OK]"));
+        assertTrue(result.contains("File Contents"));
     }
 
     @Test
     void verifyProvenanceRecordWithWrongInlineHash() {
-        List<ProvenanceVerificationResult> results = verificationTool.verify(
-            Path.of(PROVENANCE_RECORD_FILE), "test.txt=" + WRONG_SHA256_B64, null);
-        assertEquals(1, results.size());
-        ProvenanceVerificationResult result = results.getFirst();
-        assertFalse(result.status());
-        assertTrue(result.steps().stream()
-            .anyMatch(s -> s.name() == VerificationStepName.FILE_CONTENTS && !s.status()),
-            "Expected a failed FILE_CONTENTS step");
+        String result = verificationTool.verify(
+            Path.of(PROVENANCE_RECORD_FILE), "test.txt=" + WRONG_SHA256_B64, null, "text");
+        assertTrue(result.contains("FAILED"));
+        assertTrue(result.contains("[FAIL]"));
+        assertTrue(result.contains("File Contents"));
     }
 
     @Test
     void verifyProvenanceRecordWithCorrectHashFile() {
-        List<ProvenanceVerificationResult> results = verificationTool.verify(
-            Path.of(PROVENANCE_RECORD_FILE), null, Path.of(HASHES_FILE));
-        assertEquals(1, results.size());
-        ProvenanceVerificationResult result = results.getFirst();
-        assertTrue(result.status(), () -> String.format(
-            "Verification failed: %s - %s", result.error(), result.errorMessage()));
-        assertTrue(result.steps().stream()
-            .anyMatch(s -> s.name() == VerificationStepName.FILE_CONTENTS && s.status()),
-            "Expected a passing FILE_CONTENTS step");
+        String result = verificationTool.verify(
+            Path.of(PROVENANCE_RECORD_FILE), null, Path.of(HASHES_FILE), "text");
+        assertTrue(result.contains("PASSED"), () -> "Expected PASSED, got: " + result);
+        assertTrue(result.contains("[OK]"));
+        assertTrue(result.contains("File Contents"));
     }
 
     @Test
     void verifyProvenanceRecordWithWrongHashFile() {
-        List<ProvenanceVerificationResult> results = verificationTool.verify(
-            Path.of(PROVENANCE_RECORD_FILE), null, Path.of(WRONG_HASHES_FILE));
-        assertEquals(1, results.size());
-        ProvenanceVerificationResult result = results.getFirst();
-        assertFalse(result.status());
-        assertTrue(result.steps().stream()
-            .anyMatch(s -> s.name() == VerificationStepName.FILE_CONTENTS && !s.status()),
-            "Expected a failed FILE_CONTENTS step");
+        String result = verificationTool.verify(
+            Path.of(PROVENANCE_RECORD_FILE), null, Path.of(WRONG_HASHES_FILE), "text");
+        assertTrue(result.contains("FAILED"));
+        assertTrue(result.contains("[FAIL]"));
+        assertTrue(result.contains("File Contents"));
     }
 
     @Test
     void verifyProvenanceRecordWithInlineAndHashFile() {
-        List<ProvenanceVerificationResult> results = verificationTool.verify(
-            Path.of(PROVENANCE_RECORD_FILE), "test.txt=" + EMPTY_SHA256_B64, Path.of(HASHES_FILE));
-        assertEquals(1, results.size());
-        ProvenanceVerificationResult result = results.getFirst();
-        assertTrue(result.status(), () -> String.format(
-            "Verification failed: %s - %s", result.error(), result.errorMessage()));
+        String result = verificationTool.verify(
+            Path.of(PROVENANCE_RECORD_FILE), "test.txt=" + EMPTY_SHA256_B64, Path.of(HASHES_FILE), "text");
+        assertTrue(result.contains("PASSED"), () -> "Expected PASSED, got: " + result);
     }
 
     @Test
     void verifyProvenanceRecordSkipsUnrecognizedEntriesInHashFile() {
         // hashes.txt has test.txt (in the record) and data.txt (not in the record).
         // Only test.txt should be verified; data.txt should be silently skipped.
-        List<ProvenanceVerificationResult> results = verificationTool.verify(
-            Path.of(PROVENANCE_RECORD_FILE), null, Path.of(HASHES_FILE));
-        assertEquals(1, results.size());
-        assertTrue(results.getFirst().steps().stream()
-            .filter(s -> s.name() == VerificationStepName.FILE_CONTENTS)
-            .anyMatch(s -> s.status() && s.description().contains("1 of 1")),
-            "Expected '1 of 1 file content hashes verified' (data.txt skipped)");
+        String result = verificationTool.verify(
+            Path.of(PROVENANCE_RECORD_FILE), null, Path.of(HASHES_FILE), "text");
+        assertTrue(result.contains("1 of 1"), "Expected '1 of 1 file content hashes verified' (data.txt skipped)");
     }
 
     @Test
     void verifyProvenanceRecordFailsForInvalidEntryInHashFile() {
         // invalid-hashes.txt has two valid entries followed by one with invalid base64.
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), null, Path.of(INVALID_HASHES_FILE)));
+            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), null, Path.of(INVALID_HASHES_FILE), "text"));
     }
 
     @Test
     void verifyProvenanceRecordWithInvalidHashFormat() {
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), "test.txt", null));
+            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), "test.txt", null, "text"));
     }
 
     @Test
     void verifyFailsForNonExistentTextFile() {
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of("nonexistent.txt"), Path.of(SIGNATURE_FILE)));
+            () -> verificationTool.verify(Path.of("nonexistent.txt"), Path.of(SIGNATURE_FILE), "text"));
     }
 
     @Test
     void verifyProvenanceRecordFailsForNonExistentFile() {
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of("nonexistent.json"), null, null));
+            () -> verificationTool.verify(Path.of("nonexistent.json"), null, null, "text"));
     }
 
     @Test
     void verifyProvenanceRecordFailsForNonExistentHashManifest(@TempDir Path tempDir) {
         Path missing = tempDir.resolve("missing.txt");
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), null, missing));
+            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), null, missing, "text"));
     }
 
     @Test
     void verifyProvenanceRecordFailsForInvalidBase64InHash() {
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), "test.txt=not!valid!!base64", null));
+            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), "test.txt=not!valid!!base64", null, "text"));
     }
 
     @Test
     void verifyProvenanceRecordFailsForBlankPathInHash() {
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), "=" + EMPTY_SHA256_B64, null));
+            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), "=" + EMPTY_SHA256_B64, null, "text"));
+    }
+
+    @Test
+    void verifyFailsForUnknownFormat() {
+        assertThrows(IllegalArgumentException.class,
+            () -> verificationTool.verify(Path.of(TEST_FILE), Path.of(SIGNATURE_FILE), "xml"));
+    }
+
+    @Test
+    void verifyProvenanceRecordFailsForUnknownFormat() {
+        assertThrows(IllegalArgumentException.class,
+            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), null, null, "xml"));
     }
 
     @Test
@@ -260,11 +240,9 @@ class VerificationToolTest {
         FileHashInfo fileHashInfo = record.filesInfo().files().iterator().next();
         String fileHash = fileHashInfo.path() + "=" + Base64.getEncoder().encodeToString(fileHashInfo.hashValue());
 
-        List<ProvenanceVerificationResult> results = verificationTool.verify(jsonPath, fileHash, null);
-        assertEquals(1, results.size());
-        assertTrue(results.getFirst().steps().stream()
-            .anyMatch(s -> s.name() == VerificationStepName.FILE_CONTENTS && s.status()),
-            "Expected FILE_CONTENTS to pass for SHA-512 record");
+        String result = verificationTool.verify(jsonPath, fileHash, null, "text");
+        assertTrue(result.contains("[OK]"));
+        assertTrue(result.contains("File Contents"));
     }
 
 }
