@@ -17,6 +17,12 @@ The project consists of multiple software components:
 
 Use `./build-dev.sh` to build the backend image, frontend, and Docker images. Then `./start-dev.sh` to start all services (PostgreSQL, Keycloak, backend, frontend).
 
+Database volumes are preserved across `./stop-dev.sh` / `./start-dev.sh` cycles. To start with a clean database, pass the `--fresh` flag:
+
+```bash
+./start-dev.sh --fresh
+```
+
 ### Building a container image for the tracing system
 
 ```bash
