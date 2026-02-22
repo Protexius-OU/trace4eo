@@ -83,6 +83,12 @@ export default function IntegrityChain({ record, verificationResult }: Props) {
                 Transparency log #{details.rekorLogIndex}
               </a>
             </div>
+            {details.manifestHash && (
+              <div className="ic-manifest-hash">
+                <span className="ic-field-label">Rekor signed hash</span>
+                <code className="ic-hash-value">{signature?.hashAlgorithm.toLowerCase()}:{details.manifestHash}</code>
+              </div>
+            )}
           </div>
         )}
       </div>

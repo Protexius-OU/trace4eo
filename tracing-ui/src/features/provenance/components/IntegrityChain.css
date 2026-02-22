@@ -259,6 +259,14 @@
   margin-top: 0.25rem;
 }
 
+/* Manifest hash in signature node */
+.ic-manifest-hash {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin-top: 0.125rem;
+}
+
 /* Summary */
 .ic-summary {
   margin-top: 0.75rem;

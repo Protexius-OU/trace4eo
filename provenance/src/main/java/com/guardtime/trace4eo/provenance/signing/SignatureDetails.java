@@ -6,5 +6,6 @@ public record SignatureDetails(
     Instant signingTime,
     String rekorLogIndex,
     String signerIdentity,
-    String certificateIssuer
+    String certificateIssuer,
+    String manifestHash
 ) {}
