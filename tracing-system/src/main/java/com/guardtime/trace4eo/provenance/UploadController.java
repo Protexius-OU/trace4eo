@@ -39,6 +39,8 @@ public class UploadController {
 
     private static final Logger log = LoggerFactory.getLogger(UploadController.class);
 
+    private static final HashAlgorithm HASH_ALGORITHM = HashAlgorithm.SHA256;
+
     private final ProvenanceJsonMapper provenanceJsonMapper;
     private final ProvenanceSigningService signingService;
     private final ProvenanceService provenanceService;
@@ -63,6 +65,16 @@ public class UploadController {
         @RequestParam("dataId") String dataId,
         @RequestParam(value = "predecessors", required = false) List<String> predecessorIds
     ) throws IOException {
+        validate(file, dataType, dataId);
+        String sigstoreToken = getSigstoreToken();
+        List<Predecessor> predecessors = parsePredecessors(predecessorIds);
+        ProvenanceRecord record = createProvenanceRecord(file, dataType, dataId, predecessors, sigstoreToken);
+        provenanceService.save(record);
+        log.info("Created provenance record with ID: {}", record.id());
+        return record;
+    }
+
+    private void validate(MultipartFile file, String dataType, String dataId) {
         if (file.isEmpty()) {
             throw new IllegalArgumentException("file must not be empty");
         }
@@ -72,46 +84,51 @@ public class UploadController {
         if (dataId == null || dataId.isBlank()) {
             throw new IllegalArgumentException("dataId must not be null or blank");
         }
+    }
+
+    private String getSigstoreToken() {
+        JwtAuthenticationToken authentication =
+            (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+        String keycloakAccessToken = authentication.getToken().getTokenValue();
+        return brokerTokenService.getSigstoreIdToken(keycloakAccessToken);
+    }
+
+    private List<Predecessor> parsePredecessors(List<String> predecessorIds) {
+        List<Predecessor> predecessors = new ArrayList<>();
+        if (predecessorIds == null) {
+            return predecessors;
+        }
+        for (String id : predecessorIds) {
+            try {
+                predecessors.add(new Predecessor(UUID.fromString(id.trim())));
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException(String.format("Invalid predecessor ID: %s", id.trim()));
+            }
+        }
+        return predecessors;
+    }
+
+    private ProvenanceRecord createProvenanceRecord(
+        MultipartFile file,
+        String dataType,
+        String dataId,
+        List<Predecessor> predecessors,
+        String sigstoreToken
+    ) throws IOException {
         String sanitizedFilename = file.getOriginalFilename() != null
             ? file.getOriginalFilename().replaceAll("[^a-zA-Z0-9._-]", "_")
             : "unknown";
         log.info("Uploading file: {} with dataType: {}, dataId: {}", sanitizedFilename, dataType, dataId);
-
-        // Extract Keycloak access token from security context
-        JwtAuthenticationToken authentication =
-            (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
-        String keycloakAccessToken = authentication.getToken().getTokenValue();
-
-        // Retrieve Sigstore ID token from Keycloak broker
-        String sigstoreToken = brokerTokenService.getSigstoreIdToken(keycloakAccessToken);
-
         Path tempFile = Files.createTempFile("upload-", "-" + sanitizedFilename);
         try {
             file.transferTo(tempFile);
-
-            List<Predecessor> predecessors = new ArrayList<>();
-            if (predecessorIds != null) {
-                for (String id : predecessorIds) {
-                    try {
-                        predecessors.add(new Predecessor(UUID.fromString(id.trim())));
-                    } catch (IllegalArgumentException e) {
-                        throw new IllegalArgumentException(String.format("Invalid predecessor ID: %s", id.trim()));
-                    }
-                }
-            }
-
-            ProvenanceRecord record = createProvenanceRecord(tempFile, dataType, dataId, predecessors, sigstoreToken);
-
-            provenanceService.save(record);
-
-            log.info("Created provenance record with ID: {}", record.id());
-            return record;
+            return buildRecord(tempFile, dataType, dataId, predecessors, sigstoreToken);
         } finally {
             Files.deleteIfExists(tempFile);
         }
     }
 
-    private ProvenanceRecord createProvenanceRecord(
+    private ProvenanceRecord buildRecord(
         Path file,
         String dataType,
         String dataId,
@@ -120,11 +137,11 @@ public class UploadController {
     ) throws IOException {
         Metadata metadata = new Metadata(dataId, dataType, predecessors);
 
-        FilesInfo filesInfo = new FilesInfoBuilder(HashAlgorithm.SHA256)
+        FilesInfo filesInfo = new FilesInfoBuilder(HASH_ALGORITHM)
             .addFile(file)
             .build();
 
-        Manifest manifest = new ManifestBuilder(HashAlgorithm.SHA256, provenanceJsonMapper)
+        Manifest manifest = new ManifestBuilder(HASH_ALGORITHM, provenanceJsonMapper)
             .withFilesInfo(filesInfo)
             .withMetadata(metadata)
             .build();
