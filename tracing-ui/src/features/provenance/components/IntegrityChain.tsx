@@ -32,11 +32,19 @@ function StatusIcon({ status }: { status: Status }) {
   }
 }
 
-function Connector({ label, status }: { label: string; status: Status }) {
+function Connector({ label, status, hashAlgorithm, hashValue }: {
+  label: string
+  status: Status
+  hashAlgorithm?: string
+  hashValue?: string
+}) {
   return (
     <div className={`ic-connector ic-connector-${connectorClass(status)}`}>
       <div className="ic-line" />
       <span className="ic-label">{label}</span>
+      {hashAlgorithm && hashValue && (
+        <code className="ic-connector-hash">{hashAlgorithm}: {hashValue}</code>
+      )}
       <div className="ic-line" />
     </div>
   )
@@ -83,18 +91,17 @@ export default function IntegrityChain({ record, verificationResult }: Props) {
                 Transparency log #{details.rekorLogIndex}
               </a>
             </div>
-            {details.manifestHash && (
-              <div className="ic-manifest-hash">
-                <span className="ic-field-label">Rekor signed hash</span>
-                <code className="ic-hash-value">{signature?.hashAlgorithm.toLowerCase()}:{details.manifestHash}</code>
-              </div>
-            )}
           </div>
         )}
       </div>
 
       {/* Connector: signs */}
-      <Connector label="signs" status={sigStatus} />
+      <Connector
+        label="signs"
+        status={sigStatus}
+        hashAlgorithm={details?.manifestHash ? signature?.hashAlgorithm.toUpperCase() : undefined}
+        hashValue={details?.manifestHash ?? undefined}
+      />
 
       {/* === Manifest layer === */}
       <div className="ic-node">
