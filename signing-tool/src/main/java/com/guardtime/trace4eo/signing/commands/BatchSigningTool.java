@@ -2,8 +2,8 @@ package com.guardtime.trace4eo.signing.commands;
 
 import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
-import com.guardtime.trace4eo.signing.FileSigningResult;
 import com.guardtime.trace4eo.signing.OidcTokenResolver;
+import com.guardtime.trace4eo.signing.OutputWriter;
 import com.guardtime.trace4eo.signing.RecordSigningService;
 import com.guardtime.trace4eo.signing.UnsignedRecord;
 import com.guardtime.trace4eo.signing.registration.RecordRegistrationClient;
@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +30,7 @@ public class BatchSigningTool {
 
     private final SigningInputValidator validator;
     private final RecordSigningService recordSigningService;
+    private final OutputWriter outputWriter;
     private final RecordRegistrationClient registrationClient;
     private final OidcTokenResolver oidcTokenResolver;
 
@@ -38,10 +38,12 @@ public class BatchSigningTool {
     public BatchSigningTool(
         SigningInputValidator validator,
         RecordSigningService recordSigningService,
+        OutputWriter outputWriter,
         RecordRegistrationClient registrationClient
     ) {
         this.validator = validator;
         this.recordSigningService = recordSigningService;
+        this.outputWriter = outputWriter;
         this.registrationClient = registrationClient;
         this.oidcTokenResolver = new OidcTokenResolver(null);
     }
@@ -49,11 +51,13 @@ public class BatchSigningTool {
     public BatchSigningTool(
         SigningInputValidator validator,
         RecordSigningService recordSigningService,
+        OutputWriter outputWriter,
         RecordRegistrationClient registrationClient,
         String oidcToken
     ) {
         this.validator = validator;
         this.recordSigningService = recordSigningService;
+        this.outputWriter = outputWriter;
         this.registrationClient = registrationClient;
         this.oidcTokenResolver = new OidcTokenResolver(oidcToken);
     }
@@ -77,8 +81,29 @@ public class BatchSigningTool {
             description = "Write a plain-text file with the IDs of all successfully signed provenance records, one UUID per line",
             defaultValue = "false") boolean createRecordIdsFile
     ) throws IOException {
-        List<Path> filePaths = files != null ? files.stream().map(Path::of).toList() : List.of();
         HashAlgorithm algorithm = validator.validateHashAlgorithm(hashAlgorithm);
+        List<Path> resolvedFiles = validateAndResolveFiles(files, directory, pattern, provenanceRecordType,
+            dataId, outputDir, registerUrl, keycloakUrl);
+        KeylessSigner signer = authenticateAndBuildSigner();
+        List<ProvenanceRecord> records = signFiles(resolvedFiles, dataId, provenanceRecordType, algorithm, signer);
+        List<UUID> recordIds = records.stream().map(ProvenanceRecord::id).toList();
+        if (!records.isEmpty()) {
+            outputWriter.saveAll(records, outputDir, dataId);
+            registerRecords(records, registerUrl, keycloakUrl, realm);
+            if (createRecordIdsFile) {
+                outputWriter.writeRecordIds(recordIds, outputDir, dataId);
+            }
+        } else if (createRecordIdsFile) {
+            log.warn("--create-record-ids-file was requested but no records were signed successfully; no file written");
+        }
+        return recordIds;
+    }
+
+    private List<Path> validateAndResolveFiles(
+        List<String> files, Path directory, String pattern, String provenanceRecordType,
+        String dataId, Path outputDir, String registerUrl, String keycloakUrl
+    ) throws IOException {
+        List<Path> filePaths = files != null ? files.stream().map(Path::of).toList() : List.of();
         validateInput(filePaths, provenanceRecordType, dataId, directory);
         validator.validateFilesExist(filePaths);
         validator.validateOutputDirectory(outputDir);
@@ -89,28 +114,23 @@ public class BatchSigningTool {
         if (resolvedFiles.isEmpty()) {
             throw new IllegalArgumentException("No files found matching the given --files or --directory/--pattern");
         }
+        return resolvedFiles;
+    }
 
+    private KeylessSigner authenticateAndBuildSigner() {
         String oidcToken = oidcTokenResolver.resolve();
         if (oidcToken == null) {
             throw new IllegalStateException("No OIDC token available. Set SIGSTORE_ID_TOKEN or enable browser-based login.");
         }
+        return recordSigningService.buildSigner(oidcToken);
+    }
 
-        KeylessSigner signer = recordSigningService.buildSigner(oidcToken);
-        SigningOutcome outcome = signFiles(resolvedFiles, dataId, provenanceRecordType, algorithm, signer);
-
-        if (!outcome.records.isEmpty()) {
-            Path resolvedOutput = recordSigningService.saveAll(outcome.records, outputDir, dataId);
-            String accessToken = registrationClient.exchangeTokenIfConfigured(registerUrl, keycloakUrl, realm, oidcToken);
-            registrationClient.registerIfConfigured(outcome.records, registerUrl, accessToken);
-            writeRecordIdsIfConfigured(outcome.results, createRecordIdsFile, resolvedOutput.toAbsolutePath().getParent());
-        } else if (createRecordIdsFile) {
-            log.warn("--create-record-ids-file was requested but no records were signed successfully; no file written");
-        }
-
-        return outcome.results.stream()
-            .filter(FileSigningResult::success)
-            .map(FileSigningResult::recordId)
-            .toList();
+    private void registerRecords(
+        List<ProvenanceRecord> records, String registerUrl, String keycloakUrl, String realm
+    ) {
+        String oidcToken = oidcTokenResolver.resolve();
+        String accessToken = registrationClient.exchangeTokenIfConfigured(registerUrl, keycloakUrl, realm, oidcToken);
+        registrationClient.registerIfConfigured(records, registerUrl, accessToken);
     }
 
     private void validateInput(
@@ -131,13 +151,10 @@ public class BatchSigningTool {
         }
     }
 
-    private record SigningOutcome(List<FileSigningResult> results, List<ProvenanceRecord> records) {}
-
-    private SigningOutcome signFiles(
+    private List<ProvenanceRecord> signFiles(
         List<Path> files, String dataId, String provenanceRecordType,
         HashAlgorithm algorithm, KeylessSigner signer
     ) {
-        List<FileSigningResult> results = new ArrayList<>();
         List<ProvenanceRecord> records = new ArrayList<>();
         log.info("Signing {} provenance record(s)...", files.size());
         for (Path file : files) {
@@ -147,14 +164,12 @@ public class BatchSigningTool {
                     List.of(file), fileDataId, provenanceRecordType, List.of(), algorithm);
                 ProvenanceRecord record = recordSigningService.sign(unsigned, signer);
                 records.add(record);
-                results.add(FileSigningResult.success(file, record.id()));
             } catch (Exception e) {
                 log.warn("Failed to create provenance record for file: {}", file, e);
-                results.add(FileSigningResult.failure(file, e.getMessage()));
             }
         }
         log.info("Successfully signed {}/{} provenance records", records.size(), files.size());
-        return new SigningOutcome(results, records);
+        return records;
     }
 
     private List<Path> resolveFiles(List<Path> files, Path directory, String pattern) throws IOException {
@@ -163,25 +178,12 @@ public class BatchSigningTool {
         if (directory != null) {
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory, pattern)) {
                 for (Path path : stream) {
-                    if (Files.isRegularFile(path)) result.add(path);
+                    if (Files.isRegularFile(path)) {
+                        result.add(path);
+                    }
                 }
             }
         }
         return result;
-    }
-
-    private Path writeRecordIdsIfConfigured(
-        List<FileSigningResult> results, boolean createRecordIdsFile, Path outputDir
-    ) throws IOException {
-        if (!createRecordIdsFile) return null;
-        String timestamp = String.valueOf(Instant.now().toEpochMilli());
-        Path recordIdsPath = outputDir.resolve("record-ids-" + timestamp + ".txt");
-        List<String> ids = results.stream()
-            .filter(FileSigningResult::success)
-            .map(r -> r.recordId().toString())
-            .toList();
-        Files.writeString(recordIdsPath, String.join("\n", ids) + "\n");
-        log.info("Record IDs written to: {}", recordIdsPath);
-        return recordIdsPath;
     }
 }
