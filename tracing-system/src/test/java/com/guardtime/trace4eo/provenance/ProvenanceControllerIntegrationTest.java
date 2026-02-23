@@ -293,7 +293,7 @@ class ProvenanceControllerIntegrationTest {
         Manifest manifest = new Manifest("1", null, null);
         Instant signingTime = Instant.parse("2024-01-15T10:30:00Z");
         SignatureDetails details = signerIdentity != null
-            ? new SignatureDetails(signingTime, "12345", signerIdentity, "https://issuer.example.com")
+            ? new SignatureDetails(signingTime, "12345", signerIdentity, "https://issuer.example.com", null)
             : null;
         ProvenanceSignature signature = new ProvenanceSignature(
             new byte[]{1, 2, 3},

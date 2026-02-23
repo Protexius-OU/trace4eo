@@ -19,6 +19,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.List;
 
 public class ProvenanceSigningService {
@@ -62,7 +63,8 @@ public class ProvenanceSigningService {
         }
         try (DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)) {
             digestInputStream.transferTo(OutputStream.nullOutputStream());
-            Bundle bundle = signer.sign(md.digest());
+            byte[] digest = md.digest();
+            Bundle bundle = signer.sign(digest);
             Bundle.MessageSignature messageSignature = bundle.getMessageSignature().orElse(null);
             if (messageSignature == null) {
                 throw new IllegalStateException("Signature is null");
@@ -74,7 +76,7 @@ public class ProvenanceSigningService {
             Instant timestamp = rekorEntry.getIntegratedTimeInstant();
             byte[] bundleBytes = new JsonCanonicalizer(bundle.toJson()).getEncodedUTF8();
 
-            SignatureDetails details = extractSignatureDetails(bundle, rekorEntry, timestamp);
+            SignatureDetails details = extractSignatureDetails(bundle, rekorEntry, timestamp, digest);
 
             return new ProvenanceSignature(bundleBytes, timestamp, SIGNING_HASH_ALGORITHM, details);
         } catch (Exception e) {
@@ -114,10 +116,13 @@ public class ProvenanceSigningService {
         }
     }
 
-    private SignatureDetails extractSignatureDetails(Bundle bundle, RekorEntry rekorEntry, Instant timestamp) {
+    private SignatureDetails extractSignatureDetails(
+        Bundle bundle, RekorEntry rekorEntry, Instant timestamp, byte[] manifestDigest
+    ) {
         String rekorLogIndex = String.valueOf(rekorEntry.getLogIndex());
         String signerIdentity = "Unknown";
         String certificateIssuer = "Unknown";
+        String manifestHash = HexFormat.of().formatHex(manifestDigest);
 
         try {
             List<X509Certificate> certChain = bundle.getCertPath().getCertificates()
@@ -147,6 +152,6 @@ public class ProvenanceSigningService {
             log.warn("Failed to extract certificate details", e);
         }
 
-        return new SignatureDetails(timestamp, rekorLogIndex, signerIdentity, certificateIssuer);
+        return new SignatureDetails(timestamp, rekorLogIndex, signerIdentity, certificateIssuer, manifestHash);
     }
 }

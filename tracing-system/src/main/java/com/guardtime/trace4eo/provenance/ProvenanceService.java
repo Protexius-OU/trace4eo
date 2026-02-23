@@ -2,15 +2,19 @@ package com.guardtime.trace4eo.provenance;
 
 import com.guardtime.trace4eo.provenance.record.Predecessor;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
+import com.guardtime.trace4eo.provenance.signing.SignatureDetails;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationResult;
 import com.guardtime.trace4eo.provenance.verification.ProvenanceVerificationService;
+import dev.sigstore.json.canonicalizer.JsonCanonicalizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,7 +46,34 @@ public class ProvenanceService {
     }
 
     public Optional<ProvenanceRecord> get(UUID id) {
-        return provenanceRegistry.get(id);
+        return provenanceRegistry.get(id).map(this::withManifestHash);
+    }
+
+    private ProvenanceRecord withManifestHash(ProvenanceRecord record) {
+        var sig = record.signature();
+        if (sig == null || sig.details() == null || sig.details().manifestHash() != null) {
+            return record;
+        }
+        String manifestHash = computeManifestHash(record);
+        var d = sig.details();
+        var newDetails = new SignatureDetails(
+            d.signingTime(), d.rekorLogIndex(), d.signerIdentity(), d.certificateIssuer(), manifestHash
+        );
+        var newSig = new ProvenanceSignature(sig.bytes(), sig.signingTime(), sig.hashAlgorithm(), newDetails);
+        return new ProvenanceRecordImpl(record.id(), record.metadata(), record.filesInfo(), record.manifest(), newSig);
+    }
+
+    private String computeManifestHash(ProvenanceRecord record) {
+        try {
+            byte[] manifestBytes = new JsonCanonicalizer(
+                provenanceJsonMapper.writeValueAsBytes(record.manifest())
+            ).getEncodedUTF8();
+            String algorithm = record.signature().hashAlgorithm().getName();
+            return HexFormat.of().formatHex(MessageDigest.getInstance(algorithm).digest(manifestBytes));
+        } catch (Exception e) {
+            log.warn("Failed to compute manifest hash for record {}", record.id(), e);
+            return null;
+        }
     }
 
     public List<UUID> findMissing(List<UUID> ids) {

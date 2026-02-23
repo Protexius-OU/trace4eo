@@ -1,3 +1,4 @@
+import React from 'react'
 import type { ProvenanceRecord, VerificationResult, VerificationStepName } from '../types/provenance'
 import './IntegrityChain.css'
 
@@ -32,7 +33,10 @@ function StatusIcon({ status }: { status: Status }) {
   }
 }
 
-function Connector({ label, status }: { label: string; status: Status }) {
+function Connector({ label, status }: {
+  label: React.ReactNode
+  status: Status
+}) {
   return (
     <div className={`ic-connector ic-connector-${connectorClass(status)}`}>
       <div className="ic-line" />
@@ -53,6 +57,18 @@ export default function IntegrityChain({ record, verificationResult }: Props) {
   const filesHashStatus = findStepStatus(verificationResult, 'FILES_INFO')
   const fileContentsStatus = findStepStatus(verificationResult, 'FILE_CONTENTS')
   const filesNodeStatus: Status = fileContentsStatus === 'skipped' ? 'idle' : fileContentsStatus
+
+  const sigConnectorLabel = details?.manifestHash
+    ? (
+      <>
+        <span>signs manifest hash</span>
+        <br />
+        <code className="ic-connector-hash">
+          {signature?.hashAlgorithm.toUpperCase()}: {details.manifestHash}
+        </code>
+      </>
+    )
+    : 'signs manifest hash'
 
   return (
     <div className="integrity-chain">
@@ -88,7 +104,7 @@ export default function IntegrityChain({ record, verificationResult }: Props) {
       </div>
 
       {/* Connector: signs */}
-      <Connector label="signs" status={sigStatus} />
+      <Connector label={sigConnectorLabel} status={sigStatus} />
 
       {/* === Manifest layer === */}
       <div className="ic-node">
@@ -148,7 +164,7 @@ export default function IntegrityChain({ record, verificationResult }: Props) {
               <span className="ic-field-label">Predecessors</span>
               <span className="ic-field-value">
                 {metadata.predecessors.length === 0
-                  ? 'None — this is a root record'
+                  ? 'None.'
                   : `${metadata.predecessors.length} predecessor(s)`}
               </span>
             </div>
