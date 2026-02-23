@@ -4,6 +4,7 @@ import com.guardtime.trace4eo.provenance.HashAlgorithm;
 import com.guardtime.trace4eo.provenance.record.Predecessor;
 import com.guardtime.trace4eo.provenance.record.ProvenanceRecord;
 import com.guardtime.trace4eo.signing.OidcTokenResolver;
+import com.guardtime.trace4eo.signing.OutputWriter;
 import com.guardtime.trace4eo.signing.RecordSigningService;
 import com.guardtime.trace4eo.signing.UnsignedRecord;
 import com.guardtime.trace4eo.signing.registration.RecordRegistrationClient;
@@ -28,6 +29,7 @@ public class SigningTool {
 
     private final SigningInputValidator validator;
     private final RecordSigningService recordSigningService;
+    private final OutputWriter outputWriter;
     private final RecordRegistrationClient registrationClient;
     private final OidcTokenResolver oidcTokenResolver;
 
@@ -35,10 +37,12 @@ public class SigningTool {
     public SigningTool(
         SigningInputValidator validator,
         RecordSigningService recordSigningService,
+        OutputWriter outputWriter,
         RecordRegistrationClient registrationClient
     ) {
         this.validator = validator;
         this.recordSigningService = recordSigningService;
+        this.outputWriter = outputWriter;
         this.registrationClient = registrationClient;
         this.oidcTokenResolver = new OidcTokenResolver(null);
     }
@@ -46,11 +50,13 @@ public class SigningTool {
     public SigningTool(
         SigningInputValidator validator,
         RecordSigningService recordSigningService,
+        OutputWriter outputWriter,
         RecordRegistrationClient registrationClient,
         String oidcToken
     ) {
         this.validator = validator;
         this.recordSigningService = recordSigningService;
+        this.outputWriter = outputWriter;
         this.registrationClient = registrationClient;
         this.oidcTokenResolver = new OidcTokenResolver(oidcToken);
     }
@@ -74,35 +80,75 @@ public class SigningTool {
             description = "Path to a plain-text file of predecessor record IDs, one UUID per line.")
             Path predecessorsFile
     ) throws IOException {
-        List<Path> paths = toPaths(files);
         HashAlgorithm algorithm = validator.validateHashAlgorithm(hashAlgorithm);
-        validateInput(paths, provenanceRecordType, dataId);
+        List<Path> paths = validateAndResolveInput(files, provenanceRecordType, dataId, outputDir,
+            registerUrl, keycloakUrl, predecessorsFile);
+        List<Predecessor> parsedPredecessors = resolvePredecessors(predecessors, predecessorsFile);
+        String accessToken = authenticateAndValidatePredecessors(parsedPredecessors, registerUrl, keycloakUrl, realm);
+        ProvenanceRecord record = buildAndSign(paths, dataId, provenanceRecordType, parsedPredecessors, algorithm);
+        saveAndRegister(record, outputDir, registerUrl, accessToken);
+        return record.id();
+    }
+
+    private List<Path> validateAndResolveInput(
+        List<String> files, String provenanceRecordType, String dataId, Path outputDir,
+        String registerUrl, String keycloakUrl, Path predecessorsFile
+    ) {
+        List<Path> paths = toPaths(files);
+        validateRequiredFields(paths, provenanceRecordType, dataId);
         validator.validateFilesExist(paths);
         validator.validateOutputDirectory(outputDir);
         validator.validateRegistrationConfig(registerUrl, keycloakUrl);
         validator.validatePredecessorsFile(predecessorsFile);
-        List<Predecessor> parsedPredecessors = Stream.concat(
+        return paths;
+    }
+
+    private List<Predecessor> resolvePredecessors(List<String> predecessors, Path predecessorsFile) {
+        return Stream.concat(
             toPredecessors(predecessors).stream(),
             readPredecessorsFromFile(predecessorsFile).stream()
         ).toList();
+    }
 
+    private String authenticateAndValidatePredecessors(
+        List<Predecessor> predecessors, String registerUrl, String keycloakUrl, String realm
+    ) {
         boolean hasRegistration = registerUrl != null && !registerUrl.isBlank();
+        if (!hasRegistration) return null;
         String oidcToken = oidcTokenResolver.resolve();
-        String accessToken = null;
-        if (hasRegistration) {
-            accessToken = registrationClient.exchangeTokenIfConfigured(registerUrl, keycloakUrl, realm, oidcToken);
-            registrationClient.validatePredecessorsExist(parsedPredecessors, registerUrl, accessToken);
+        String accessToken = registrationClient.exchangeTokenIfConfigured(registerUrl, keycloakUrl, realm, oidcToken);
+        if (!predecessors.isEmpty()) {
+            registrationClient.validatePredecessorsExist(predecessors, registerUrl, accessToken);
         }
+        return accessToken;
+    }
 
+    private ProvenanceRecord buildAndSign(
+        List<Path> paths, String dataId, String provenanceRecordType,
+        List<Predecessor> predecessors, HashAlgorithm algorithm
+    ) throws IOException {
         log.info("Creating provenance record for {} file(s)...", paths.size());
-        UnsignedRecord unsigned = recordSigningService.build(paths, dataId, provenanceRecordType, parsedPredecessors, algorithm);
+        UnsignedRecord unsigned = recordSigningService.build(paths, dataId, provenanceRecordType, predecessors, algorithm);
         log.info("Signing provenance record...");
-        ProvenanceRecord record = recordSigningService.sign(unsigned, oidcToken);
-        recordSigningService.save(record, outputDir);
-        if (hasRegistration) {
+        String oidcToken = oidcTokenResolver.resolve();
+        return recordSigningService.sign(unsigned, oidcToken);
+    }
+
+    private void saveAndRegister(
+        ProvenanceRecord record, Path outputDir, String registerUrl, String accessToken
+    ) throws IOException {
+        outputWriter.saveRecord(record, outputDir);
+        if (accessToken != null) {
             registrationClient.registerIfConfigured(List.of(record), registerUrl, accessToken);
         }
-        return record.id();
+    }
+
+    private void validateRequiredFields(List<Path> files, String provenanceRecordType, String dataId) {
+        if (files == null || files.isEmpty()) {
+            throw new IllegalArgumentException("--files must not be null or empty");
+        }
+        validator.validateProvenanceRecordType(provenanceRecordType);
+        validator.validateDataId(dataId);
     }
 
     private List<Path> toPaths(List<String> files) {
@@ -121,14 +167,6 @@ public class SigningTool {
                 }
             })
             .toList();
-    }
-
-    private void validateInput(List<Path> files, String provenanceRecordType, String dataId) {
-        if (files == null || files.isEmpty()) {
-            throw new IllegalArgumentException("--files must not be null or empty");
-        }
-        validator.validateProvenanceRecordType(provenanceRecordType);
-        validator.validateDataId(dataId);
     }
 
     private List<Predecessor> readPredecessorsFromFile(Path predecessorsFile) {
