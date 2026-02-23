@@ -118,4 +118,5 @@ export interface SignatureDetails {
   rekorLogIndex: string
   signerIdentity: string
   certificateIssuer: string
+  manifestHash: string | null
 }
