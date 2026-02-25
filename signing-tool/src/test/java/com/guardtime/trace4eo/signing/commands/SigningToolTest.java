@@ -27,8 +27,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -37,6 +39,7 @@ class SigningToolTest {
     private SigningTool signingTool;
     private ProvenanceJsonMapper provenanceJsonMapper;
     private RecordRegistrationClient mockRegistrationClient;
+    private RecordSigningService recordSigningService;
 
     @BeforeEach
     void setUp() {
@@ -52,7 +55,7 @@ class SigningToolTest {
 
         mockRegistrationClient = mock(RecordRegistrationClient.class);
 
-        RecordSigningService recordSigningService = new RecordSigningService(mockSigningService, provenanceJsonMapper);
+        recordSigningService = spy(new RecordSigningService(mockSigningService, provenanceJsonMapper));
         OutputWriter outputWriter = new OutputWriter(provenanceJsonMapper);
         SigningInputValidator validator = new SigningInputValidator();
         signingTool = new SigningTool(validator, recordSigningService, outputWriter, mockRegistrationClient, "test-token");
@@ -342,5 +345,47 @@ class SigningToolTest {
                 "http://localhost:8080/api/provenance", null, "trace4eo", null)
         );
         assertTrue(exception.getMessage().contains("--keycloak-url"));
+    }
+
+    @Test
+    void createProvenanceRecord_duplicateInlinePredecessors_deduplicates(@TempDir Path tempDir) throws IOException {
+        UUID id = UUID.randomUUID();
+        List<String> files = List.of("src/test/resources/test.txt");
+        signingTool.createProvenanceRecord(
+            files, "test", "test", List.of(id.toString(), id.toString()), "SHA256", tempDir,
+            null, null, "trace4eo", null
+        );
+        verify(recordSigningService).build(
+            anyList(), anyString(), anyString(), eq(List.of(new Predecessor(id))), any(HashAlgorithm.class));
+    }
+
+    @Test
+    void createProvenanceRecord_duplicatesAcrossFileAndInline_deduplicates(@TempDir Path tempDir) throws IOException {
+        UUID id = UUID.randomUUID();
+        Path predecessorsFile = tempDir.resolve("ids.txt");
+        Files.writeString(predecessorsFile, id + "\n");
+
+        List<String> files = List.of("src/test/resources/test.txt");
+        signingTool.createProvenanceRecord(
+            files, "test", "test", List.of(id.toString()), "SHA256", tempDir,
+            null, null, "trace4eo", predecessorsFile
+        );
+        verify(recordSigningService).build(
+            anyList(), anyString(), anyString(), eq(List.of(new Predecessor(id))), any(HashAlgorithm.class));
+    }
+
+    @Test
+    void createProvenanceRecord_duplicatesInFile_deduplicates(@TempDir Path tempDir) throws IOException {
+        UUID id = UUID.randomUUID();
+        Path predecessorsFile = tempDir.resolve("ids.txt");
+        Files.writeString(predecessorsFile, id + "\n" + id + "\n");
+
+        List<String> files = List.of("src/test/resources/test.txt");
+        signingTool.createProvenanceRecord(
+            files, "test", "test", List.of(), "SHA256", tempDir,
+            null, null, "trace4eo", predecessorsFile
+        );
+        verify(recordSigningService).build(
+            anyList(), anyString(), anyString(), eq(List.of(new Predecessor(id))), any(HashAlgorithm.class));
     }
 }

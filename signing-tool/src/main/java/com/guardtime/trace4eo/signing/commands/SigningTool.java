@@ -104,10 +104,15 @@ public class SigningTool {
     }
 
     private List<Predecessor> resolvePredecessors(List<String> predecessors, Path predecessorsFile) {
-        return Stream.concat(
+        List<Predecessor> all = Stream.concat(
             toPredecessors(predecessors).stream(),
             readPredecessorsFromFile(predecessorsFile).stream()
         ).toList();
+        List<Predecessor> unique = all.stream().distinct().toList();
+        if (unique.size() < all.size()) {
+            log.warn("Removed {} duplicate predecessor ID(s)", all.size() - unique.size());
+        }
+        return unique;
     }
 
     private String authenticateAndValidatePredecessors(
