@@ -5,6 +5,7 @@ import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import com.guardtime.trace4eo.provenance.record.Predecessor;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
+import com.guardtime.trace4eo.signing.OutputWriter;
 import com.guardtime.trace4eo.signing.RecordSigningService;
 import com.guardtime.trace4eo.signing.registration.RecordRegistrationClient;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,8 +53,9 @@ class SigningToolTest {
         mockRegistrationClient = mock(RecordRegistrationClient.class);
 
         RecordSigningService recordSigningService = new RecordSigningService(mockSigningService, provenanceJsonMapper);
+        OutputWriter outputWriter = new OutputWriter(provenanceJsonMapper);
         SigningInputValidator validator = new SigningInputValidator();
-        signingTool = new SigningTool(validator, recordSigningService, mockRegistrationClient, "test-token");
+        signingTool = new SigningTool(validator, recordSigningService, outputWriter, mockRegistrationClient, "test-token");
     }
 
     @Test

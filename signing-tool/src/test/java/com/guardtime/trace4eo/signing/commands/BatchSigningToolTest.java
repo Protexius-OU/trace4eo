@@ -3,6 +3,7 @@ package com.guardtime.trace4eo.signing.commands;
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
+import com.guardtime.trace4eo.signing.OutputWriter;
 import com.guardtime.trace4eo.signing.RecordSigningService;
 import com.guardtime.trace4eo.signing.registration.RecordRegistrationClient;
 import dev.sigstore.KeylessSigner;
@@ -60,9 +61,10 @@ class BatchSigningToolTest {
         mockHttpClient = mock(HttpClient.class);
         RecordRegistrationClient registrationClient = new RecordRegistrationClient(mockHttpClient, provenanceJsonMapper);
         RecordSigningService recordSigningService = new RecordSigningService(mockSigningService, provenanceJsonMapper);
+        OutputWriter outputWriter = new OutputWriter(provenanceJsonMapper);
         SigningInputValidator validator = new SigningInputValidator();
 
-        batchSigningTool = new BatchSigningTool(validator, recordSigningService, registrationClient, "test-token");
+        batchSigningTool = new BatchSigningTool(validator, recordSigningService, outputWriter, registrationClient, "test-token");
     }
 
     @Test
@@ -488,13 +490,9 @@ class BatchSigningToolTest {
         );
 
         assertEquals(2, result.size());
-        List<Path> textFiles;
-        try (var stream = Files.list(outputDir)) {
-            textFiles = stream.filter(p -> p.getFileName().toString().startsWith("record-ids-")
-                && p.getFileName().toString().endsWith(".txt")).toList();
-        }
-        assertEquals(1, textFiles.size());
-        List<String> ids = Files.readAllLines(textFiles.get(0)).stream()
+        Path expectedRecordIdsFile = outputDir.resolve("batch-2024-record-ids.txt");
+        assertTrue(Files.exists(expectedRecordIdsFile));
+        List<String> ids = Files.readAllLines(expectedRecordIdsFile).stream()
             .filter(l -> !l.isBlank()).toList();
         assertEquals(2, ids.size());
     }
@@ -511,15 +509,11 @@ class BatchSigningToolTest {
         );
 
         assertEquals(1, result.size());
-        List<Path> recordIdsFiles;
-        try (var stream = Files.list(Path.of("."))) {
-            recordIdsFiles = stream.filter(p -> p.getFileName().toString().startsWith("record-ids-")
-                && p.getFileName().toString().endsWith(".txt")).toList();
-        }
-        assertFalse(recordIdsFiles.isEmpty());
-        List<String> ids = Files.readAllLines(recordIdsFiles.get(0)).stream().filter(l -> !l.isBlank()).toList();
+        Path expectedRecordIdsFile = Path.of("cwd-record-ids-test-record-ids.txt");
+        assertTrue(Files.exists(expectedRecordIdsFile));
+        List<String> ids = Files.readAllLines(expectedRecordIdsFile).stream().filter(l -> !l.isBlank()).toList();
         assertEquals(1, ids.size());
-        for (Path f : recordIdsFiles) Files.deleteIfExists(f);
+        Files.deleteIfExists(expectedRecordIdsFile);
         Files.deleteIfExists(Path.of("cwd-record-ids-test.zip"));
     }
 
@@ -541,10 +535,6 @@ class BatchSigningToolTest {
         );
 
         assertEquals(1, result.size());
-        long fileCount;
-        try (var stream = Files.list(tempDir)) {
-            fileCount = stream.filter(p -> p.getFileName().toString().startsWith("record-ids-")).count();
-        }
-        assertEquals(0, fileCount);
+        assertFalse(Files.exists(tempDir.resolve("batch-2024-record-ids.txt")));
     }
 }
