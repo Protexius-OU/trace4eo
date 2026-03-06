@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Build and test
+        env:
+          GRADLE_OPTS: -Dorg.gradle.daemon=false
+        run: ./gradlew build
+
+  check-frontend:
+    name: Type-check and Lint Frontend
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: tracing-ui/package-lock.json
+
+      - name: Install dependencies
+        working-directory: tracing-ui
+        run: npm ci
+
+      - name: Lint
+        working-directory: tracing-ui
+        run: npm run lint
