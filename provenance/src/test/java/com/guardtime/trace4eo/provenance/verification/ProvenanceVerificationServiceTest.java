@@ -26,6 +26,7 @@ import static com.guardtime.trace4eo.provenance.io.TestUtils.TEST_BYTES_2;
 import static com.guardtime.trace4eo.provenance.io.TestUtils.TEST_FILE_1;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -176,5 +177,33 @@ class ProvenanceVerificationServiceTest {
                 && s.status()
                 && s.description().contains("no hashes provided")),
             "Expected FILE_CONTENTS step to be skipped with 'no hashes provided'");
+    }
+
+    @Test
+    void verifyReportsErrorWhenFileNotFoundInContainer() throws IOException {
+        ProvenanceRecord record = TestUtils.createProvenanceRecord(TEST_FILE_1);
+        FilesInfo filesInfoWithMissingFile = new FilesInfo(
+            record.filesInfo().files(),
+            fileInfo -> {
+                throw new IOException("file not found in container: " + fileInfo.path());
+            }
+        );
+        ProvenanceRecord modifiedRecord = new ProvenanceRecordBuilder()
+            .withMetadata(record.metadata())
+            .withFilesInfo(filesInfoWithMissingFile)
+            .withManifest(record.manifest())
+            .withSignature(record.signature())
+            .build();
+
+        ProvenanceVerificationResult result = verificationService.verify(modifiedRecord);
+
+        assertFalse(result.status());
+        VerificationStep fileContentsStep = result.steps().stream()
+            .filter(s -> s.name() == VerificationStepName.FILE_CONTENTS)
+            .findFirst().orElseThrow();
+        assertFalse(fileContentsStep.status(), "FILE_CONTENTS should fail when file is not found");
+        assertNotNull(fileContentsStep.errorMessage());
+        assertTrue(fileContentsStep.errorMessage().contains("file not found in container"),
+            "Error message should indicate file was not found: " + fileContentsStep.errorMessage());
     }
 }

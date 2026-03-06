@@ -4,6 +4,8 @@ import com.guardtime.trace4eo.provenance.Container;
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import com.guardtime.trace4eo.provenance.io.ContainerReader;
+import com.guardtime.trace4eo.provenance.record.FileHashInfo;
+import com.guardtime.trace4eo.provenance.record.FilesContext;
 import com.guardtime.trace4eo.provenance.record.FilesInfo;
 import com.guardtime.trace4eo.provenance.record.Manifest;
 import com.guardtime.trace4eo.provenance.record.Metadata;
@@ -12,15 +14,17 @@ import com.guardtime.trace4eo.provenance.record.ProvenanceRecordBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.SequencedSet;
 import java.util.UUID;
@@ -60,19 +64,17 @@ public class ZipContainerReader implements ContainerReader {
         return new Container(head, provenanceRecords);
     }
 
-    private UUID parseHead(Path path) {
+    private UUID parseHead(Path path) throws IOException {
+        Optional<String> headString;
         try (Stream<String> lines = Files.lines(path)) {
-            Optional<String> headString = lines.findFirst();
-            if (headString.isEmpty()) {
-                log.error("Head file was empty.");
-                return null;
-            }
-            return UUID.fromString(headString.get());
+            headString = lines.findFirst();
         } catch (IOException e) {
-            log.error("Error reading head from {}", path, e);
-            // TODO exception
-            throw new UncheckedIOException(e);
+            throw new IOException("Failed to read container HEAD file: " + e.getMessage(), e);
         }
+        if (headString.isEmpty()) {
+            throw new IOException("Container HEAD file is empty");
+        }
+        return UUID.fromString(headString.get());
     }
 
     class ProvenanceRecordParser {
@@ -93,16 +95,33 @@ public class ZipContainerReader implements ContainerReader {
                     ContainerLayout.METADATA_FILE_NAME,
                     inputStream -> containerBuilder.withMetadata(readValue(inputStream, Metadata.class))
             );
-            readProvenanceRecordComponent(
-                    ContainerLayout.FILES_FILE_NAME,
-                    inputStream -> containerBuilder.withFilesInfo(readValue(inputStream, FilesInfo.class))
-            );
+            containerBuilder.withFilesInfo(readFilesInfoWithContext());
             readProvenanceRecordComponent(
                     ContainerLayout.MANIFEST_SIGNATURE_FILE_NAME,
                     inputStream -> containerBuilder.withSignature(readValue(inputStream, ProvenanceSignature.class))
             );
             // TODO - check that there are no unexpected files/folders
             return containerBuilder.build();
+        }
+
+        private FilesInfo readFilesInfoWithContext() throws IOException {
+            Path filesJsonPath = getComponentPathOrThrow(ContainerLayout.FILES_FILE_NAME);
+            FilesInfo filesInfo;
+            try (InputStream is = Files.newInputStream(filesJsonPath)) {
+                filesInfo = readValue(is, FilesInfo.class);
+            }
+            Path filesDir = recordDir.resolve("files");
+            if (Files.notExists(filesDir)) {
+                return filesInfo;
+            }
+            Map<String, byte[]> fileContents = new HashMap<>();
+            try (Stream<Path> paths = Files.walk(filesDir)) {
+                for (Path filePath : (Iterable<Path>) paths.filter(Files::isRegularFile)::iterator) {
+                    String relativePath = filesDir.relativize(filePath).toString();
+                    fileContents.put(relativePath, Files.readAllBytes(filePath));
+                }
+            }
+            return new FilesInfo(filesInfo.files(), new InMemoryFilesContext(fileContents));
         }
 
         private void readProvenanceRecordComponent(String componentName, Consumer<InputStream> consumer) throws IOException {
@@ -122,6 +141,23 @@ public class ZipContainerReader implements ContainerReader {
                 throw new RuntimeException(String.format("Provenance record component not found: %s", componentPath));
             }
             return componentPath;
+        }
+    }
+
+    private static final class InMemoryFilesContext implements FilesContext {
+        private final Map<String, byte[]> fileContents;
+
+        InMemoryFilesContext(Map<String, byte[]> fileContents) {
+            this.fileContents = fileContents;
+        }
+
+        @Override
+        public InputStream getFileContents(FileHashInfo fileInfo) throws IOException {
+            byte[] contents = fileContents.get(fileInfo.path());
+            if (contents == null) {
+                throw new IOException("file not found in container: " + fileInfo.path());
+            }
+            return new ByteArrayInputStream(contents);
         }
     }
 }
