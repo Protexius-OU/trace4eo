@@ -71,7 +71,8 @@ Create and register with a tracing system:
 
 ### batch-sign
 
-Sign multiple files, creating one provenance record per file and packaging them into a ZIP container.
+Sign multiple files into a single provenance record packaged as a ZIP container.
+Use `--one-record-per-file` to create a separate provenance record for each file instead.
 
 **Options:**
 
@@ -81,13 +82,14 @@ Sign multiple files, creating one provenance record per file and packaging them 
 | `--directory`              | Directory containing files to sign (either this or `--files` is required)                                                                                                                            | None              |
 | `--pattern`                | Glob pattern for files in directory                                                                                                                                                                  | `*`               |
 | `--provenance-record-type` | Type of provenance record                                                                                                                                                                            | Required          |
-| `--data-id`                | Base data ID (files get `<data-id>/<filename>`)                                                                                                                                                      | Required          |
+| `--data-id`                | Data ID for the provenance record; with `--one-record-per-file` each file gets `<data-id>/<filename>`                                                                                                | Required          |
 | `--output`                 | Output directory for ZIP file                                                                                                                                                                        | Current directory |
 | `--hash-algorithm`         | Hash algorithm to use                                                                                                                                                                                | SHA256            |
 | `--register-url`           | Tracing backend URL to register provenance records                                                                                                                                                   | None              |
 | `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set)                                                                                                                                          | None              |
 | `--realm`                  | Keycloak realm                                                                                                                                                                                       | trace4eo          |
 | `--create-record-ids-file` | Write a plain-text file alongside the ZIP container with the IDs of all successfully signed provenance records, one UUID per line (written to `--output` directory, or current directory if omitted) | false             |
+| `--one-record-per-file`    | Create one provenance record per file instead of a single combined record                                                                                                                            | false             |
 
 **Examples:**
 
@@ -151,7 +153,7 @@ Capture record IDs for use as predecessors in a follow-up record:
 - Provenance records are always saved as ZIP containers. The output filename is auto-generated (`<record-uuid>.zip` for
   `create-provenance-record`, `<data-id>.zip` for `batch-sign`). Use `--output` to specify a directory; if omitted, the
   file is written to the current directory. If the specified directory doesn't exist, it will be created automatically.
-- Each file in a batch gets its own provenance record with data ID `<base-id>/<filename>`
+- By default `batch-sign` combines all files into a single provenance record. With `--one-record-per-file` each file gets its own record with data ID `<data-id>/<filename>`
 - The `--register-url` option POSTs each provenance record as JSON to the specified URL
 - When `--register-url` is used, `--keycloak-url` is required. The tool exchanges the Sigstore OIDC token for a Keycloak
   access token via RFC 8693 token exchange to authenticate with the tracing backend.
