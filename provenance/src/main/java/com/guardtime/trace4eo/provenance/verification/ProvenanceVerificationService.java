@@ -298,7 +298,7 @@ public class ProvenanceVerificationService {
                 }
             } catch (IOException e) {
                 log.error("Failed to verify file {}", file.path(), e);
-                mismatches.add(String.format("%s: failed to read file", file.path()));
+                mismatches.add(String.format("%s: %s", file.path(), e.getMessage()));
             }
         }
         return mismatches;
