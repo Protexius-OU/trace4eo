@@ -9,18 +9,35 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 public class OidcTokenResolver {
 
     private static final Logger log = LoggerFactory.getLogger(OidcTokenResolver.class);
 
     private final String oidcTokenOverride;
+    private final Supplier<String> browserTokenSupplier;
+    private String resolvedToken;
+    private boolean resolved;
 
     public OidcTokenResolver(String oidcTokenOverride) {
+        this(oidcTokenOverride, OidcTokenResolver::obtainBrowserToken);
+    }
+
+    OidcTokenResolver(String oidcTokenOverride, Supplier<String> browserTokenSupplier) {
         this.oidcTokenOverride = oidcTokenOverride;
+        this.browserTokenSupplier = browserTokenSupplier;
     }
 
     public String resolve() {
+        if (!resolved) {
+            resolvedToken = resolveInternal();
+            resolved = true;
+        }
+        return resolvedToken;
+    }
+
+    private String resolveInternal() {
         if (oidcTokenOverride != null) {
             return oidcTokenOverride;
         }
@@ -30,10 +47,10 @@ public class OidcTokenResolver {
             return ciToken;
         }
         log.info("No SIGSTORE_ID_TOKEN set, obtaining token via browser-based OIDC login");
-        return obtainBrowserToken();
+        return browserTokenSupplier.get();
     }
 
-    private String obtainBrowserToken() {
+    private static String obtainBrowserToken() {
         try {
             var tufClientBuilder = SigstoreTufClient.builder().usePublicGoodInstance();
             var signingConfig = SigningConfigProvider.from(tufClientBuilder).get();
