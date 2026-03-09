@@ -38,10 +38,11 @@ jobs:
           GRADLE_OPTS: -Dorg.gradle.daemon=false
         run: |
           set -euo pipefail
-          ./gradlew :tracing-system:bootBuildImage --imageName="$IMAGE:latest"
-          docker tag "$IMAGE:latest" "$IMAGE:${{ github.sha }}"
-          docker push "$IMAGE:latest"
-          docker push "$IMAGE:${{ github.sha }}"
+          IMAGE_LC="${IMAGE,,}"
+          ./gradlew :tracing-system:bootBuildImage --imageName="$IMAGE_LC:latest"
+          docker tag "$IMAGE_LC:latest" "$IMAGE_LC:${{ github.sha }}"
+          docker push "$IMAGE_LC:latest"
+          docker push "$IMAGE_LC:${{ github.sha }}"
 
   build-frontend:
     name: Build and Publish Frontend
@@ -76,11 +77,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set lowercase image name
+        run: echo "IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/trace4eo-frontend" | tr '[:upper:]' '[:lower:]' >> $GITHUB_ENV
+
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
           context: ./tracing-ui
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/trace4eo-frontend:latest
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/trace4eo-frontend:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
