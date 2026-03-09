@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "lint": "eslint src --ext ts,tsx"
+    "dev": "npx vite",
+    "build": "npx tsc -b && npx vite build",
+    "preview": "npx vite preview",
+    "lint": "npx tsc --noEmit"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.60.0",
