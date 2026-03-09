@@ -46,7 +46,7 @@ public class SigningToolConfiguration {
     }
 
     static String quoteIfNecessary(String arg) {
-        if (arg.contains(" ")) {
+        if (arg.chars().anyMatch(Character::isWhitespace)) {
             return "\"" + arg.replace("\"", "\\\"") + "\"";
         }
         return arg;

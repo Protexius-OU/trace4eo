@@ -8,6 +8,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.shell.core.ShellRunner;
 import org.springframework.shell.core.command.CommandExecutionException;
 
+import java.util.Arrays;
+
 @Configuration
 public class VerificationToolConfiguration {
 
@@ -35,13 +37,23 @@ public class VerificationToolConfiguration {
     public ApplicationRunner springShellApplicationRunner(ShellRunner shellRunner) {
         return args -> {
             try {
-                shellRunner.run(args.getSourceArgs());
+                String[] quotedArgs = Arrays.stream(args.getSourceArgs())
+                        .map(VerificationToolConfiguration::quoteIfNecessary)
+                        .toArray(String[]::new);
+                shellRunner.run(quotedArgs);
             } catch (CommandExecutionException e) {
                 Throwable root = rootCause(e);
                 System.err.println(String.format("Error: %s", root.getMessage()));
                 System.exit(1);
             }
         };
+    }
+
+    static String quoteIfNecessary(String arg) {
+        if (arg.chars().anyMatch(Character::isWhitespace)) {
+            return "\"" + arg.replace("\"", "\\\"") + "\"";
+        }
+        return arg;
     }
 
     private static Throwable rootCause(Throwable t) {

@@ -1,4 +1,4 @@
-package com.guardtime.trace4eo.signing;
+package com.guardtime.trace4eo.verification;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -11,30 +11,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-class SigningToolConfigurationTest {
+class VerificationToolConfigurationTest {
 
-    private final SigningToolConfiguration config = new SigningToolConfiguration();
+    private final VerificationToolConfiguration config = new VerificationToolConfiguration();
 
     @ParameterizedTest(name = "[{index}] {0} -> {1}")
     @CsvSource({
         // space in file name
-        "/path/my file.txt,              \"/path/my file.txt\"",
+        "/path/my file.json,             \"/path/my file.json\"",
         // space in directory
-        "/my dir/file.txt,               \"/my dir/file.txt\"",
+        "/my dir/file.json,              \"/my dir/file.json\"",
         // space in both directory and file name
-        "/my dir/my file.txt,            \"/my dir/my file.txt\"",
+        "/my dir/my file.json,           \"/my dir/my file.json\"",
         // no space -> unchanged
-        "/path/file.txt,                 /path/file.txt",
-        // no space, option-like value -> unchanged
-        "satellite-imagery,              satellite-imagery"
+        "/path/file.json,                /path/file.json"
     })
     void applicationRunner_quotesArgsContainingSpaces(String input, String expected) throws Exception {
         ShellRunner mockShellRunner = mock(ShellRunner.class);
         var runner = config.springShellApplicationRunner(mockShellRunner);
 
         runner.run(new DefaultApplicationArguments(
-            "create-provenance-record", "--files", input,
-            "--provenance-record-type", "satellite-imagery", "--data-id", "test"
+            "verify-provenance-record", "--file", input
         ));
 
         ArgumentCaptor<String[]> captor = ArgumentCaptor.forClass(String[].class);
@@ -44,13 +41,12 @@ class SigningToolConfigurationTest {
 
     @Test
     void applicationRunner_quotesArgsContainingTab() throws Exception {
-        String pathWithTab = "/path/my\tfile.txt";
+        String pathWithTab = "/path/my\tfile.json";
         ShellRunner mockShellRunner = mock(ShellRunner.class);
         var runner = config.springShellApplicationRunner(mockShellRunner);
 
         runner.run(new DefaultApplicationArguments(
-            "create-provenance-record", "--files", pathWithTab,
-            "--provenance-record-type", "satellite-imagery", "--data-id", "test"
+            "verify-provenance-record", "--file", pathWithTab
         ));
 
         ArgumentCaptor<String[]> captor = ArgumentCaptor.forClass(String[].class);
