@@ -77,14 +77,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set lowercase image name
-        run: echo "IMAGE=${{ env.REGISTRY }}/${{ github.repository_owner }}/trace4eo-frontend" | tr '[:upper:]' '[:lower:]' >> $GITHUB_ENV
-
       - name: Build and push frontend image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./tracing-ui
-          push: true
-          tags: |
-            ${{ env.IMAGE }}:latest
-            ${{ env.IMAGE }}:${{ github.sha }}
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/trace4eo-frontend
+        run: |
+          set -euo pipefail
+          IMAGE_LC="${IMAGE,,}"
+          docker build -t "$IMAGE_LC:latest" -t "$IMAGE_LC:${{ github.sha }}" ./tracing-ui
+          docker push "$IMAGE_LC:latest"
+          docker push "$IMAGE_LC:${{ github.sha }}"
