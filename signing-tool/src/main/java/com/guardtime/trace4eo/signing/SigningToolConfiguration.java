@@ -25,6 +25,11 @@ public class SigningToolConfiguration {
     }
 
     @Bean
+    public OidcTokenResolver oidcTokenResolver() {
+        return new OidcTokenResolver();
+    }
+
+    @Bean
     public HttpClient httpClient() {
         return HttpClient.newHttpClient();
     }

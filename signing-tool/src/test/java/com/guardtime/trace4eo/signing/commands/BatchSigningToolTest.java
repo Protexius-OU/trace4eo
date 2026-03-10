@@ -3,6 +3,7 @@ package com.guardtime.trace4eo.signing.commands;
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
+import com.guardtime.trace4eo.signing.OidcTokenResolver;
 import com.guardtime.trace4eo.signing.OutputWriter;
 import com.guardtime.trace4eo.signing.RecordSigningService;
 import com.guardtime.trace4eo.signing.registration.RecordRegistrationClient;
@@ -50,7 +51,7 @@ class BatchSigningToolTest {
         AtomicInteger callCount = new AtomicInteger(0);
         ProvenanceSigningService mockSigningService = mock(ProvenanceSigningService.class);
         KeylessSigner mockSigner = mock(KeylessSigner.class);
-        when(mockSigningService.buildTokenSigner(anyString())).thenReturn(mockSigner);
+        when(mockSigningService.buildSigner(anyString())).thenReturn(mockSigner);
         when(mockSigningService.sign(any(byte[].class), any(KeylessSigner.class)))
             .thenAnswer(invocation -> new ProvenanceSignature(
                 testSignature.bytes(),
@@ -64,7 +65,10 @@ class BatchSigningToolTest {
         OutputWriter outputWriter = new OutputWriter(provenanceJsonMapper);
         SigningInputValidator validator = new SigningInputValidator();
 
-        batchSigningTool = new BatchSigningTool(validator, recordSigningService, outputWriter, registrationClient, "test-token");
+        OidcTokenResolver oidcTokenResolver = mock(OidcTokenResolver.class);
+        when(oidcTokenResolver.resolve()).thenReturn("test-token");
+        batchSigningTool = new BatchSigningTool(validator, recordSigningService, outputWriter, registrationClient,
+            oidcTokenResolver);
     }
 
     @Test

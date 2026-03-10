@@ -10,7 +10,6 @@ import com.guardtime.trace4eo.signing.UnsignedRecord;
 import com.guardtime.trace4eo.signing.registration.RecordRegistrationClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.core.command.annotation.Command;
 import org.springframework.shell.core.command.annotation.Option;
 import org.springframework.stereotype.Component;
@@ -33,32 +32,18 @@ public class SigningTool {
     private final RecordRegistrationClient registrationClient;
     private final OidcTokenResolver oidcTokenResolver;
 
-    @Autowired
-    public SigningTool(
-        SigningInputValidator validator,
-        RecordSigningService recordSigningService,
-        OutputWriter outputWriter,
-        RecordRegistrationClient registrationClient
-    ) {
-        this.validator = validator;
-        this.recordSigningService = recordSigningService;
-        this.outputWriter = outputWriter;
-        this.registrationClient = registrationClient;
-        this.oidcTokenResolver = new OidcTokenResolver(null);
-    }
-
     public SigningTool(
         SigningInputValidator validator,
         RecordSigningService recordSigningService,
         OutputWriter outputWriter,
         RecordRegistrationClient registrationClient,
-        String oidcToken
+        OidcTokenResolver oidcTokenResolver
     ) {
         this.validator = validator;
         this.recordSigningService = recordSigningService;
         this.outputWriter = outputWriter;
         this.registrationClient = registrationClient;
-        this.oidcTokenResolver = new OidcTokenResolver(oidcToken);
+        this.oidcTokenResolver = oidcTokenResolver;
     }
 
     @Command(name = "create-provenance-record", description = "Create and sign provenance record")
@@ -136,6 +121,10 @@ public class SigningTool {
         UnsignedRecord unsigned = recordSigningService.build(paths, dataId, provenanceRecordType, predecessors, algorithm);
         log.info("Signing provenance record...");
         String oidcToken = oidcTokenResolver.resolve();
+        if (oidcToken == null) {
+            throw new IllegalStateException(
+                "No OIDC token available. Set SIGSTORE_ID_TOKEN or enable browser-based login.");
+        }
         return recordSigningService.sign(unsigned, oidcToken);
     }
 

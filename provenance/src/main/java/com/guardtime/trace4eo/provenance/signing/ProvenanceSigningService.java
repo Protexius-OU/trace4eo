@@ -29,23 +29,21 @@ public class ProvenanceSigningService {
     /** Sigstore only supports SHA-256 digests for all available signing algorithms. */
     private static final HashAlgorithm SIGNING_HASH_ALGORITHM = HashAlgorithm.SHA256;
 
-    private volatile KeylessSigner browserSigner;
-
     /** Uses Sigstore public good instance. */
     public ProvenanceSigningService() {
     }
 
-    /** Build a reusable signer for an explicit OIDC token. Caller manages the lifecycle. */
-    public KeylessSigner buildTokenSigner(String oidcToken) {
-        return buildSigner(oidcToken);
+    /** Build a reusable signer for an OIDC token. Caller manages the lifecycle. */
+    public KeylessSigner buildSigner(String oidcToken) {
+        return buildSignerInternal(oidcToken);
     }
 
     /** Sign with an explicit OIDC token (e.g. from Google via Keycloak broker). */
     public ProvenanceSignature sign(byte[] bytes, String oidcToken) {
-        KeylessSigner signer = oidcToken != null
-            ? buildSigner(oidcToken)
-            : getBrowserSigner();
-        return sign(new ByteArrayInputStream(bytes), signer);
+        if (oidcToken == null) {
+            throw new IllegalArgumentException("oidcToken must not be null");
+        }
+        return sign(new ByteArrayInputStream(bytes), buildSignerInternal(oidcToken));
     }
 
     /** Sign using a pre-built signer (for batch operations). */
@@ -85,7 +83,7 @@ public class ProvenanceSigningService {
         }
     }
 
-    private KeylessSigner buildSigner(String oidcToken) {
+    private KeylessSigner buildSignerInternal(String oidcToken) {
         try {
             return KeylessSigner.builder()
                 .sigstorePublicDefaults()
@@ -94,24 +92,6 @@ public class ProvenanceSigningService {
                 .build();
         } catch (Exception e) {
             log.error("Failed to build signer", e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    private synchronized KeylessSigner getBrowserSigner() {
-        if (browserSigner == null) {
-            browserSigner = buildBrowserSigner();
-        }
-        return browserSigner;
-    }
-
-    private KeylessSigner buildBrowserSigner() {
-        try {
-            return KeylessSigner.builder()
-                .sigstorePublicDefaults()
-                .build();
-        } catch (Exception e) {
-            log.error("Failed to build browser-based signer", e);
             throw new RuntimeException(e);
         }
     }
