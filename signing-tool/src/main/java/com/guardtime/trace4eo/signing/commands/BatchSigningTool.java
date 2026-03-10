@@ -10,7 +10,6 @@ import com.guardtime.trace4eo.signing.registration.RecordRegistrationClient;
 import dev.sigstore.KeylessSigner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.core.command.annotation.Command;
 import org.springframework.shell.core.command.annotation.Option;
 import org.springframework.stereotype.Component;
@@ -34,32 +33,18 @@ public class BatchSigningTool {
     private final RecordRegistrationClient registrationClient;
     private final OidcTokenResolver oidcTokenResolver;
 
-    @Autowired
-    public BatchSigningTool(
-        SigningInputValidator validator,
-        RecordSigningService recordSigningService,
-        OutputWriter outputWriter,
-        RecordRegistrationClient registrationClient
-    ) {
-        this.validator = validator;
-        this.recordSigningService = recordSigningService;
-        this.outputWriter = outputWriter;
-        this.registrationClient = registrationClient;
-        this.oidcTokenResolver = new OidcTokenResolver(null);
-    }
-
     public BatchSigningTool(
         SigningInputValidator validator,
         RecordSigningService recordSigningService,
         OutputWriter outputWriter,
         RecordRegistrationClient registrationClient,
-        String oidcToken
+        OidcTokenResolver oidcTokenResolver
     ) {
         this.validator = validator;
         this.recordSigningService = recordSigningService;
         this.outputWriter = outputWriter;
         this.registrationClient = registrationClient;
-        this.oidcTokenResolver = new OidcTokenResolver(oidcToken);
+        this.oidcTokenResolver = oidcTokenResolver;
     }
 
     @Command(name = "batch-sign", description = "Sign multiple files into a single provenance record")

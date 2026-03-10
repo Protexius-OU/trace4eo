@@ -56,7 +56,7 @@ public class RecordSigningService {
     }
 
     public KeylessSigner buildSigner(String oidcToken) {
-        return signingService.buildTokenSigner(oidcToken);
+        return signingService.buildSigner(oidcToken);
     }
 
     private ProvenanceRecord assembleRecord(UnsignedRecord unsigned, ProvenanceSignature signature) throws IOException {

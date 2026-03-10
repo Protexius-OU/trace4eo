@@ -9,45 +9,30 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.function.Supplier;
 
 public class OidcTokenResolver {
 
     private static final Logger log = LoggerFactory.getLogger(OidcTokenResolver.class);
 
-    private final String oidcTokenOverride;
-    private final Supplier<String> browserTokenSupplier;
-    private String resolvedToken;
+    private String cachedToken;
     private boolean resolved;
-
-    public OidcTokenResolver(String oidcTokenOverride) {
-        this(oidcTokenOverride, OidcTokenResolver::obtainBrowserToken);
-    }
-
-    OidcTokenResolver(String oidcTokenOverride, Supplier<String> browserTokenSupplier) {
-        this.oidcTokenOverride = oidcTokenOverride;
-        this.browserTokenSupplier = browserTokenSupplier;
-    }
 
     public String resolve() {
         if (!resolved) {
-            resolvedToken = resolveInternal();
+            cachedToken = resolveOnce();
             resolved = true;
         }
-        return resolvedToken;
+        return cachedToken;
     }
 
-    private String resolveInternal() {
-        if (oidcTokenOverride != null) {
-            return oidcTokenOverride;
-        }
+    private String resolveOnce() {
         String ciToken = System.getenv("SIGSTORE_ID_TOKEN");
         if (ciToken != null && !ciToken.isBlank()) {
             log.info("Using SIGSTORE_ID_TOKEN from environment");
             return ciToken;
         }
         log.info("No SIGSTORE_ID_TOKEN set, obtaining token via browser-based OIDC login");
-        return browserTokenSupplier.get();
+        return obtainBrowserToken();
     }
 
     private static String obtainBrowserToken() {

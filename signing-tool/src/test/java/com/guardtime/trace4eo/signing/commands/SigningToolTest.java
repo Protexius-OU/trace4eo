@@ -5,6 +5,7 @@ import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import com.guardtime.trace4eo.provenance.record.Predecessor;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
+import com.guardtime.trace4eo.signing.OidcTokenResolver;
 import com.guardtime.trace4eo.signing.OutputWriter;
 import com.guardtime.trace4eo.signing.RecordSigningService;
 import com.guardtime.trace4eo.signing.registration.RecordRegistrationClient;
@@ -58,7 +59,9 @@ class SigningToolTest {
         recordSigningService = spy(new RecordSigningService(mockSigningService, provenanceJsonMapper));
         OutputWriter outputWriter = new OutputWriter(provenanceJsonMapper);
         SigningInputValidator validator = new SigningInputValidator();
-        signingTool = new SigningTool(validator, recordSigningService, outputWriter, mockRegistrationClient, "test-token");
+        OidcTokenResolver oidcTokenResolver = mock(OidcTokenResolver.class);
+        when(oidcTokenResolver.resolve()).thenReturn("test-token");
+        signingTool = new SigningTool(validator, recordSigningService, outputWriter, mockRegistrationClient, oidcTokenResolver);
     }
 
     @Test
