@@ -67,7 +67,8 @@ class BatchSigningToolTest {
 
         OidcTokenResolver oidcTokenResolver = mock(OidcTokenResolver.class);
         when(oidcTokenResolver.resolve()).thenReturn("test-token");
-        batchSigningTool = new BatchSigningTool(validator, recordSigningService, outputWriter, registrationClient, oidcTokenResolver);
+        batchSigningTool = new BatchSigningTool(validator, recordSigningService, outputWriter, registrationClient,
+            oidcTokenResolver);
     }
 
     @Test
