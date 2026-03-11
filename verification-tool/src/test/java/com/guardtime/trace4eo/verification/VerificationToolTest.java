@@ -34,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class VerificationToolTest {
 
     private static final String TEST_FILE = "src/test/resources/test.txt";
-    private static final String OTHER_FILE = "src/test/resources/other.txt";
     private static final String SIGNATURE_FILE = "src/test/resources/signature.json";
     private static final String PROVENANCE_RECORD_FILE = "src/test/resources/provenance-record.json";
     private static final String INVALID_SIGNATURE_PROVENANCE_RECORD_FILE = "src/test/resources/invalid-signature-provenance-record.json";
@@ -50,18 +49,6 @@ class VerificationToolTest {
         "json", new JsonVerificationResultFormatter(provenanceJsonMapper)
     );
     private final VerificationTool verificationTool = new VerificationTool(verificationService, provenanceJsonMapper, formatters);
-
-    @Test
-    void verifyValidSignature() {
-        String result = verificationTool.verify(Path.of(TEST_FILE), Path.of(SIGNATURE_FILE), "text");
-        assertTrue(result.contains("PASSED"));
-    }
-
-    @Test
-    void verifyInvalidSignature() {
-        String result = verificationTool.verify(Path.of(OTHER_FILE), Path.of(SIGNATURE_FILE), "text");
-        assertTrue(result.contains("FAILED"));
-    }
 
     // SHA-256 of empty bytes (content of test.txt in provenance-record.json), base64-encoded
     private static final String EMPTY_SHA256_B64 = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
@@ -170,12 +157,6 @@ class VerificationToolTest {
     }
 
     @Test
-    void verifyFailsForNonExistentTextFile() {
-        assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of("nonexistent.txt"), Path.of(SIGNATURE_FILE), "text"));
-    }
-
-    @Test
     void verifyProvenanceRecordFailsForNonExistentFile() {
         assertThrows(IllegalArgumentException.class,
             () -> verificationTool.verify(Path.of("nonexistent.json"), null, null, "text"));
@@ -198,12 +179,6 @@ class VerificationToolTest {
     void verifyProvenanceRecordFailsForBlankPathInHash() {
         assertThrows(IllegalArgumentException.class,
             () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), "=" + EMPTY_SHA256_B64, null, "text"));
-    }
-
-    @Test
-    void verifyFailsForUnknownFormat() {
-        assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of(TEST_FILE), Path.of(SIGNATURE_FILE), "xml"));
     }
 
     @Test
