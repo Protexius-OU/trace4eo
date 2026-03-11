@@ -47,7 +47,7 @@ public class BatchSigningTool {
         this.oidcTokenResolver = oidcTokenResolver;
     }
 
-    @Command(name = "batch-sign", description = "Sign multiple files into a single provenance record")
+    @Command(name = "batch-sign", description = "Sign multiple files, creating one provenance record per file")
     public List<UUID> batchSign(
         @Option(longName = "files", description = "Files to sign") List<String> files,
         @Option(longName = "directory", description = "Directory containing files to sign") Path directory,
@@ -55,7 +55,7 @@ public class BatchSigningTool {
         @Option(longName = "provenance-record-type", description = "Provenance record type",
             required = true) String provenanceRecordType,
         @Option(longName = "data-id",
-            description = "Data ID for the provenance record; with --one-record-per-file each file gets <data-id>/<filename>",
+            description = "Data ID prefix for provenance records; each file gets <data-id>/<filename>",
             required = true) String dataId,
         @Option(longName = "output", description = "Output directory for ZIP file") Path outputDir,
         @Option(longName = "hash-algorithm", description = "Hash algorithm (SHA256, SHA384, SHA512)",
@@ -65,18 +65,13 @@ public class BatchSigningTool {
         @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm,
         @Option(longName = "create-record-ids-file",
             description = "Write a plain-text file with the IDs of all successfully signed provenance records, one UUID per line",
-            defaultValue = "false") boolean createRecordIdsFile,
-        @Option(longName = "one-record-per-file",
-            description = "Create one provenance record per file instead of a single combined record",
-            defaultValue = "false") boolean oneRecordPerFile
+            defaultValue = "false") boolean createRecordIdsFile
     ) throws IOException {
         HashAlgorithm algorithm = validator.validateHashAlgorithm(hashAlgorithm);
         List<Path> resolvedFiles = validateAndResolveFiles(files, directory, pattern, provenanceRecordType,
             dataId, outputDir, registerUrl, keycloakUrl);
         KeylessSigner signer = authenticateAndBuildSigner();
-        List<ProvenanceRecord> records = oneRecordPerFile
-            ? signFilesIndividually(resolvedFiles, dataId, provenanceRecordType, algorithm, signer)
-            : signAsCombinedRecord(resolvedFiles, dataId, provenanceRecordType, algorithm, signer);
+        List<ProvenanceRecord> records = signFilesIndividually(resolvedFiles, dataId, provenanceRecordType, algorithm, signer);
         List<UUID> recordIds = records.stream().map(ProvenanceRecord::id).toList();
         if (!records.isEmpty()) {
             outputWriter.saveAll(records, outputDir, dataId);
@@ -139,22 +134,6 @@ public class BatchSigningTool {
             if (!Files.isDirectory(directory)) {
                 throw new IllegalArgumentException(String.format("--directory is not a directory: %s", directory));
             }
-        }
-    }
-
-    private List<ProvenanceRecord> signAsCombinedRecord(
-        List<Path> files, String dataId, String provenanceRecordType,
-        HashAlgorithm algorithm, KeylessSigner signer
-    ) {
-        log.info("Signing {} file(s) into a single provenance record...", files.size());
-        try {
-            UnsignedRecord unsigned = recordSigningService.build(files, dataId, provenanceRecordType, List.of(), algorithm);
-            ProvenanceRecord record = recordSigningService.sign(unsigned, signer);
-            log.info("Successfully signed 1 provenance record");
-            return List.of(record);
-        } catch (Exception e) {
-            log.warn("Failed to create combined provenance record", e);
-            return List.of();
         }
     }
 
