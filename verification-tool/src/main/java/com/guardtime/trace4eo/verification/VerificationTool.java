@@ -2,7 +2,6 @@ package com.guardtime.trace4eo.verification;
 
 import com.guardtime.trace4eo.provenance.Container;
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
-import com.guardtime.trace4eo.provenance.ProvenanceSignature;
 import com.guardtime.trace4eo.provenance.io.ContainerReader;
 import com.guardtime.trace4eo.provenance.io.json.JsonContainerReader;
 import com.guardtime.trace4eo.provenance.io.zip.ZipContainerReader;
@@ -42,18 +41,6 @@ public class VerificationTool {
         this.verificationService = verificationService;
         this.provenanceJsonMapper = provenanceJsonMapper;
         this.formatters = formatters;
-    }
-
-    @Command(name = "verify", description = "Verify input data against signature")
-    public String verify(
-        @Option(longName = "text", description = "Path to input file", required = true) Path file,
-        @Option(longName = "signature", description = "Path to signature file", required = true) Path signaturePath,
-        @Option(longName = "format", description = "Output format: text (default) or json", defaultValue = "text") String format
-    ) {
-        byte[] inputBytes = resolveInput(file);
-        ProvenanceSignature signature = provenanceJsonMapper.readValue(signaturePath, ProvenanceSignature.class);
-        ProvenanceVerificationResult result = verificationService.verify(signature, inputBytes);
-        return resolveFormatter(format).format(result);
     }
 
     @Command(name = "verify-provenance-record", description = "Verify provenance record")
@@ -161,15 +148,4 @@ public class VerificationTool {
         return results;
     }
 
-    private byte[] resolveInput(Path filePath) {
-        if (Files.notExists(filePath)) {
-            throw new IllegalArgumentException("File does not exist");
-        }
-        try {
-            return Files.readAllBytes(filePath);
-        } catch (IOException e) {
-            log.warn("Failed to read file {}", filePath, e);
-            throw new RuntimeException(e);
-        }
-    }
 }

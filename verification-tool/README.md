@@ -18,26 +18,6 @@ Commands are passed via `--args`:
 
 ## Commands
 
-### verify
-
-Verify input data against a signature file.
-
-**Options:**
-
-| Option        | Description                               |
-|---------------|-------------------------------------------|
-| `--text`      | Path to the input file to verify          |
-| `--signature` | Path to the signature file                |
-| `--format`    | Output format: `text` (default) or `json` |
-
-**Example:**
-
-```bash
-./gradlew :verification-tool:bootRun --args="verify \
-  --text data.bin \
-  --signature signature.json"
-```
-
 ### verify-provenance-record
 
 Verify a provenance record container. Both ZIP (`.zip`) and JSON (`.json`) container formats are accepted. This runs all

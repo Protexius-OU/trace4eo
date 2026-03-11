@@ -48,20 +48,6 @@ class VerificationToolApplicationTest {
     }
 
     /**
-     * Exercises the {@code verify} command through the Spring Shell dispatch pipeline.
-     * Both {@code --text} and {@code --signature} are path parameters that Spring Shell
-     * converts from strings using {@link PathConverter}.
-     */
-    @Test
-    void verifyCommandAcceptsTextAndSignatureParameters() {
-        assertDoesNotThrow(() -> shellRunner.run(new String[]{
-            "verify",
-            "--text", "src/test/resources/test.txt",
-            "--signature", "src/test/resources/signature.json"
-        }));
-    }
-
-    /**
      * Exercises the {@code verify-provenance-record} command's required {@code --file}
      * path parameter through the Spring Shell dispatch pipeline.
      */
