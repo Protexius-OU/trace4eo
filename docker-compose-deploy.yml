@@ -67,6 +67,8 @@ services:
   frontend:
     image: ghcr.io/protexius-ou/trace4eo-frontend:90cb31ae10437995d4989d00cda14b28d95ae226
     restart: unless-stopped
+    environment:
+      KEYCLOAK_URL: http://${VM_HOST}:8180/realms/trace4eo
     ports:
       - "80:80"
     depends_on:

@@ -3,7 +3,7 @@ import { WebStorageStateStore } from 'oidc-client-ts'
 import type { ReactNode } from 'react'
 
 const oidcConfig = {
-  authority: import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180/realms/trace4eo',
+  authority: window.__ENV__?.KEYCLOAK_URL || import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8180/realms/trace4eo',
   client_id: 'trace4eo-ui',
   redirect_uri: window.location.origin + '/',
   post_logout_redirect_uri: window.location.origin + '/',
