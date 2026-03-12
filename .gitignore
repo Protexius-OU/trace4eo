@@ -10,5 +10,5 @@ build
 # Deployment secrets
 .env
 
-# Generated from trace4eo-realm.deploy.json.tmpl by start-deploy.sh
+# Generated from trace4eo-realm.deploy.json.template by start-deploy.sh
 config/keycloak/trace4eo-realm.deploy.json
