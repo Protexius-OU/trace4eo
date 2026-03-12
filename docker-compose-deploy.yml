@@ -1,0 +1,77 @@
+services:
+  db:
+    image: postgres:18.2-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: trace4eo
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/postgres/init-keycloak-db.sh:/docker-entrypoint-initdb.d/init-keycloak-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.5
+    restart: unless-stopped
+    command: start-dev --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KC_HOSTNAME: ${VM_HOST}
+      KC_HTTP_PORT: 8180
+      KC_FEATURES: token-exchange,admin-fine-grained-authz:v1
+      KC_HEALTH_ENABLED: "true"
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    volumes:
+      - ./config/keycloak/trace4eo-realm.deploy.json:/opt/keycloak/data/import/trace4eo-realm.json:ro
+    ports:
+      - "8180:8180"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8180"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  backend:
+    image: ghcr.io/protexius-ou/trace4eo-backend:90cb31ae10437995d4989d00cda14b28d95ae226
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: trace4eo
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      KEYCLOAK_ISSUER_URI: http://${VM_HOST}:8180/realms/trace4eo
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8180/realms/trace4eo/protocol/openid-connect/certs
+      KEYCLOAK_BASE_URL: http://keycloak:8180
+      KEYCLOAK_REALM: trace4eo
+    depends_on:
+      db:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+  frontend:
+    image: ghcr.io/protexius-ou/trace4eo-frontend:90cb31ae10437995d4989d00cda14b28d95ae226
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_started
+
+volumes:
+  postgres_data:

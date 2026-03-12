@@ -6,3 +6,9 @@ build
 
 # Ignore IDE specific files
 .idea/
+
+# Deployment secrets
+.env
+
+# Generated from trace4eo-realm.deploy.json.tmpl by start-deploy.sh
+config/keycloak/trace4eo-realm.deploy.json
