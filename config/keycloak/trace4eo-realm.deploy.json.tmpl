@@ -1,0 +1,101 @@
+{
+  "realm": "trace4eo",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "clients": [
+    {
+      "clientId": "trace4eo-ui",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "webOrigins": [
+        "http://${VM_HOST}"
+      ],
+      "redirectUris": [
+        "http://${VM_HOST}/*"
+      ],
+      "protocolMappers": [
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "clientScopeMappings": {
+    "broker": [
+      {
+        "client": "trace4eo-ui",
+        "roles": ["read-token"]
+      }
+    ]
+  },
+  "identityProviders": [
+    {
+      "alias": "sigstore",
+      "providerId": "oidc",
+      "enabled": true,
+      "trustEmail": true,
+      "storeToken": true,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "sigstore",
+        "clientAuthMethod": "none",
+        "authorizationUrl": "https://oauth2.sigstore.dev/auth/auth",
+        "tokenUrl": "https://oauth2.sigstore.dev/auth/token",
+        "jwksUrl": "https://oauth2.sigstore.dev/auth/keys",
+        "issuer": "https://oauth2.sigstore.dev/auth",
+        "defaultScope": "openid email offline_access",
+        "pkceEnabled": "true",
+        "pkceMethod": "S256",
+        "syncMode": "FORCE",
+        "validateSignature": "true",
+        "useJwksUrl": "true",
+        "disableTypeClaimCheck": "true"
+      }
+    }
+  ],
+  "identityProviderMappers": [
+    {
+      "name": "sigstore-signer-role",
+      "identityProviderAlias": "sigstore",
+      "identityProviderMapper": "oidc-hardcoded-role-idp-mapper",
+      "config": {
+        "role": "signer"
+      }
+    },
+    {
+      "name": "sigstore-broker-read-token",
+      "identityProviderAlias": "sigstore",
+      "identityProviderMapper": "oidc-hardcoded-role-idp-mapper",
+      "config": {
+        "role": "broker.read-token"
+      }
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "signer",
+        "description": "Can upload and sign provenance records"
+      },
+      {
+        "name": "admin",
+        "description": "Full administrative access"
+      }
+    ]
+  }
+}

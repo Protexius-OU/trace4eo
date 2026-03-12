@@ -8,11 +8,17 @@ REALM="trace4eo"
 IDP_ALIAS="sigstore"
 CLIENT_ID="trace4eo-ui"
 
+echo "Waiting for Keycloak to be ready..."
+until curl -sf "${KEYCLOAK_URL}/realms/master" > /dev/null 2>&1; do
+  echo "  Keycloak not ready yet, retrying in 5s..."
+  sleep 5
+done
+
 echo "Obtaining admin token..."
 ADMIN_TOKEN=$(curl -sf "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
   -d "client_id=admin-cli" \
   -d "username=admin" \
-  -d "password=admin" \
+  -d "password=${KEYCLOAK_ADMIN_PASSWORD:-admin}" \
   -d "grant_type=password" | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
 AUTH="Authorization: Bearer ${ADMIN_TOKEN}"
