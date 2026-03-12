@@ -9,7 +9,13 @@ IDP_ALIAS="sigstore"
 CLIENT_ID="trace4eo-ui"
 
 echo "Waiting for Keycloak to be ready..."
+RETRIES=24
 until curl -sf "${KEYCLOAK_URL}/realms/master" > /dev/null 2>&1; do
+  RETRIES=$((RETRIES - 1))
+  if [ "${RETRIES}" -eq 0 ]; then
+    echo "Timed out waiting for Keycloak."
+    exit 1
+  fi
   echo "  Keycloak not ready yet, retrying in 5s..."
   sleep 5
 done

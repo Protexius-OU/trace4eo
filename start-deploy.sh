@@ -15,7 +15,7 @@ source "${ENV_FILE}"
 set +a
 
 echo "Generating Keycloak realm config for host: ${VM_HOST}..."
-envsubst < config/keycloak/trace4eo-realm.deploy.json.tmpl > config/keycloak/trace4eo-realm.deploy.json
+envsubst < config/keycloak/trace4eo-realm.deploy.json.template > config/keycloak/trace4eo-realm.deploy.json
 
 echo "Pulling latest images..."
 docker compose -f docker-compose-deploy.yml pull
