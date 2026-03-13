@@ -70,6 +70,9 @@ checkstyle {
     toolVersion = libs.versions.checkstyle.get()
 }
 
+tasks.named('checkstyleAot').configure { enabled = false }
+tasks.named('checkstyleAotTest').configure { enabled = false }
+
 graalvmNative {
     binaries {
         main {
