@@ -20,6 +20,7 @@ spring-shell = [
 
 [plugins]
 errorprone = { id = "net.ltgt.errorprone", version = "5.0.0" }
+graalvm-native = { id = "org.graalvm.buildtools.native", version = "0.10.6" }
 openrewrite = { id = "org.openrewrite.rewrite", version = "7.25.0" }
 owasp = { id = "org.owasp.dependencycheck", version = "12.2.0" }
 spotbugs = { id = "com.github.spotbugs", version = "6.4.8" }
