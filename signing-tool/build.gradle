@@ -4,6 +4,7 @@ import org.springframework.boot.gradle.plugin.SpringBootPlugin
 plugins {
     id("java")
     alias(libs.plugins.spring.boot)
+    alias(libs.plugins.graalvm.native)
 
     // code quality
     id("checkstyle")
@@ -67,6 +68,15 @@ tasks.withType(SpotBugsTask).configureEach {
 
 checkstyle {
     toolVersion = libs.versions.checkstyle.get()
+}
+
+graalvmNative {
+    binaries {
+        main {
+            imageName = "signing-tool"
+            mainClass = "com.guardtime.trace4eo.signing.SigningToolApplication"
+        }
+    }
 }
 
 rewrite {
