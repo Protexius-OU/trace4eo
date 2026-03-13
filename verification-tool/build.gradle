@@ -76,6 +76,11 @@ graalvmNative {
         main {
             imageName = "verification-tool"
             mainClass = "com.guardtime.trace4eo.verification.VerificationToolApplication"
+            // gRPC/Netty (via sigstore-java) creates Logger instances in static initializers,
+            // placing logback objects in the image heap. GraalVM 25 defaults to runtime init,
+            // so these packages must be explicitly marked for build-time initialization.
+            buildArgs.add("--initialize-at-build-time=ch.qos.logback")
+            buildArgs.add("--initialize-at-build-time=org.slf4j")
         }
     }
 }
