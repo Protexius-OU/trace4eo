@@ -37,7 +37,7 @@ dependencies {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 
@@ -78,8 +78,6 @@ graalvmNative {
         main {
             imageName = "signing-tool"
             mainClass = "com.guardtime.trace4eo.signing.SigningToolApplication"
-            buildArgs.add("--initialize-at-build-time=ch.qos.logback")
-            buildArgs.add("--initialize-at-build-time=org.slf4j")
         }
     }
 }
