@@ -14,44 +14,46 @@ on:
           - macos-arm64
 
 jobs:
-  build:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    if: inputs.platform == 'all' || inputs.platform == matrix.platform
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            platform: linux-amd64
-            suffix: linux-amd64
-          - os: macos-latest
-            platform: macos-arm64
-            suffix: macos-arm64
-
+  build-linux:
+    name: Build linux-amd64
+    runs-on: ubuntu-latest
+    if: inputs.platform == 'all' || inputs.platform == 'linux-amd64'
     steps:
       - uses: actions/checkout@v4
-
       - uses: graalvm/setup-graalvm@v1
         with:
           java-version: '21'
           distribution: 'graalvm'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-
+      - uses: gradle/actions/setup-gradle@v4
       - name: Build native binaries
         run: ./gradlew :signing-tool:nativeCompile :verification-tool:nativeCompile
-
-      - name: Collect artifacts
-        run: |
-          cp signing-tool/build/native/nativeCompile/signing-tool signing-tool-${{ matrix.suffix }}
-          cp verification-tool/build/native/nativeCompile/verification-tool verification-tool-${{ matrix.suffix }}
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cli-${{ matrix.suffix }}
+          name: cli-linux-amd64
           path: |
-            signing-tool-${{ matrix.suffix }}
-            verification-tool-${{ matrix.suffix }}
+            signing-tool/build/native/nativeCompile/signing-tool
+            verification-tool/build/native/nativeCompile/verification-tool
+
+  build-macos:
+    name: Build macos-arm64
+    runs-on: macos-latest
+    if: inputs.platform == 'all' || inputs.platform == 'macos-arm64'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build native binaries
+        run: ./gradlew :signing-tool:nativeCompile :verification-tool:nativeCompile
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-macos-arm64
+          path: |
+            signing-tool/build/native/nativeCompile/signing-tool
+            verification-tool/build/native/nativeCompile/verification-tool
