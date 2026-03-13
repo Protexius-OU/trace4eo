@@ -12,18 +12,12 @@ on:
           - all
           - linux-amd64
           - macos-arm64
-  push:
-    tags:
-      - 'v*'
 
 jobs:
   build:
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    if: >
-      startsWith(github.ref, 'refs/tags/') ||
-      inputs.platform == 'all' ||
-      inputs.platform == matrix.platform
+    if: inputs.platform == 'all' || inputs.platform == matrix.platform
     strategy:
       matrix:
         include:
@@ -47,8 +41,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Build native binaries
-        run: |
-          ./gradlew :signing-tool:nativeCompile :verification-tool:nativeCompile
+        run: ./gradlew :signing-tool:nativeCompile :verification-tool:nativeCompile
 
       - name: Collect artifacts
         run: |
@@ -60,13 +53,5 @@ jobs:
         with:
           name: cli-${{ matrix.suffix }}
           path: |
-            signing-tool-${{ matrix.suffix }}
-            verification-tool-${{ matrix.suffix }}
-
-      - name: Upload to release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
             signing-tool-${{ matrix.suffix }}
             verification-tool-${{ matrix.suffix }}
