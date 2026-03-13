@@ -76,6 +76,8 @@ graalvmNative {
         main {
             imageName = "verification-tool"
             mainClass = "com.guardtime.trace4eo.verification.VerificationToolApplication"
+            buildArgs.add("--initialize-at-run-time=ch.qos.logback")
+            buildArgs.add("--initialize-at-run-time=org.slf4j")
         }
     }
 }
