@@ -35,7 +35,7 @@ dependencies {
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 
@@ -76,8 +76,6 @@ graalvmNative {
         main {
             imageName = "verification-tool"
             mainClass = "com.guardtime.trace4eo.verification.VerificationToolApplication"
-            buildArgs.add("--initialize-at-build-time=ch.qos.logback")
-            buildArgs.add("--initialize-at-build-time=org.slf4j")
         }
     }
 }
