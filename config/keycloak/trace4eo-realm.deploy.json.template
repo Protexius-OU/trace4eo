@@ -12,10 +12,10 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": true,
       "webOrigins": [
-        "http://${VM_HOST}"
+        "https://${VM_HOST}"
       ],
       "redirectUris": [
-        "http://${VM_HOST}/*"
+        "https://${VM_HOST}/*"
       ],
       "protocolMappers": [
         {
@@ -64,7 +64,8 @@
         "syncMode": "FORCE",
         "validateSignature": "true",
         "useJwksUrl": "true",
-        "disableTypeClaimCheck": "true"
+        "disableTypeClaimCheck": "true",
+        "hideOnLoginPage": "true"
       }
     }
   ],

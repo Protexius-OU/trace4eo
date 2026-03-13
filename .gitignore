@@ -12,3 +12,7 @@ build
 
 # Generated from trace4eo-realm.deploy.json.template by start-deploy.sh
 config/keycloak/trace4eo-realm.deploy.json
+
+# Generated TLS certificates and Certbot state by start-deploy.sh
+config/nginx/certs/
+config/certbot/
