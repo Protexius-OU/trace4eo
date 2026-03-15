@@ -1,6 +1,9 @@
 # Ignore Gradle project-specific cache directory
 .gradle
 
+# Spring Shell interactive session logs
+spring-shell.log
+
 # Ignore Gradle build output directory
 build
 

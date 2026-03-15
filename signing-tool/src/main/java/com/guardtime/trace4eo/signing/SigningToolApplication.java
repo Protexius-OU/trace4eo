@@ -1,5 +1,8 @@
 package com.guardtime.trace4eo.signing;
 
+import com.guardtime.trace4eo.signing.commands.BatchSigningTool;
+import com.guardtime.trace4eo.signing.commands.SigningTool;
+import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.boot.SpringApplication;
@@ -18,7 +21,10 @@ public class SigningToolApplication {
     static class Hints implements RuntimeHintsRegistrar {
         @Override
         public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
-            hints.resources().registerPattern("META-INF/spring.components");
+            // NativeCommandsConfiguration calls getDeclaredMethods() on these classes
+            // and CommandFactoryBean invokes the @Command methods via reflection.
+            hints.reflection().registerType(SigningTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
+            hints.reflection().registerType(BatchSigningTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
         }
     }
 }

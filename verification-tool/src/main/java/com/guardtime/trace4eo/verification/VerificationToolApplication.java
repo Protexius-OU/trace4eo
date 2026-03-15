@@ -1,5 +1,6 @@
 package com.guardtime.trace4eo.verification;
 
+import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.hint.RuntimeHintsRegistrar;
 import org.springframework.boot.SpringApplication;
@@ -18,7 +19,9 @@ public class VerificationToolApplication {
     static class Hints implements RuntimeHintsRegistrar {
         @Override
         public void registerHints(RuntimeHints hints, ClassLoader classLoader) {
-            hints.resources().registerPattern("META-INF/spring.components");
+            // NativeCommandsConfiguration calls getDeclaredMethods() on this class
+            // and CommandFactoryBean invokes the @Command method via reflection.
+            hints.reflection().registerType(VerificationTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
         }
     }
 }
