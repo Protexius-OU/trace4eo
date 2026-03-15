@@ -26,9 +26,6 @@ dependencies {
     implementation(platform(SpringBootPlugin.BOM_COORDINATES))
     implementation(libs.bundles.spring.shell)
 
-    annotationProcessor(enforcedPlatform(SpringBootPlugin.BOM_COORDINATES))
-    annotationProcessor("org.springframework:spring-context-indexer")
-
     errorprone(libs.error.prone.core)
     rewrite(libs.rewrite.static.analysis)
 
