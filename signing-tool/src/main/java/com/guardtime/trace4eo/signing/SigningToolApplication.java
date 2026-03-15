@@ -25,6 +25,7 @@ public class SigningToolApplication {
             // and CommandFactoryBean invokes the @Command methods via reflection.
             hints.reflection().registerType(SigningTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
             hints.reflection().registerType(BatchSigningTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
+            hints.resources().registerPattern("dev/sigstore/**");
         }
     }
 }

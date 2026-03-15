@@ -22,6 +22,7 @@ public class VerificationToolApplication {
             // NativeCommandsConfiguration calls getDeclaredMethods() on this class
             // and CommandFactoryBean invokes the @Command method via reflection.
             hints.reflection().registerType(VerificationTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
+            hints.resources().registerPattern("dev/sigstore/**");
         }
     }
 }
