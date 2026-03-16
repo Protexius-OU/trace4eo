@@ -23,10 +23,6 @@ public class VerificationToolApplication {
             // and CommandFactoryBean invokes the @Command method via reflection.
             hints.reflection().registerType(VerificationTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
             hints.resources().registerPattern("dev/sigstore/**");
-            // Sigstore's gRPC layer calls valueOf(Descriptors$EnumValueDescriptor) via reflection
-            // on protobuf enums from proto-google-common-protos at runtime.
-            hints.reflection().registerTypeIfPresent(classLoader, "com.google.api.FieldBehavior",
-                    MemberCategory.INVOKE_DECLARED_METHODS);
         }
     }
 }
