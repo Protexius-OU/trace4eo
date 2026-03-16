@@ -90,6 +90,9 @@ graalvmNative {
             // fields that are not themselves build-time initialized, causing fatal heap errors.
             buildArgs.add("--initialize-at-build-time=com.google.protobuf")
             buildArgs.add("--initialize-at-build-time=com.google.api.FieldBehavior")
+            // com.google.protobuf.util.JsonFormat$PrinterImpl$GsonHolder creates a Gson instance
+            // in its static initializer, so Gson must also be build-time initialized.
+            buildArgs.add("--initialize-at-build-time=com.google.gson")
         }
     }
 }
