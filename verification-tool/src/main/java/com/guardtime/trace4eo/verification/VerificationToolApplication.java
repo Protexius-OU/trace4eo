@@ -50,7 +50,7 @@ public class VerificationToolApplication {
                     "com.google.protobuf.DescriptorProtos$FeatureSet$Builder",
                     MemberCategory.INVOKE_DECLARED_METHODS);
             registerProtocolMessageEnums(hints, classLoader,
-                    "com.google.api", "com.google.rpc", "dev.sigstore");
+                    "com.google.protobuf", "com.google.api", "com.google.rpc", "dev.sigstore");
         }
 
         private static void registerProtocolMessageEnums(
