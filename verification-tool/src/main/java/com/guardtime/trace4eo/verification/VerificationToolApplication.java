@@ -23,6 +23,10 @@ public class VerificationToolApplication {
             // and CommandFactoryBean invokes the @Command method via reflection.
             hints.reflection().registerType(VerificationTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
             hints.resources().registerPattern("dev/sigstore/**");
+            // FieldBehavior is only reachable via protobuf's descriptor system at runtime,
+            // so --initialize-at-build-time has no effect. Register valueOf explicitly.
+            hints.reflection().registerTypeIfPresent(classLoader, "com.google.api.FieldBehavior",
+                    MemberCategory.INVOKE_DECLARED_METHODS);
         }
     }
 }

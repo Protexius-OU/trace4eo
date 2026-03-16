@@ -26,6 +26,10 @@ public class SigningToolApplication {
             hints.reflection().registerType(SigningTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
             hints.reflection().registerType(BatchSigningTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
             hints.resources().registerPattern("dev/sigstore/**");
+            // FieldBehavior is only reachable via protobuf's descriptor system at runtime,
+            // so --initialize-at-build-time has no effect. Register valueOf explicitly.
+            hints.reflection().registerTypeIfPresent(classLoader, "com.google.api.FieldBehavior",
+                    MemberCategory.INVOKE_DECLARED_METHODS);
         }
     }
 }
