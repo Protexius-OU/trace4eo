@@ -83,8 +83,11 @@ graalvmNative {
             buildArgs.add("--initialize-at-build-time=org.slf4j")
             // Protobuf 4.x calls methods on descriptor/generated classes via reflection at runtime.
             // Initializing at build time avoids the entire class of missing-reflection errors.
+            // com.google.api is intentionally NOT used as a prefix — it is too broad and pulls in
+            // com.google.api.client.http.OpenCensusUtils, which stores OpenCensus objects in static
+            // fields that are not themselves build-time initialized, causing fatal heap errors.
             buildArgs.add("--initialize-at-build-time=com.google.protobuf")
-            buildArgs.add("--initialize-at-build-time=com.google.api")
+            buildArgs.add("--initialize-at-build-time=com.google.api.FieldBehavior")
         }
     }
 }
