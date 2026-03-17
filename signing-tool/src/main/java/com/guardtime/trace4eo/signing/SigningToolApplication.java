@@ -45,6 +45,12 @@ public class SigningToolApplication {
         //    distinct enum type in the sigstore/googleapis protos. Rather than fixing these
         //    one by one, we scan for every ProtocolMessageEnum implementation at AOT time
         //    and register them all upfront.
+        //
+        // 3. Gson deserialization: sigstore-java uses Gson to deserialize TUF target files
+        //    (e.g. signing config, trust root) downloaded at runtime. Gson accesses fields
+        //    directly via reflection, so every dev.sigstore class that participates in JSON
+        //    deserialization needs DECLARED_FIELDS. We scan the whole package to avoid
+        //    per-class whack-a-mole.
         private static void registerProtobufReflection(RuntimeHints hints, ClassLoader classLoader) {
             hints.reflection().registerTypeIfPresent(classLoader,
                     "com.google.protobuf.DescriptorProtos$FeatureSet",
@@ -54,6 +60,22 @@ public class SigningToolApplication {
                     MemberCategory.INVOKE_DECLARED_METHODS);
             registerProtocolMessageEnums(hints, classLoader,
                     "com.google.protobuf", "com.google.api", "com.google.rpc", "dev.sigstore");
+            registerForGsonDeserialization(hints, classLoader, "dev.sigstore");
+        }
+
+        private static void registerForGsonDeserialization(
+                RuntimeHints hints, ClassLoader classLoader, String... packages) {
+            ClassPathScanningCandidateComponentProvider scanner =
+                    new ClassPathScanningCandidateComponentProvider(false);
+            scanner.addIncludeFilter((metadataReader, factory) -> true);
+            for (String pkg : List.of(packages)) {
+                for (BeanDefinition bd : scanner.findCandidateComponents(pkg)) {
+                    hints.reflection().registerTypeIfPresent(classLoader,
+                            bd.getBeanClassName(),
+                            MemberCategory.DECLARED_FIELDS,
+                            MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
+                }
+            }
         }
 
         private static void registerProtocolMessageEnums(

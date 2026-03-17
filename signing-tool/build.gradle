@@ -83,15 +83,13 @@ graalvmNative {
             // so these packages must be explicitly marked for build-time initialization.
             buildArgs.add("--initialize-at-build-time=ch.qos.logback")
             buildArgs.add("--initialize-at-build-time=org.slf4j")
-            // Protobuf 4.x calls methods on descriptor/generated classes via reflection at runtime.
-            // Initializing at build time avoids the entire class of missing-reflection errors.
-            // com.google.api is intentionally NOT used as a prefix — it is too broad and pulls in
-            // com.google.api.client.http.OpenCensusUtils, which stores OpenCensus objects in static
-            // fields that are not themselves build-time initialized, causing fatal heap errors.
-            buildArgs.add("--initialize-at-build-time=com.google.protobuf")
-            // com.google.protobuf.util.JsonFormat$PrinterImpl$GsonHolder creates a Gson instance
-            // in its static initializer, so Gson must also be build-time initialized.
-            buildArgs.add("--initialize-at-build-time=com.google.gson")
+            // NOTE: com.google.protobuf and com.google.gson are intentionally NOT initialized at
+            // build time. Build-time initialization freezes protobuf's MessageSchema with JVM
+            // object-layout Unsafe offsets that differ from GraalVM native-image layout, causing
+            // JsonFormat.Parser.merge() to silently return default (empty) values for all fields.
+            // The RuntimeHints registrations in SigningToolApplication.Hints cover the specific
+            // reflection calls (DescriptorProtos$FeatureSet methods, ProtocolMessageEnum valueOf,
+            // dev.sigstore Gson fields) that protobuf needs at runtime.
         }
     }
 }
