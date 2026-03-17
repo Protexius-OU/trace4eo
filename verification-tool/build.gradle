@@ -86,6 +86,7 @@ graalvmNative {
             // the entire tcnative package to runtime, and disable OpenSSL so Netty falls back
             // to the JDK SSL provider.
             buildArgs.add("--initialize-at-run-time=io.grpc.netty.shaded.io.netty.internal.tcnative")
+            buildArgs.add("--initialize-at-run-time=io.grpc.netty.shaded.io.netty.handler.ssl")
             buildArgs.add("-Dio.grpc.netty.shaded.io.netty.handler.ssl.noOpenSsl=true")
             // NOTE: com.google.protobuf and com.google.gson are intentionally NOT initialized at
             // build time. Build-time initialization freezes protobuf's MessageSchema with JVM
