@@ -81,6 +81,9 @@ graalvmNative {
             // so these packages must be explicitly marked for build-time initialization.
             buildArgs.add("--initialize-at-build-time=ch.qos.logback")
             buildArgs.add("--initialize-at-build-time=org.slf4j")
+            // grpc-netty-shaded bundles tcnative (OpenSSL JNI bindings) which cannot be loaded
+            // in a native image. Force Netty to use the JDK SSL provider instead.
+            buildArgs.add("-Dio.grpc.netty.shaded.io.netty.handler.ssl.noOpenSsl=true")
             // NOTE: com.google.protobuf and com.google.gson are intentionally NOT initialized at
             // build time. Build-time initialization freezes protobuf's MessageSchema with JVM
             // object-layout Unsafe offsets that differ from GraalVM native-image layout, causing
