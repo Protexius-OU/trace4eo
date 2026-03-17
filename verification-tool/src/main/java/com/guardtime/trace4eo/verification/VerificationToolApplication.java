@@ -28,6 +28,7 @@ public class VerificationToolApplication {
             hints.reflection().registerType(VerificationTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
             hints.resources().registerPattern("dev/sigstore/**");
             registerProtobufReflection(hints, classLoader);
+            registerBouncyCastleReflection(hints, classLoader);
         }
 
         // Protobuf 4.x makes two categories of reflective calls at runtime that are invisible
@@ -74,6 +75,24 @@ public class VerificationToolApplication {
                             MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                             MemberCategory.INVOKE_DECLARED_METHODS);
                 }
+            }
+        }
+
+        // BouncyCastle registers JCA service implementations (KeyFactory, Signature, etc.) by
+        // string class name. GraalVM static analysis cannot trace these string references, so the
+        // implementation classes are excluded from the image and throw ClassNotFoundException at
+        // runtime. Scanning the whole org.bouncycastle package and registering all classes for
+        // construction ensures every provider implementation is reachable.
+        private static void registerBouncyCastleReflection(
+                RuntimeHints hints, ClassLoader classLoader) {
+            ClassPathScanningCandidateComponentProvider scanner =
+                    new ClassPathScanningCandidateComponentProvider(false);
+            scanner.addIncludeFilter((metadataReader, factory) -> true);
+            for (BeanDefinition bd : scanner.findCandidateComponents("org.bouncycastle")) {
+                hints.reflection().registerTypeIfPresent(classLoader,
+                        bd.getBeanClassName(),
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS);
             }
         }
 
