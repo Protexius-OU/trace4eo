@@ -43,11 +43,12 @@ public class VerificationToolApplication {
         //    one by one, we scan for every ProtocolMessageEnum implementation at AOT time
         //    and register them all upfront.
         //
-        // 3. Gson deserialization: sigstore-java uses Gson to deserialize TUF target files
-        //    (e.g. signing config, trust root) downloaded at runtime. Gson accesses fields
-        //    directly via reflection, so every dev.sigstore class that participates in JSON
-        //    deserialization needs DECLARED_FIELDS. We scan the whole package to avoid
-        //    per-class whack-a-mole.
+        // 3. Gson deserialization + proto Builder methods: sigstore-java uses Gson to deserialize
+        //    TUF target files (e.g. signing config, trust root) downloaded at runtime. Gson
+        //    accesses fields directly via reflection. Additionally, protobuf JsonFormat calls
+        //    getter methods (e.g. getMediaType()) on dev.sigstore Builder classes via reflection.
+        //    We register DECLARED_FIELDS, constructors, and methods for the whole dev.sigstore
+        //    package to avoid per-class whack-a-mole.
         private static void registerProtobufReflection(RuntimeHints hints, ClassLoader classLoader) {
             hints.reflection().registerTypeIfPresent(classLoader,
                     "com.google.protobuf.DescriptorProtos$FeatureSet",
@@ -70,7 +71,8 @@ public class VerificationToolApplication {
                     hints.reflection().registerTypeIfPresent(classLoader,
                             bd.getBeanClassName(),
                             MemberCategory.DECLARED_FIELDS,
-                            MemberCategory.INVOKE_DECLARED_CONSTRUCTORS);
+                            MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                            MemberCategory.INVOKE_DECLARED_METHODS);
                 }
             }
         }
