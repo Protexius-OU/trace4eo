@@ -27,6 +27,7 @@ public class VerificationToolApplication {
             // and CommandFactoryBean invokes the @Command method via reflection.
             hints.reflection().registerType(VerificationTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
             hints.resources().registerPattern("dev/sigstore/**");
+            registerProvenanceReflection(hints, classLoader);
             registerProtobufReflection(hints, classLoader);
             registerBouncyCastleReflection(hints, classLoader);
         }
@@ -75,6 +76,26 @@ public class VerificationToolApplication {
                             MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                             MemberCategory.INVOKE_DECLARED_METHODS);
                 }
+            }
+        }
+
+        // Provenance record and result types are Java records. GraalVM requires all record
+        // component accessor methods to be registered for reflection so that
+        // Class.getRecordComponents() works at runtime (used by Jackson and internal serializers).
+        // Scanning the whole com.guardtime.trace4eo.provenance package covers all current and
+        // future record types without per-class maintenance.
+        private static void registerProvenanceReflection(
+                RuntimeHints hints, ClassLoader classLoader) {
+            ClassPathScanningCandidateComponentProvider scanner =
+                    new ClassPathScanningCandidateComponentProvider(false);
+            scanner.addIncludeFilter((metadataReader, factory) -> true);
+            for (BeanDefinition bd : scanner.findCandidateComponents(
+                    "com.guardtime.trace4eo.provenance")) {
+                hints.reflection().registerTypeIfPresent(classLoader,
+                        bd.getBeanClassName(),
+                        MemberCategory.DECLARED_FIELDS,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS);
             }
         }
 
