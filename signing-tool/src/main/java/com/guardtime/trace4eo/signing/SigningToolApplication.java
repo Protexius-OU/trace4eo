@@ -64,7 +64,7 @@ hints.resources().registerPattern("dev/sigstore/**");
             registerProtocolMessageEnums(hints, classLoader,
                     "com.google.protobuf", "com.google.api", "com.google.rpc", "dev.sigstore",
                     "io.intoto");
-            registerForGsonDeserialization(hints, classLoader, "dev.sigstore", "io.intoto");
+            registerForGsonDeserialization(hints, classLoader, "com.google.protobuf", "dev.sigstore", "io.intoto");
         }
 
         private static void registerForGsonDeserialization(
