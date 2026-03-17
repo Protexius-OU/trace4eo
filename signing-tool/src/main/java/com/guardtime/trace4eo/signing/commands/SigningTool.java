@@ -46,6 +46,18 @@ public class SigningTool {
         this.oidcTokenResolver = oidcTokenResolver;
     }
 
+    @Command(name = "get-oidc-token",
+        description = "Obtain an OIDC token via browser login and print it to stdout. "
+            + "Use on a machine with a browser, then copy the token to a headless environment "
+            + "as SIGSTORE_ID_TOKEN.")
+    public String getOidcToken() {
+        String token = oidcTokenResolver.resolve();
+        if (token == null) {
+            throw new IllegalStateException("Failed to obtain OIDC token.");
+        }
+        return token;
+    }
+
     @Command(name = "create-provenance-record", description = "Create and sign provenance record")
     public UUID createProvenanceRecord(
         @Option(longName = "files", description = "Files to be included in provenance record",

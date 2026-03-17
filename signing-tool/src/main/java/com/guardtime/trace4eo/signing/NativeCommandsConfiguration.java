@@ -38,6 +38,11 @@ class NativeCommandsConfiguration {
         return commandBean(BatchSigningTool.class, "batchSign");
     }
 
+    @Bean
+    CommandFactoryBean getOidcTokenCommand() {
+        return commandBean(SigningTool.class, "getOidcToken");
+    }
+
     private CommandFactoryBean commandBean(Class<?> cls, String methodName) {
         Method method = Arrays.stream(cls.getDeclaredMethods())
             .filter(m -> m.getName().equals(methodName))
