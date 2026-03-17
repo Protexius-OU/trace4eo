@@ -62,8 +62,9 @@ hints.resources().registerPattern("dev/sigstore/**");
                     "com.google.protobuf.DescriptorProtos$FeatureSet$Builder",
                     MemberCategory.INVOKE_DECLARED_METHODS);
             registerProtocolMessageEnums(hints, classLoader,
-                    "com.google.protobuf", "com.google.api", "com.google.rpc", "dev.sigstore");
-            registerForGsonDeserialization(hints, classLoader, "dev.sigstore");
+                    "com.google.protobuf", "com.google.api", "com.google.rpc", "dev.sigstore",
+                    "io.intoto");
+            registerForGsonDeserialization(hints, classLoader, "dev.sigstore", "io.intoto");
         }
 
         private static void registerForGsonDeserialization(
