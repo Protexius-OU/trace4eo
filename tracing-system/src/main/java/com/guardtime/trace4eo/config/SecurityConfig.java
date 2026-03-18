@@ -40,7 +40,9 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/provenance/upload").hasAnyRole("signer", "admin")
                 .requestMatchers(HttpMethod.POST, "/api/provenance").hasAnyRole("signer", "admin")
-                .requestMatchers("/api/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/provenance/validate-predecessors").hasAnyRole("signer", "admin")
+                .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("viewer", "signer", "admin")
+                .requestMatchers(HttpMethod.POST, "/api/provenance/*/verify").hasAnyRole("viewer", "signer", "admin")
                 .anyRequest().permitAll()
             )
             .oauth2ResourceServer(oauth2 ->

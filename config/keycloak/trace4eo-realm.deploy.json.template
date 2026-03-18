@@ -2,7 +2,8 @@
   "realm": "trace4eo",
   "enabled": true,
   "sslRequired": "none",
-  "registrationAllowed": false,
+  "registrationAllowed": true,
+  "defaultRoles": ["viewer"],
   "loginWithEmailAllowed": true,
   "clients": [
     {
@@ -89,6 +90,10 @@
   ],
   "roles": {
     "realm": [
+      {
+        "name": "viewer",
+        "description": "Can browse and verify provenance records"
+      },
       {
         "name": "signer",
         "description": "Can upload and sign provenance records"
