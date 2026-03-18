@@ -146,6 +146,14 @@ Capture record IDs for use as predecessors in a follow-up record:
   --output /data/output"
 ```
 
+### get-oidc-token
+
+Obtain a Sigstore OIDC token interactively.
+
+```bash
+./gradlew :signing-tool:bootRun --args="get-oidc-token"
+```
+
 ## Notes
 
 - Provenance records are always saved as ZIP containers. The output filename is auto-generated (`<record-uuid>.zip` for

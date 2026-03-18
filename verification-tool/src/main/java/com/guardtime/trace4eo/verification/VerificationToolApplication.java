@@ -73,7 +73,7 @@ public class VerificationToolApplication {
                 for (BeanDefinition bd : scanner.findCandidateComponents(pkg)) {
                     hints.reflection().registerTypeIfPresent(classLoader,
                             bd.getBeanClassName(),
-                            MemberCategory.DECLARED_FIELDS,
+                            MemberCategory.ACCESS_DECLARED_FIELDS,
                             MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                             MemberCategory.INVOKE_DECLARED_METHODS);
                 }
@@ -94,7 +94,7 @@ public class VerificationToolApplication {
                     "com.guardtime.trace4eo.provenance")) {
                 hints.reflection().registerTypeIfPresent(classLoader,
                         bd.getBeanClassName(),
-                        MemberCategory.DECLARED_FIELDS,
+                        MemberCategory.ACCESS_DECLARED_FIELDS,
                         MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
                         MemberCategory.INVOKE_DECLARED_METHODS);
             }

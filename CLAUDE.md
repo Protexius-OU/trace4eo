@@ -18,7 +18,7 @@ cd tracing-ui && npx tsc --noEmit
 
 ## Architecture
 
-Four Gradle modules (Java 21) plus a React frontend:
+Four Gradle modules (Java 25) plus a React frontend:
 
 - **provenance** — core library, exported as API to other modules. Contains record model (`ProvenanceRecord`, `Metadata`, `Manifest`, `FilesInfo`), builder pattern for record construction, Sigstore-based signing/verification services, JSON/ZIP container I/O, and custom Jackson serializers (`ProvenanceJsonMapper`).
 - **signing-tool** — Spring Shell CLI. `SigningTool` with `create-provenance-record` (single record) and `batch-sign` (batch, optional HTTP registration with Keycloak auth).

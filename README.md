@@ -10,7 +10,7 @@ The project consists of multiple software components:
 
 ## Prerequisites
 
-* Java 21
+* Java 25
 * For UI, `npm` and `node`
 
 ## Running via Docker
