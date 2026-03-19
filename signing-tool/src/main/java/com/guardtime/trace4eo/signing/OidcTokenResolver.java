@@ -1,12 +1,12 @@
 package com.guardtime.trace4eo.signing;
 
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import dev.sigstore.SigningConfigProvider;
 import dev.sigstore.trustroot.Service;
 import dev.sigstore.tuf.SigstoreTufClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.net.URI;
@@ -83,6 +83,9 @@ public class OidcTokenResolver {
         String discoveryUrl = issuer.replaceAll("/+$", "") + "/.well-known/openid-configuration";
         HttpRequest request = HttpRequest.newBuilder().uri(URI.create(discoveryUrl)).GET().build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new IllegalStateException("OIDC discovery failed: HTTP " + response.statusCode() + " — " + response.body());
+        }
         JsonNode json = mapper.readTree(response.body());
         return new OidcEndpoints(
                 requireText(json, "device_authorization_endpoint", response.body()),
@@ -102,6 +105,10 @@ public class OidcTokenResolver {
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) {
+            throw new IllegalStateException(
+                    "Device authorization request failed: HTTP " + response.statusCode() + " — " + response.body());
+        }
         JsonNode json = mapper.readTree(response.body());
         String verificationUri = json.has("verification_uri_complete")
                 ? json.get("verification_uri_complete").asText()
@@ -150,10 +157,15 @@ public class OidcTokenResolver {
                 log.info("Authorization successful");
                 return json.get("id_token").asText();
             }
-            String error = json.has("error") ? json.get("error").asText() : "";
+            if (!json.has("error")) {
+                throw new IllegalStateException("Unexpected token response (no id_token and no error): " + response.body());
+            }
+            String error = json.get("error").asText();
             switch (error) {
                 case "authorization_pending" -> { /* keep polling */ }
                 case "slow_down" -> interval += 5;
+                case "access_denied" -> throw new IllegalStateException("Authorization denied by user");
+                case "expired_token" -> throw new IllegalStateException("Device code expired — please retry");
                 default -> throw new IllegalStateException("Device flow failed: " + error);
             }
         }
