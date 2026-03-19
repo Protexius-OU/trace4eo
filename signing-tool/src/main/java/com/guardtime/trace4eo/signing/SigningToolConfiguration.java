@@ -2,12 +2,12 @@ package com.guardtime.trace4eo.signing;
 
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
-import tools.jackson.databind.ObjectMapper;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.shell.core.ShellRunner;
 import org.springframework.shell.core.command.CommandExecutionException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.net.http.HttpClient;
 import java.util.Arrays;

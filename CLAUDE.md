@@ -38,7 +38,7 @@ Docker Compose runs all services: PostgreSQL (trace4eo/trace4eo), Keycloak (port
 
 ## Workflow
 
-- After making changes to **Java modules**, run `./gradlew clean build` before considering the work done
+- After making changes to **Java modules**, run `./gradlew clean build` before considering the work done — this includes checkstyle, SpotBugs, and tests. Do not commit until this passes.
 - After making changes to **tracing-ui**, run `cd tracing-ui && npx tsc --noEmit` before considering the work done
 - After making changes to **docker-compose.yml**, Dockerfiles, or build configs, run `docker compose config -q` before considering the work done
 - Always validate user input and write unit tests respectively
