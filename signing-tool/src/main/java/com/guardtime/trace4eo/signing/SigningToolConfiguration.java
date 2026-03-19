@@ -2,6 +2,7 @@ package com.guardtime.trace4eo.signing;
 
 import com.guardtime.trace4eo.provenance.ProvenanceJsonMapper;
 import com.guardtime.trace4eo.provenance.signing.ProvenanceSigningService;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,8 +26,8 @@ public class SigningToolConfiguration {
     }
 
     @Bean
-    public OidcTokenResolver oidcTokenResolver() {
-        return new OidcTokenResolver();
+    public OidcTokenResolver oidcTokenResolver(HttpClient httpClient, ObjectMapper objectMapper) {
+        return new OidcTokenResolver(System.getenv("SIGSTORE_ID_TOKEN"), httpClient, objectMapper);
     }
 
     @Bean
