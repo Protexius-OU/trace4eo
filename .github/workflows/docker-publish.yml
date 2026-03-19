@@ -2,6 +2,16 @@ name: Build and Publish Docker Images
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag for images (e.g. v1.2.3). If omitted, only :latest is pushed.'
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -36,13 +46,16 @@ jobs:
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/trace4eo-backend
           GRADLE_OPTS: -Dorg.gradle.daemon=false
+          VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           IMAGE_LC="${IMAGE,,}"
           ./gradlew :tracing-system:bootBuildImage --imageName="$IMAGE_LC:latest"
-          docker tag "$IMAGE_LC:latest" "$IMAGE_LC:${{ github.sha }}"
           docker push "$IMAGE_LC:latest"
-          docker push "$IMAGE_LC:${{ github.sha }}"
+          if [ -n "$VERSION" ]; then
+            docker tag "$IMAGE_LC:latest" "$IMAGE_LC:$VERSION"
+            docker push "$IMAGE_LC:$VERSION"
+          fi
 
   build-frontend:
     name: Build and Publish Frontend
@@ -80,9 +93,13 @@ jobs:
       - name: Build and push frontend image
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ github.repository_owner }}/trace4eo-frontend
+          VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           IMAGE_LC="${IMAGE,,}"
-          docker build -t "$IMAGE_LC:latest" -t "$IMAGE_LC:${{ github.sha }}" ./tracing-ui
+          docker build -t "$IMAGE_LC:latest" ./tracing-ui
           docker push "$IMAGE_LC:latest"
-          docker push "$IMAGE_LC:${{ github.sha }}"
+          if [ -n "$VERSION" ]; then
+            docker tag "$IMAGE_LC:latest" "$IMAGE_LC:$VERSION"
+            docker push "$IMAGE_LC:$VERSION"
+          fi
