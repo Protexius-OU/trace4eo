@@ -3,8 +3,7 @@ import { Routes, Route, Link } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import './App.css'
 import { setUserGetter } from './core/auth/authFetch'
-import { hasRole } from './core/auth/roles'
-import { RecordListPage, RecordGraphPage, UploadPage } from './features/provenance'
+import { RecordListPage, RecordGraphPage } from './features/provenance'
 
 export default function App() {
   const auth = useAuth()
@@ -61,7 +60,6 @@ export default function App() {
       <header className="header">
         <nav>
           <Link to="/" className="logo">Trace4EO</Link>
-          {hasRole(auth.user, 'signer') && <Link to="/upload" className="nav-link">Upload</Link>}
           <div className="nav-right">
             <span className="nav-user">{auth.user?.profile.email}</span>
             <button className="btn-icon" onClick={() => auth.signoutRedirect()} title="Sign Out">
@@ -77,7 +75,6 @@ export default function App() {
       <main className="main">
         <Routes>
           <Route path="/" element={<RecordListPage />} />
-          {hasRole(auth.user, 'signer') && <Route path="/upload" element={<UploadPage />} />}
           <Route path="/records/:id/graph" element={<RecordGraphPage />} />
         </Routes>
       </main>
