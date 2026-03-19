@@ -12,6 +12,13 @@ on:
           - all
           - linux-amd64
           - macos-arm64
+  workflow_call:
+    inputs:
+      platform:
+        description: 'Target platform'
+        required: false
+        default: 'all'
+        type: string
 
 jobs:
   build-linux:
@@ -28,13 +35,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
       - name: Build native binaries
         run: ./gradlew :signing-tool:nativeCompile :verification-tool:nativeCompile
+      - name: Rename with platform suffix
+        run: |
+          mkdir -p dist
+          cp signing-tool/build/native/nativeCompile/signing-tool dist/signing-tool-linux-amd64
+          cp verification-tool/build/native/nativeCompile/verification-tool dist/verification-tool-linux-amd64
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: cli-linux-amd64
-          path: |
-            signing-tool/build/native/nativeCompile/signing-tool
-            verification-tool/build/native/nativeCompile/verification-tool
+          path: dist/
 
   build-macos:
     name: Build macos-arm64
@@ -50,10 +60,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v5
       - name: Build native binaries
         run: ./gradlew :signing-tool:nativeCompile :verification-tool:nativeCompile
+      - name: Rename with platform suffix
+        run: |
+          mkdir -p dist
+          cp signing-tool/build/native/nativeCompile/signing-tool dist/signing-tool-macos-arm64
+          cp verification-tool/build/native/nativeCompile/verification-tool dist/verification-tool-macos-arm64
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: cli-macos-arm64
-          path: |
-            signing-tool/build/native/nativeCompile/signing-tool
-            verification-tool/build/native/nativeCompile/verification-tool
+          path: dist/

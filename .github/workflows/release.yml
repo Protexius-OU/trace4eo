@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. v1.2.3)'
+        required: true
+        type: string
+
+jobs:
+  create-tag:
+    name: Create git tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Create and push tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ inputs.version }}
+          git push origin ${{ inputs.version }}
+
+  publish-docker:
+    name: Publish Docker images
+    needs: create-tag
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      version: ${{ inputs.version }}
+    secrets: inherit
+
+  build-cli:
+    name: Build CLI binaries
+    needs: create-tag
+    uses: ./.github/workflows/native-cli.yml
+    with:
+      platform: all
+    secrets: inherit
+
+  create-release:
+    name: Create GitHub release
+    needs: [publish-docker, build-cli]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download linux binaries
+        uses: actions/download-artifact@v8
+        with:
+          name: cli-linux-amd64
+          path: dist/
+
+      - name: Download macOS binaries
+        uses: actions/download-artifact@v8
+        with:
+          name: cli-macos-arm64
+          path: dist/
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          generate_release_notes: true
+          body: |
+            ## Docker images
+
+            ```
+            docker pull ghcr.io/${{ github.repository_owner }}/trace4eo-backend:${{ inputs.version }}
+            docker pull ghcr.io/${{ github.repository_owner }}/trace4eo-frontend:${{ inputs.version }}
+            ```
+
+            ## CLI binaries
+
+            Download the binary for your platform below, then make it executable:
+
+            ```bash
+            chmod +x signing-tool-<platform>
+            chmod +x verification-tool-<platform>
+            ```
+          files: |
+            dist/signing-tool-linux-amd64
+            dist/signing-tool-macos-arm64
+            dist/verification-tool-linux-amd64
+            dist/verification-tool-macos-arm64
