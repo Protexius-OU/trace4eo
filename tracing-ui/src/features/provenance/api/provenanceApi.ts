@@ -84,28 +84,3 @@ export async function verifyRecord(id: string): Promise<VerificationResult> {
   }
   return response.json()
 }
-
-export async function uploadFile(
-  file: File,
-  dataType: string,
-  dataId: string,
-  predecessors?: string[]
-): Promise<ProvenanceRecord> {
-  const formData = new FormData()
-  formData.append('file', file)
-  formData.append('dataType', dataType)
-  formData.append('dataId', dataId)
-  if (predecessors) {
-    predecessors.forEach(id => formData.append('predecessors', id))
-  }
-
-  const response = await authFetch(`${API_BASE}/upload`, {
-    method: 'POST',
-    body: formData,
-  })
-  if (!response.ok) {
-    const text = await response.text()
-    throw new Error(text || `Upload failed: ${response.statusText}`)
-  }
-  return response.json()
-}

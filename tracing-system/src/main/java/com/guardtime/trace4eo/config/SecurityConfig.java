@@ -38,7 +38,6 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/provenance/upload").hasAnyRole("signer", "admin")
                 .requestMatchers(HttpMethod.POST, "/api/provenance").hasAnyRole("signer", "admin")
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll()
