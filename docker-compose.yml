@@ -59,7 +59,7 @@ services:
       KC_FEATURES: token-exchange,admin-fine-grained-authz:v1
       KC_HEALTH_ENABLED: "true"
       KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
     volumes:
       - ./config/keycloak/trace4eo-realm.json:/opt/keycloak/data/import/trace4eo-realm.json:ro
     ports:
