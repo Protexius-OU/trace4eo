@@ -24,7 +24,7 @@ echo "Obtaining admin token..."
 ADMIN_TOKEN=$(curl -sf "${KEYCLOAK_URL}/realms/master/protocol/openid-connect/token" \
   -d "client_id=admin-cli" \
   -d "username=admin" \
-  -d "password=${KEYCLOAK_ADMIN_PASSWORD:-admin}" \
+  -d "password=${KEYCLOAK_ADMIN_PASSWORD}" \
   -d "grant_type=password" | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
 AUTH="Authorization: Bearer ${ADMIN_TOKEN}"
