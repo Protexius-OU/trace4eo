@@ -22,12 +22,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -83,12 +84,13 @@ public class BatchSigningTool {
         List<Path> resolvedFiles = validateAndResolveFiles(files, directory, pattern, provenanceRecordType,
             dataId, outputDir, registerUrl, keycloakUrl);
         String oidcToken = resolveOidcToken();
+        String accessToken = registrationClient.exchangeTokenIfConfigured(registerUrl, keycloakUrl, realm, oidcToken);
         List<ProvenanceRecord> records = signFilesIndividually(resolvedFiles, dataId, provenanceRecordType, algorithm,
             oidcToken, Math.max(1, threads));
         List<UUID> recordIds = records.stream().map(ProvenanceRecord::id).toList();
         if (!records.isEmpty()) {
             outputWriter.saveAll(records, outputDir, dataId);
-            registerRecords(records, registerUrl, keycloakUrl, realm);
+            registrationClient.registerIfConfigured(records, registerUrl, accessToken);
             if (createRecordIdsFile) {
                 outputWriter.writeRecordIds(recordIds, outputDir, dataId);
             }
@@ -124,14 +126,6 @@ public class BatchSigningTool {
         return oidcToken;
     }
 
-    private void registerRecords(
-        List<ProvenanceRecord> records, String registerUrl, String keycloakUrl, String realm
-    ) {
-        String oidcToken = oidcTokenResolver.resolve();
-        String accessToken = registrationClient.exchangeTokenIfConfigured(registerUrl, keycloakUrl, realm, oidcToken);
-        registrationClient.registerIfConfigured(records, registerUrl, accessToken);
-    }
-
     private void validateInput(
         List<Path> files, String provenanceRecordType, String dataId, Path directory
     ) {
@@ -155,33 +149,37 @@ public class BatchSigningTool {
         HashAlgorithm algorithm, String oidcToken, int threads
     ) throws InterruptedException {
         int total = files.size();
-        log.info("Signing {} file(s) with up to {} concurrent thread(s)...", total, threads);
         AtomicInteger completedCount = new AtomicInteger(0);
-        Semaphore semaphore = new Semaphore(threads);
         List<Future<Optional<ProvenanceRecord>>> futures = new ArrayList<>(total);
+
+        int poolSize = Math.min(threads, total);
+        log.info("Signing {} file(s) with {} concurrent signer(s)...", total, poolSize);
+        BlockingQueue<KeylessSigner> signerPool = new ArrayBlockingQueue<>(poolSize);
+        for (int i = 0; i < poolSize; i++) {
+            signerPool.put(recordSigningService.buildSigner(oidcToken));
+        }
 
         ScheduledExecutorService progressScheduler = Executors.newSingleThreadScheduledExecutor(
             Thread.ofPlatform().daemon().factory());
         try {
             progressScheduler.scheduleAtFixedRate(
-                () -> log.info("Progress: {}/{} signed...", completedCount.get(), total),
-                30, 30, TimeUnit.SECONDS);
+                () -> log.info("Progress: {}/{} processed...", completedCount.get(), total),
+                10, 10, TimeUnit.SECONDS);
 
             try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
                 for (Path file : files) {
                     futures.add(executor.submit(() -> {
-                        semaphore.acquire();
+                        KeylessSigner signer = signerPool.take();
                         try {
                             String fileDataId = dataId + "/" + file.getFileName();
-                            KeylessSigner signer = recordSigningService.buildSigner(oidcToken);
                             UnsignedRecord unsigned = recordSigningService.build(
                                 List.of(file), fileDataId, provenanceRecordType, List.of(), algorithm);
                             return Optional.of(recordSigningService.sign(unsigned, signer));
                         } catch (Exception e) {
                             log.warn("Failed to create provenance record for file: {}", file, e);
-                            return Optional.<ProvenanceRecord>empty();
+                            return Optional.empty();
                         } finally {
-                            semaphore.release();
+                            signerPool.offer(signer);
                             completedCount.incrementAndGet();
                         }
                     }));
