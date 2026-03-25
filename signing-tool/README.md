@@ -88,6 +88,7 @@ Sign multiple files, creating one provenance record per file, all packaged into 
 | `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set)                                                                                                                                          | None              |
 | `--realm`                  | Keycloak realm                                                                                                                                                                                       | trace4eo          |
 | `--create-record-ids-file` | Write a plain-text file alongside the ZIP container with the IDs of all successfully signed provenance records, one UUID per line (written to `--output` directory, or current directory if omitted) | false             |
+| `--threads`                | Maximum number of files to sign concurrently                                                                                                               | 4                 |
 
 **Examples:**
 

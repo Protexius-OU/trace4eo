@@ -16,10 +16,11 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Component
 public class RecordRegistrationClient {
@@ -79,16 +80,8 @@ public class RecordRegistrationClient {
         String url = registerUrl + "/validate-predecessors";
         try {
             String json = MAPPER.writeValueAsString(ids);
-            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(json));
-
-            if (accessToken != null) {
-                requestBuilder.header("Authorization", "Bearer " + accessToken);
-            }
-
-            HttpResponse<String> response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+            HttpRequest request = buildJsonPost(url, json, accessToken);
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
                 throw new RegistrationException(
@@ -135,33 +128,53 @@ public class RecordRegistrationClient {
     }
 
     public List<String> registerRecords(List<ProvenanceRecord> records, String registerUrl, String accessToken) {
-        List<String> failures = new ArrayList<>();
-        for (ProvenanceRecord record : records) {
-            try {
-                String json = provenanceJsonMapper.writeValueAsString(record);
-                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                    .uri(URI.create(registerUrl))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(json));
+        List<CompletableFuture<Optional<String>>> futures = records.stream()
+            .map(record -> sendRegistrationRequest(record, registerUrl, accessToken))
+            .toList();
+        CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+        return futures.stream()
+            .map(CompletableFuture::join)
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .toList();
+    }
 
-                if (accessToken != null) {
-                    requestBuilder.header("Authorization", "Bearer " + accessToken);
-                }
-
-                HttpResponse<String> response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
-
-                if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                    String msg = String.format("Failed to register record %s: HTTP %d - %s",
-                        record.id(), response.statusCode(), response.body());
-                    log.warn(msg);
-                    failures.add(msg);
-                }
-            } catch (Exception e) {
-                String msg = String.format("Failed to register record %s: %s", record.id(), e.getMessage());
-                log.error(msg, e);
-                failures.add(msg);
-            }
+    private CompletableFuture<Optional<String>> sendRegistrationRequest(
+        ProvenanceRecord record, String registerUrl, String accessToken
+    ) {
+        try {
+            String json = provenanceJsonMapper.writeValueAsString(record);
+            HttpRequest request = buildJsonPost(registerUrl, json, accessToken);
+            return httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .handle((response, ex) -> {
+                    if (ex != null) {
+                        String msg = String.format("Failed to register record %s: %s", record.id(), ex.getMessage());
+                        log.error(msg, ex);
+                        return Optional.of(msg);
+                    }
+                    if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                        String msg = String.format("Failed to register record %s: HTTP %d - %s",
+                            record.id(), response.statusCode(), response.body());
+                        log.warn(msg);
+                        return Optional.of(msg);
+                    }
+                    return Optional.<String>empty();
+                });
+        } catch (Exception e) {
+            String msg = String.format("Failed to register record %s: %s", record.id(), e.getMessage());
+            log.error(msg, e);
+            return CompletableFuture.completedFuture(Optional.of(msg));
         }
-        return failures;
+    }
+
+    private HttpRequest buildJsonPost(String url, String body, String accessToken) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+            .uri(URI.create(url))
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(body));
+        if (accessToken != null) {
+            builder.header("Authorization", "Bearer " + accessToken);
+        }
+        return builder.build();
     }
 }

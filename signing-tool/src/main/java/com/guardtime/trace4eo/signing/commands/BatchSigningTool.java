@@ -20,7 +20,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 public class BatchSigningTool {
@@ -65,13 +74,17 @@ public class BatchSigningTool {
         @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm,
         @Option(longName = "create-record-ids-file",
             description = "Write a plain-text file with the IDs of all successfully signed provenance records, one UUID per line",
-            defaultValue = "false") boolean createRecordIdsFile
-    ) throws IOException {
+            defaultValue = "false") boolean createRecordIdsFile,
+        @Option(longName = "threads",
+            description = "Maximum concurrent signing threads (default: 4)",
+            defaultValue = "4") int threads
+    ) throws IOException, InterruptedException {
         HashAlgorithm algorithm = validator.validateHashAlgorithm(hashAlgorithm);
         List<Path> resolvedFiles = validateAndResolveFiles(files, directory, pattern, provenanceRecordType,
             dataId, outputDir, registerUrl, keycloakUrl);
-        KeylessSigner signer = authenticateAndBuildSigner();
-        List<ProvenanceRecord> records = signFilesIndividually(resolvedFiles, dataId, provenanceRecordType, algorithm, signer);
+        String oidcToken = resolveOidcToken();
+        List<ProvenanceRecord> records = signFilesIndividually(resolvedFiles, dataId, provenanceRecordType, algorithm,
+            oidcToken, Math.max(1, threads));
         List<UUID> recordIds = records.stream().map(ProvenanceRecord::id).toList();
         if (!records.isEmpty()) {
             outputWriter.saveAll(records, outputDir, dataId);
@@ -103,12 +116,12 @@ public class BatchSigningTool {
         return resolvedFiles;
     }
 
-    private KeylessSigner authenticateAndBuildSigner() {
+    private String resolveOidcToken() {
         String oidcToken = oidcTokenResolver.resolve();
         if (oidcToken == null) {
             throw new IllegalStateException("No OIDC token available. Set SIGSTORE_ID_TOKEN or enable browser-based login.");
         }
-        return recordSigningService.buildSigner(oidcToken);
+        return oidcToken;
     }
 
     private void registerRecords(
@@ -139,22 +152,54 @@ public class BatchSigningTool {
 
     private List<ProvenanceRecord> signFilesIndividually(
         List<Path> files, String dataId, String provenanceRecordType,
-        HashAlgorithm algorithm, KeylessSigner signer
-    ) {
-        List<ProvenanceRecord> records = new ArrayList<>();
-        log.info("Signing {} file(s) individually...", files.size());
-        for (Path file : files) {
+        HashAlgorithm algorithm, String oidcToken, int threads
+    ) throws InterruptedException {
+        int total = files.size();
+        log.info("Signing {} file(s) with up to {} concurrent thread(s)...", total, threads);
+        AtomicInteger completedCount = new AtomicInteger(0);
+        Semaphore semaphore = new Semaphore(threads);
+        List<Future<Optional<ProvenanceRecord>>> futures = new ArrayList<>(total);
+
+        ScheduledExecutorService progressScheduler = Executors.newSingleThreadScheduledExecutor(
+            Thread.ofPlatform().daemon().factory());
+        try {
+            progressScheduler.scheduleAtFixedRate(
+                () -> log.info("Progress: {}/{} signed...", completedCount.get(), total),
+                30, 30, TimeUnit.SECONDS);
+
+            try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+                for (Path file : files) {
+                    futures.add(executor.submit(() -> {
+                        semaphore.acquire();
+                        try {
+                            String fileDataId = dataId + "/" + file.getFileName();
+                            KeylessSigner signer = recordSigningService.buildSigner(oidcToken);
+                            UnsignedRecord unsigned = recordSigningService.build(
+                                List.of(file), fileDataId, provenanceRecordType, List.of(), algorithm);
+                            return Optional.of(recordSigningService.sign(unsigned, signer));
+                        } catch (Exception e) {
+                            log.warn("Failed to create provenance record for file: {}", file, e);
+                            return Optional.<ProvenanceRecord>empty();
+                        } finally {
+                            semaphore.release();
+                            completedCount.incrementAndGet();
+                        }
+                    }));
+                }
+            }
+        } finally {
+            progressScheduler.shutdownNow();
+        }
+
+        List<ProvenanceRecord> records = new ArrayList<>(futures.size());
+        for (Future<Optional<ProvenanceRecord>> future : futures) {
             try {
-                String fileDataId = dataId + "/" + file.getFileName().toString();
-                UnsignedRecord unsigned = recordSigningService.build(
-                    List.of(file), fileDataId, provenanceRecordType, List.of(), algorithm);
-                ProvenanceRecord record = recordSigningService.sign(unsigned, signer);
-                records.add(record);
-            } catch (Exception e) {
-                log.warn("Failed to create provenance record for file: {}", file, e);
+                future.get().ifPresent(records::add);
+            } catch (ExecutionException e) {
+                log.warn("Unexpected signing task failure", e.getCause());
             }
         }
-        log.info("Successfully signed {}/{} provenance records", records.size(), files.size());
+        log.info("Successfully signed {}/{} provenance records", records.size(), total);
         return records;
     }
 
