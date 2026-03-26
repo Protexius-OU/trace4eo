@@ -147,7 +147,7 @@
         <module name="SuppressWarningsHolder" />
 
 <!--        <module name="Regexp">-->
-<!--            <property name="format" value="^ \* Copyright ${projectStart.year}-${current.year} Guardtime, Inc\.$"/>-->
+<!--            <property name="format" value="^ \* Copyright ${projectStart.year}-${current.year} Protexius OÜ\.$"/>-->
 <!--        </module>-->
 
     </module>

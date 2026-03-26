@@ -14,7 +14,7 @@ plugins {
     alias(libs.plugins.openrewrite)
 }
 
-group = 'com.guardtime.trace4eo'
+group = 'com.protexius.trace4eo'
 version = '0.1.0-SNAPSHOT'
 
 repositories {
@@ -77,7 +77,7 @@ graalvmNative {
     binaries {
         main {
             imageName = "signing-tool"
-            mainClass = "com.guardtime.trace4eo.signing.SigningToolApplication"
+            mainClass = "com.protexius.trace4eo.signing.SigningToolApplication"
             // gRPC/Netty (via sigstore-java) creates Logger instances in static initializers,
             // placing logback objects in the image heap. GraalVM 25 defaults to runtime init,
             // so these packages must be explicitly marked for build-time initialization.
