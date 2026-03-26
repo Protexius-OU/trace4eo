@@ -1,0 +1,57 @@
+package com.protexius.trace4eo.provenance.io.json;
+
+import com.protexius.trace4eo.provenance.Container;
+import com.protexius.trace4eo.provenance.ProvenanceJsonMapper;
+import com.protexius.trace4eo.provenance.io.ContainerWriter;
+import com.protexius.trace4eo.provenance.io.TestUtils;
+import com.protexius.trace4eo.provenance.record.ProvenanceRecord;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.SequencedSet;
+
+import static com.protexius.trace4eo.provenance.io.TestUtils.TEST_FILE_1;
+import static com.protexius.trace4eo.provenance.io.TestUtils.TEST_FILE_2;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+class JsonContainerTest {
+
+    private static final String PROVENANCE_RECORD_FILENAME = "provenance-record.json";
+
+    @TempDir
+    private static Path tempDir;
+
+    @Test
+    @Order(1)
+    void write() throws IOException {
+        ProvenanceRecord provenanceRecord1 = TestUtils.createProvenanceRecord(TEST_FILE_1);
+        ProvenanceRecord provenanceRecord2 = TestUtils.createProvenanceRecord(TEST_FILE_2);
+        List<ProvenanceRecord> records = List.of(provenanceRecord1, provenanceRecord2);
+        SequencedSet<ProvenanceRecord> provenanceRecords = new LinkedHashSet<>(records);
+        Container container = new Container(provenanceRecords.getLast().id(), provenanceRecords);
+        ContainerWriter writer = new JsonContainerWriter(new ProvenanceJsonMapper());
+        Path provenanceRecordPath = tempDir.resolve(PROVENANCE_RECORD_FILENAME);
+        writer.writeTo(container, Files.newOutputStream(provenanceRecordPath));
+    }
+
+    @Test
+    @Order(2)
+    void read() {
+        JsonContainerReader reader = new JsonContainerReader(new ProvenanceJsonMapper());
+        Path provenanceRecordPath = tempDir.resolve(PROVENANCE_RECORD_FILENAME);
+        Container readContainer = reader.read(provenanceRecordPath);
+        assertNotNull(readContainer);
+        assertEquals(readContainer.provenanceRecords().getLast().id(), readContainer.head());
+        assertEquals(2, readContainer.provenanceRecords().size());
+    }
+}
