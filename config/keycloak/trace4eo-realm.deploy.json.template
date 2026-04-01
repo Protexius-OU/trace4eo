@@ -32,6 +32,20 @@
             "claim.name": "realm_access.roles",
             "jsonType.label": "String"
           }
+        },
+        {
+          "name": "email",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "userinfo.token.claim": "true",
+            "user.attribute": "email",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "email",
+            "jsonType.label": "String"
+          }
         }
       ]
     }
@@ -72,14 +86,6 @@
   ],
   "identityProviderMappers": [
     {
-      "name": "sigstore-signer-role",
-      "identityProviderAlias": "sigstore",
-      "identityProviderMapper": "oidc-hardcoded-role-idp-mapper",
-      "config": {
-        "role": "signer"
-      }
-    },
-    {
       "name": "sigstore-broker-read-token",
       "identityProviderAlias": "sigstore",
       "identityProviderMapper": "oidc-hardcoded-role-idp-mapper",
@@ -98,10 +104,6 @@
         "name": "signer",
         "description": "Can upload and sign provenance records"
       },
-      {
-        "name": "admin",
-        "description": "Full administrative access"
-      }
     ]
   }
 }
