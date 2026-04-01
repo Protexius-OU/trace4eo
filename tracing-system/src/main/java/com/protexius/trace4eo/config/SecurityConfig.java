@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -27,10 +26,17 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Profile("!test")
 public class SecurityConfig {
 
+    private static final String ROLE_VIEWER = "viewer";
+    private static final String ROLE_SIGNER = "signer";
+    private static final String ROLE_PREFIX = "ROLE_";
+    private static final String CLAIM_REALM_ACCESS = "realm_access";
+    private static final String CLAIM_ROLES = "roles";
+    private static final String CLAIM_EMAIL = "email";
+
     @Value("${cors.allowed-origins}")
     private List<String> allowedOrigins;
 
-    @Value("${signer.allowed-domains:}")
+    @Value("${signer.allowed-domains:#{null}}")
     private List<String> signerAllowedDomains;
 
     @Bean
@@ -42,11 +48,11 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/provenance").hasRole("signer")
-                .requestMatchers(HttpMethod.POST, "/api/provenance/validate-predecessors").hasRole("signer")
-                .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole("viewer", "signer")
-                .requestMatchers(HttpMethod.POST, "/api/provenance/*/verify").hasAnyRole("viewer", "signer")
-                .anyRequest().permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/provenance").hasRole(ROLE_SIGNER)
+                .requestMatchers(HttpMethod.POST, "/api/provenance/validate-predecessors").hasRole(ROLE_SIGNER)
+                .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole(ROLE_VIEWER, ROLE_SIGNER)
+                .requestMatchers(HttpMethod.POST, "/api/provenance/*/verify").hasAnyRole(ROLE_VIEWER, ROLE_SIGNER)
+                .anyRequest().denyAll()
             )
             .oauth2ResourceServer(oauth2 ->
                 oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
@@ -59,23 +65,23 @@ public class SecurityConfig {
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
             List<SimpleGrantedAuthority> authorities = new ArrayList<>();
 
-            Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
+            Map<String, Object> realmAccess = jwt.getClaimAsMap(CLAIM_REALM_ACCESS);
             if (realmAccess != null) {
                 @SuppressWarnings("unchecked")
-                List<String> roles = (List<String>) realmAccess.get("roles");
+                List<String> roles = (List<String>) realmAccess.get(CLAIM_ROLES);
                 if (roles != null) {
                     roles.stream()
-                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                        .map(role -> new SimpleGrantedAuthority(ROLE_PREFIX + role))
                         .forEach(authorities::add);
                 }
             }
 
-            String email = jwt.getClaimAsString("email");
-            if (email != null && !signerAllowedDomains.isEmpty()) {
+            String email = jwt.getClaimAsString(CLAIM_EMAIL);
+            if (email != null && signerAllowedDomains != null && !signerAllowedDomains.isEmpty()) {
                 boolean domainMatch = signerAllowedDomains.stream()
                     .anyMatch(domain -> email.endsWith(domain));
-                if (domainMatch && authorities.stream().noneMatch(a -> a.getAuthority().equals("ROLE_signer"))) {
-                    authorities.add(new SimpleGrantedAuthority("ROLE_signer"));
+                if (domainMatch && authorities.stream().noneMatch(a -> a.getAuthority().equals(ROLE_PREFIX + ROLE_SIGNER))) {
+                    authorities.add(new SimpleGrantedAuthority(ROLE_PREFIX + ROLE_SIGNER));
                 }
             }
 
