@@ -72,8 +72,8 @@ services:
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8180"]
       interval: 10s
       timeout: 5s
-      retries: 15
-      start_period: 30s
+      retries: 20
+      start_period: 120s
 
 volumes:
   postgres_data:
