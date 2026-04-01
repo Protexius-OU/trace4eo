@@ -36,7 +36,7 @@ public class SecurityConfig {
     @Value("${cors.allowed-origins}")
     private List<String> allowedOrigins;
 
-    @Value("${signer.allowed-domains:#{null}}")
+    @Value("${signer.allowed-domains:}")
     private List<String> signerAllowedDomains;
 
     @Bean
@@ -77,8 +77,9 @@ public class SecurityConfig {
             }
 
             String email = jwt.getClaimAsString(CLAIM_EMAIL);
-            if (email != null && signerAllowedDomains != null && !signerAllowedDomains.isEmpty()) {
+            if (email != null && signerAllowedDomains != null) {
                 boolean domainMatch = signerAllowedDomains.stream()
+                    .filter(domain -> !domain.isBlank())
                     .anyMatch(domain -> email.endsWith(domain));
                 if (domainMatch && authorities.stream().noneMatch(a -> a.getAuthority().equals(ROLE_PREFIX + ROLE_SIGNER))) {
                     authorities.add(new SimpleGrantedAuthority(ROLE_PREFIX + ROLE_SIGNER));
