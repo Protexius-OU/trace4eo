@@ -74,6 +74,7 @@ services:
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8180/realms/trace4eo/protocol/openid-connect/certs
       KEYCLOAK_BASE_URL: http://keycloak:8180
       KEYCLOAK_REALM: trace4eo
+      SIGNER_ALLOWED_DOMAINS: ${SIGNER_ALLOWED_DOMAINS:-}
     depends_on:
       db:
         condition: service_healthy
