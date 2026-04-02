@@ -43,11 +43,11 @@ class EmailOidcClient implements OidcClient {
             byte[] payloadBytes = Base64.getUrlDecoder().decode(parts[1]);
             JsonNode payload = MAPPER.readTree(payloadBytes);
 
-            String email = payload.path("email").asText(null);
+            String email = payload.path("email").asString();
             if (email == null || email.isBlank()) {
                 throw new OidcException("OIDC token does not contain an email claim");
             }
-            String issuer = payload.path("iss").asText(null);
+            String issuer = payload.path("iss").asString();
 
             return ImmutableOidcToken.builder()
                 .idToken(idToken)

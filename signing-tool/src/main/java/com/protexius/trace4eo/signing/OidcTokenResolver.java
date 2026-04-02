@@ -111,7 +111,7 @@ public class OidcTokenResolver {
         }
         JsonNode json = mapper.readTree(response.body());
         String verificationUri = json.has("verification_uri_complete")
-                ? json.get("verification_uri_complete").asText()
+                ? json.get("verification_uri_complete").asString()
                 : requireText(json, "verification_uri", response.body());
         return new DeviceCodeResponse(
                 requireText(json, "device_code", response.body()),
@@ -127,7 +127,7 @@ public class OidcTokenResolver {
         if (node == null) {
             throw new IllegalStateException("Missing field '" + field + "' in response: " + rawResponse);
         }
-        return node.asText();
+        return node.asString();
     }
 
     private static void printDeviceCodePrompt(DeviceCodeResponse deviceCode) {
@@ -154,12 +154,12 @@ public class OidcTokenResolver {
             JsonNode json = mapper.readTree(response.body());
             if (json.has("id_token")) {
                 log.info("Authorization successful");
-                return json.get("id_token").asText();
+                return json.get("id_token").asString();
             }
             if (!json.has("error")) {
                 throw new IllegalStateException("Unexpected token response (no id_token and no error): " + response.body());
             }
-            String error = json.get("error").asText();
+            String error = json.get("error").asString();
             switch (error) {
                 case "authorization_pending" -> { /* keep polling */ }
                 case "slow_down" -> interval += 5;
