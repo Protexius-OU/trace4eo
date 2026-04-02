@@ -132,7 +132,6 @@ public class OidcTokenResolver {
 
     private static void printDeviceCodePrompt(DeviceCodeResponse deviceCode) {
         log.info("To authenticate, open the following URL in any browser:\n\n  {}\n", deviceCode.verificationUriComplete());
-        log.info("Or visit the URL and enter code: {}", deviceCode.userCode());
         log.info("Waiting for authorization...");
     }
 
