@@ -70,7 +70,9 @@ public class OutputWriter {
     }
 
     private Path resolveOutputPath(Path outputDir, String filename) {
-        if (outputDir != null) return outputDir.resolve(filename);
+        if (outputDir != null) {
+            return outputDir.resolve(filename);
+        }
         return Path.of(filename);
     }
 

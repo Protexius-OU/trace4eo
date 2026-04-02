@@ -99,15 +99,65 @@ public class RecordRegistrationClient {
         }
     }
 
+    public void checkSignerAccess(String registerUrl, String accessToken) {
+        String url = registerUrl + "/check-access";
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .header("Authorization", "Bearer " + accessToken)
+                .GET()
+                .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 403) {
+                throw new RegistrationException(
+                    "Your email domain is not authorised to sign records. "
+                        + "Ask the system administrator to add your domain to the allowlist.");
+            }
+            if (response.statusCode() != 200) {
+                throw new RegistrationException(
+                    String.format("Access check failed: HTTP %d - %s", response.statusCode(), response.body()));
+            }
+            log.info("Access check passed for: {}", extractEmail(accessToken));
+        } catch (RegistrationException e) {
+            throw e;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RegistrationException("Access check interrupted", e);
+        } catch (IOException e) {
+            throw new RegistrationException(String.format("Failed to reach tracing system at %s", url), e);
+        }
+    }
+
+    private String extractEmail(String jwtToken) {
+        try {
+            String[] parts = jwtToken.split("\\.");
+            if (parts.length < 2) {
+                return "unknown";
+            }
+            String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
+            Map<String, Object> claims = MAPPER.readValue(payload, new TypeReference<>() {});
+            String email = (String) claims.get("email");
+            return email != null ? email : "unknown";
+        } catch (Exception e) {
+            return "unknown";
+        }
+    }
+
     public String exchangeTokenIfConfigured(String registerUrl, String keycloakUrl, String realm, String oidcToken) {
-        if (registerUrl == null || registerUrl.isBlank()) return null;
-        if (oidcToken != null) return exchangeToken(keycloakUrl, realm, oidcToken);
+        if (registerUrl == null || registerUrl.isBlank()) {
+            return null;
+        }
+        if (oidcToken != null) {
+            return exchangeToken(keycloakUrl, realm, oidcToken);
+        }
         log.warn("No OIDC token available for token exchange. Attempting registration without auth.");
         return null;
     }
 
     public void validatePredecessorsExist(List<Predecessor> predecessors, String registerUrl, String accessToken) {
-        if (registerUrl == null || registerUrl.isBlank() || predecessors.isEmpty()) return;
+        if (registerUrl == null || registerUrl.isBlank() || predecessors.isEmpty()) {
+            return;
+        }
         List<UUID> ids = predecessors.stream().map(Predecessor::id).toList();
         List<UUID> missing = findMissingPredecessors(ids, registerUrl, accessToken);
         if (!missing.isEmpty()) {
@@ -116,7 +166,9 @@ public class RecordRegistrationClient {
     }
 
     public void registerIfConfigured(List<ProvenanceRecord> records, String registerUrl, String accessToken) {
-        if (registerUrl == null || registerUrl.isBlank()) return;
+        if (registerUrl == null || registerUrl.isBlank()) {
+            return;
+        }
         log.info("Registering {} provenance record(s) to tracing system at {}...", records.size(), registerUrl);
         List<String> failures = registerRecords(records, registerUrl, accessToken);
         if (!failures.isEmpty()) {
@@ -158,7 +210,7 @@ public class RecordRegistrationClient {
                         log.warn(msg);
                         return Optional.of(msg);
                     }
-                    return Optional.<String>empty();
+                    return Optional.empty();
                 });
         } catch (Exception e) {
             String msg = String.format("Failed to register record %s: %s", record.id(), e.getMessage());

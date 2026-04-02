@@ -38,7 +38,9 @@ public class SigningInputValidator {
     }
 
     public void validateOutputDirectory(Path outputDir) {
-        if (outputDir == null) return;
+        if (outputDir == null) {
+            return;
+        }
         if (Files.exists(outputDir)) {
             if (!Files.isDirectory(outputDir)) {
                 throw new IllegalArgumentException(String.format("--output is not a directory: %s", outputDir));
@@ -78,7 +80,9 @@ public class SigningInputValidator {
     }
 
     public void validatePredecessorsFile(Path predecessorsFile) {
-        if (predecessorsFile == null) return;
+        if (predecessorsFile == null) {
+            return;
+        }
         if (!Files.exists(predecessorsFile)) {
             throw new IllegalArgumentException(
                 String.format("--predecessors-file does not exist: %s", predecessorsFile));

@@ -85,6 +85,9 @@ public class BatchSigningTool {
             dataId, outputDir, registerUrl, keycloakUrl);
         String oidcToken = resolveOidcToken();
         String accessToken = registrationClient.exchangeTokenIfConfigured(registerUrl, keycloakUrl, realm, oidcToken);
+        if (accessToken != null) {
+            registrationClient.checkSignerAccess(registerUrl, accessToken);
+        }
         List<ProvenanceRecord> records = signFilesIndividually(resolvedFiles, dataId, provenanceRecordType, algorithm,
             oidcToken, Math.max(1, threads));
         List<UUID> recordIds = records.stream().map(ProvenanceRecord::id).toList();
@@ -149,55 +152,77 @@ public class BatchSigningTool {
         HashAlgorithm algorithm, String oidcToken, int threads
     ) throws InterruptedException {
         int total = files.size();
-        AtomicInteger completedCount = new AtomicInteger(0);
-        List<Future<Optional<ProvenanceRecord>>> futures = new ArrayList<>(total);
-
         int poolSize = Math.min(threads, total);
         log.info("Signing {} file(s) with {} concurrent signer(s)...", total, poolSize);
+
         BlockingQueue<KeylessSigner> signerPool = new ArrayBlockingQueue<>(poolSize);
         for (int i = 0; i < poolSize; i++) {
             signerPool.put(recordSigningService.buildSigner(oidcToken));
         }
 
+        AtomicInteger completedCount = new AtomicInteger(0);
+        List<Future<Optional<ProvenanceRecord>>> futures = submitSigningTasks(
+            files, dataId, provenanceRecordType, algorithm, signerPool, completedCount, total);
+
+        List<ProvenanceRecord> records = collectResults(futures);
+        log.info("Successfully signed {}/{} provenance records", records.size(), total);
+        return records;
+    }
+
+    private List<Future<Optional<ProvenanceRecord>>> submitSigningTasks(
+        List<Path> files, String dataId, String provenanceRecordType,
+        HashAlgorithm algorithm, BlockingQueue<KeylessSigner> signerPool,
+        AtomicInteger completedCount, int total
+    ) {
         ScheduledExecutorService progressScheduler = Executors.newSingleThreadScheduledExecutor(
             Thread.ofPlatform().daemon().factory());
         try {
             progressScheduler.scheduleAtFixedRate(
                 () -> log.info("Progress: {}/{} processed...", completedCount.get(), total),
                 10, 10, TimeUnit.SECONDS);
-
             try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-                for (Path file : files) {
-                    futures.add(executor.submit(() -> {
-                        KeylessSigner signer = signerPool.take();
-                        try {
-                            String fileDataId = dataId + "/" + file.getFileName();
-                            UnsignedRecord unsigned = recordSigningService.build(
-                                List.of(file), fileDataId, provenanceRecordType, List.of(), algorithm);
-                            return Optional.of(recordSigningService.sign(unsigned, signer));
-                        } catch (Exception e) {
-                            log.warn("Failed to create provenance record for file: {}", file, e);
-                            return Optional.empty();
-                        } finally {
-                            signerPool.offer(signer);
-                            completedCount.incrementAndGet();
-                        }
-                    }));
-                }
+                return files.stream()
+                    .map(file -> executor.submit(
+                        () -> signFile(file, dataId, provenanceRecordType, algorithm, signerPool, completedCount)))
+                    .toList();
             }
         } finally {
             progressScheduler.shutdownNow();
         }
+    }
 
+    private Optional<ProvenanceRecord> signFile(
+        Path file, String dataId, String provenanceRecordType,
+        HashAlgorithm algorithm, BlockingQueue<KeylessSigner> signerPool,
+        AtomicInteger completedCount
+    ) throws InterruptedException {
+        KeylessSigner signer = signerPool.take();
+        try {
+            String fileDataId = "%s/%s".formatted(dataId, file.getFileName());
+            UnsignedRecord unsigned = recordSigningService.build(
+                List.of(file), fileDataId, provenanceRecordType, List.of(), algorithm);
+            return Optional.of(recordSigningService.sign(unsigned, signer));
+        } catch (Exception e) {
+            log.warn("Failed to create provenance record for file: {}", file, e);
+            return Optional.empty();
+        } finally {
+            signerPool.offer(signer);
+            completedCount.incrementAndGet();
+        }
+    }
+
+    private List<ProvenanceRecord> collectResults(List<Future<Optional<ProvenanceRecord>>> futures) {
         List<ProvenanceRecord> records = new ArrayList<>(futures.size());
         for (Future<Optional<ProvenanceRecord>> future : futures) {
             try {
                 future.get().ifPresent(records::add);
             } catch (ExecutionException e) {
                 log.warn("Unexpected signing task failure", e.getCause());
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Interrupted while collecting signing results", e);
             }
         }
-        log.info("Successfully signed {}/{} provenance records", records.size(), total);
         return records;
     }
 

@@ -63,6 +63,48 @@ class RecordRegistrationClientTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void checkSignerAccess_succeedsOn200() throws Exception {
+        HttpResponse<String> mockResponse = mock(HttpResponse.class);
+        when(mockResponse.statusCode()).thenReturn(200);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(mockResponse);
+
+        client.checkSignerAccess("http://localhost:8080/api/provenance", "token");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void checkSignerAccess_throwsWithDomainMessageOn403() throws Exception {
+        HttpResponse<String> mockResponse = mock(HttpResponse.class);
+        when(mockResponse.statusCode()).thenReturn(403);
+        when(mockResponse.body()).thenReturn("Forbidden");
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(mockResponse);
+
+        RegistrationException exception = assertThrows(RegistrationException.class, () ->
+            client.checkSignerAccess("http://localhost:8080/api/provenance", "token"));
+
+        assertTrue(exception.getMessage().contains("domain"));
+        assertTrue(exception.getMessage().contains("allowlist"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void checkSignerAccess_throwsOnOtherNon200Response() throws Exception {
+        HttpResponse<String> mockResponse = mock(HttpResponse.class);
+        when(mockResponse.statusCode()).thenReturn(500);
+        when(mockResponse.body()).thenReturn("Internal Server Error");
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(mockResponse);
+
+        RegistrationException exception = assertThrows(RegistrationException.class, () ->
+            client.checkSignerAccess("http://localhost:8080/api/provenance", "token"));
+
+        assertTrue(exception.getMessage().contains("500"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void findMissingPredecessors_throwsOnNon200Response() throws Exception {
         HttpResponse<String> mockResponse = mock(HttpResponse.class);
         when(mockResponse.statusCode()).thenReturn(500);

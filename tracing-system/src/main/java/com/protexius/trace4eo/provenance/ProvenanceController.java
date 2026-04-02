@@ -55,6 +55,10 @@ public class ProvenanceController {
         return provenanceService.findAll(page, size, dataTypes, dataId, signerIdentities);
     }
 
+    @GetMapping("/check-access")
+    public void checkAccess() {
+    }
+
     @GetMapping("/filters")
     public FilterOptions getFilterOptions() {
         return provenanceService.getFilterOptions();

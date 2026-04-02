@@ -132,7 +132,7 @@ public class OidcTokenResolver {
 
     private static void printDeviceCodePrompt(DeviceCodeResponse deviceCode) {
         log.info("To authenticate, open the following URL in any browser:\n\n  {}\n", deviceCode.verificationUriComplete());
-        log.info("Waiting for authorization...");
+        log.info("Waiting for Sigstore authorization...");
     }
 
     private String pollForToken(String tokenEndpoint, DeviceCodeResponse deviceCode, String codeVerifier)

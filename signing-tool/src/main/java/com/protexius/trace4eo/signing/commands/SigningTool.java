@@ -81,9 +81,14 @@ public class SigningTool {
         List<Path> paths = validateAndResolveInput(files, provenanceRecordType, dataId, outputDir,
             registerUrl, keycloakUrl, predecessorsFile);
         List<Predecessor> parsedPredecessors = resolvePredecessors(predecessors, predecessorsFile);
-        String accessToken = authenticateAndValidatePredecessors(parsedPredecessors, registerUrl, keycloakUrl, realm);
-        ProvenanceRecord record = buildAndSign(paths, dataId, provenanceRecordType, parsedPredecessors, algorithm);
-        saveAndRegister(record, outputDir, registerUrl, accessToken);
+        String accessToken = exchangeToken(registerUrl, keycloakUrl, realm);
+        if (!parsedPredecessors.isEmpty()) {
+            registrationClient.validatePredecessorsExist(parsedPredecessors, registerUrl, accessToken);
+        }
+        UnsignedRecord unsigned = buildRecord(paths, dataId, provenanceRecordType, parsedPredecessors, algorithm);
+        ProvenanceRecord record = sign(unsigned);
+        outputWriter.saveRecord(record, outputDir);
+        registrationClient.registerIfConfigured(List.of(record), registerUrl, accessToken);
         return record.id();
     }
 
@@ -112,25 +117,27 @@ public class SigningTool {
         return unique;
     }
 
-    private String authenticateAndValidatePredecessors(
-        List<Predecessor> predecessors, String registerUrl, String keycloakUrl, String realm
-    ) {
-        boolean hasRegistration = registerUrl != null && !registerUrl.isBlank();
-        if (!hasRegistration) return null;
+    private String exchangeToken(String registerUrl, String keycloakUrl, String realm) {
+        if (registerUrl == null || registerUrl.isBlank()) {
+            return null;
+        }
         String oidcToken = oidcTokenResolver.resolve();
         String accessToken = registrationClient.exchangeTokenIfConfigured(registerUrl, keycloakUrl, realm, oidcToken);
-        if (!predecessors.isEmpty()) {
-            registrationClient.validatePredecessorsExist(predecessors, registerUrl, accessToken);
+        if (accessToken != null) {
+            registrationClient.checkSignerAccess(registerUrl, accessToken);
         }
         return accessToken;
     }
 
-    private ProvenanceRecord buildAndSign(
+    private UnsignedRecord buildRecord(
         List<Path> paths, String dataId, String provenanceRecordType,
         List<Predecessor> predecessors, HashAlgorithm algorithm
     ) throws IOException {
         log.info("Creating provenance record for {} file(s)...", paths.size());
-        UnsignedRecord unsigned = recordSigningService.build(paths, dataId, provenanceRecordType, predecessors, algorithm);
+        return recordSigningService.build(paths, dataId, provenanceRecordType, predecessors, algorithm);
+    }
+
+    private ProvenanceRecord sign(UnsignedRecord unsigned) throws IOException {
         log.info("Signing provenance record...");
         String oidcToken = oidcTokenResolver.resolve();
         if (oidcToken == null) {
@@ -138,15 +145,6 @@ public class SigningTool {
                 "No OIDC token available. Set SIGSTORE_ID_TOKEN or enable browser-based login.");
         }
         return recordSigningService.sign(unsigned, oidcToken);
-    }
-
-    private void saveAndRegister(
-        ProvenanceRecord record, Path outputDir, String registerUrl, String accessToken
-    ) throws IOException {
-        outputWriter.saveRecord(record, outputDir);
-        if (accessToken != null) {
-            registrationClient.registerIfConfigured(List.of(record), registerUrl, accessToken);
-        }
     }
 
     private void validateRequiredFields(List<Path> files, String provenanceRecordType, String dataId) {
@@ -158,12 +156,16 @@ public class SigningTool {
     }
 
     private List<Path> toPaths(List<String> files) {
-        if (files == null) return List.of();
+        if (files == null) {
+            return List.of();
+        }
         return files.stream().map(Path::of).toList();
     }
 
     private List<Predecessor> toPredecessors(List<String> predecessors) {
-        if (predecessors == null) return List.of();
+        if (predecessors == null) {
+            return List.of();
+        }
         return predecessors.stream()
             .map(id -> {
                 try {
@@ -176,7 +178,9 @@ public class SigningTool {
     }
 
     private List<Predecessor> readPredecessorsFromFile(Path predecessorsFile) {
-        if (predecessorsFile == null) return List.of();
+        if (predecessorsFile == null) {
+            return List.of();
+        }
         List<String> lines;
         try {
             lines = Files.readAllLines(predecessorsFile);
