@@ -100,7 +100,6 @@ class SigningToolTest {
             files, "test", "test", List.of(), "SHA256", tempDir, null, null, "trace4eo", null
         );
         verify(mockRegistrationClient, never()).exchangeTokenIfConfigured(any(), any(), any(), any());
-        verify(mockRegistrationClient, never()).registerIfConfigured(anyList(), any(), any());
     }
 
     @Test

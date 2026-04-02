@@ -31,10 +31,6 @@ Database volumes are preserved across `./stop-dev.sh` / `./start-dev.sh` cycles.
 
 This uses Spring Boot's built-in Buildpacks support to produce an OCI image.
 
-## Deployment
-
-Copy `.env.example` to `.env`, fill in the values, then run `./start-deploy.sh`.
-
 ### Access control
 
 Two roles are defined in the `trace4eo` realm:
@@ -52,7 +48,7 @@ All users authenticated via Sigstore get `viewer` by default. `signer` access is
 SIGNER_ALLOWED_DOMAINS=@esa.int,@example.com
 ```
 
-**2. Manual assignment** — log into the Keycloak admin console at `https://<VM_HOST>/admin/master/console/`, navigate to the `trace4eo` realm → Users → select user → Role mapping, and assign the `signer` role.
+**2. Manual assignment** — log into the Keycloak admin console at `https://<VM_HOST>/admin`, navigate to the `trace4eo` realm → Users → select user → Role mapping, and assign the `signer` realm role.
 
 ## Static code analysis
 

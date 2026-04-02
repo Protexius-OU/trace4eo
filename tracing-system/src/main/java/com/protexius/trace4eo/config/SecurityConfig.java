@@ -48,6 +48,7 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/provenance/check-access").hasRole(ROLE_SIGNER)
                 .requestMatchers(HttpMethod.POST, "/api/provenance").hasRole(ROLE_SIGNER)
                 .requestMatchers(HttpMethod.POST, "/api/provenance/validate-predecessors").hasRole(ROLE_SIGNER)
                 .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole(ROLE_VIEWER, ROLE_SIGNER)
