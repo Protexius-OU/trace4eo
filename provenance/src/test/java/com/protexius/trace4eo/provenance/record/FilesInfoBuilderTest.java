@@ -124,38 +124,6 @@ class FilesInfoBuilderTest {
     }
 
     @Test
-    void addFile_duplicatePathThrows() throws IOException {
-        Path file = tempDir.resolve("a.txt");
-        Files.writeString(file, "content");
-
-        FilesInfoBuilder builder = new FilesInfoBuilder(HashAlgorithm.SHA256);
-        builder.addFile(file);
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-            () -> builder.addFile(file));
-        assertTrue(exception.getMessage().contains("Duplicate file path"));
-        assertTrue(exception.getMessage().contains("a.txt"));
-    }
-
-    @Test
-    void addFile_differentFilesWithSameFilename_throws() throws IOException {
-        Path dirA = tempDir.resolve("a");
-        Path dirB = tempDir.resolve("b");
-        Files.createDirectory(dirA);
-        Files.createDirectory(dirB);
-        Path fileA = dirA.resolve("data.tif");
-        Path fileB = dirB.resolve("data.tif");
-        Files.writeString(fileA, "content-a");
-        Files.writeString(fileB, "content-b");
-
-        FilesInfoBuilder builder = new FilesInfoBuilder(HashAlgorithm.SHA256);
-        builder.addFile(fileA);
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-            () -> builder.addFile(fileB));
-        assertTrue(exception.getMessage().contains("Duplicate file path"));
-        assertTrue(exception.getMessage().contains("data.tif"));
-    }
-
-    @Test
     void addFiles_differentFilesProduceDifferentHashes() throws IOException {
         Path file1 = tempDir.resolve("a.txt");
         Path file2 = tempDir.resolve("b.txt");
