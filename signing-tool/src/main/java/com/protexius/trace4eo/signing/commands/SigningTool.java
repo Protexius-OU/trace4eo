@@ -70,7 +70,7 @@ public class SigningTool {
         @Option(longName = "predecessors", description = "Provenance record predecessor IDs (UUIDs)") List<String> predecessors,
         @Option(longName = "hash-algorithm", description = "Hash algorithm (SHA256, SHA384, SHA512)",
             defaultValue = "SHA256") String hashAlgorithm,
-        @Option(longName = "output", description = "Output directory for ZIP file") Path outputDir,
+        @Option(longName = "output", description = "Output directory for the saved record") Path outputDir,
         @Option(longName = "register-url", description = "URL to register provenance records") String registerUrl,
         @Option(longName = "keycloak-url", description = "Keycloak server URL (for registration auth)") String keycloakUrl,
         @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm,
@@ -81,11 +81,14 @@ public class SigningTool {
             description = "Directory containing files to be included in provenance record") Path directory,
         @Option(longName = "pattern",
             description = "Glob pattern for files in --directory",
-            defaultValue = "*") String pattern
+            defaultValue = "*") String pattern,
+        @Option(longName = "save-record",
+            description = "Save the provenance record",
+            defaultValue = "true") boolean saveZip
     ) throws IOException {
         HashAlgorithm algorithm = validator.validateHashAlgorithm(hashAlgorithm);
         List<Path> paths = validateAndResolveInput(files, provenanceRecordType, dataId, outputDir,
-            registerUrl, keycloakUrl, predecessorsFile, directory, pattern);
+            registerUrl, keycloakUrl, predecessorsFile, directory, pattern, saveZip);
         List<Predecessor> parsedPredecessors = resolvePredecessors(predecessors, predecessorsFile);
         String accessToken = exchangeToken(registerUrl, keycloakUrl, realm);
         if (!parsedPredecessors.isEmpty()) {
@@ -93,14 +96,17 @@ public class SigningTool {
         }
         UnsignedRecord unsigned = buildRecord(paths, dataId, provenanceRecordType, parsedPredecessors, algorithm);
         ProvenanceRecord record = sign(unsigned);
-        outputWriter.saveRecord(record, outputDir);
+        if (saveZip) {
+            outputWriter.saveRecord(record, outputDir);
+        }
         registrationClient.registerIfConfigured(List.of(record), registerUrl, accessToken);
         return record.id();
     }
 
     private List<Path> validateAndResolveInput(
         List<String> files, String provenanceRecordType, String dataId, Path outputDir,
-        String registerUrl, String keycloakUrl, Path predecessorsFile, Path directory, String pattern
+        String registerUrl, String keycloakUrl, Path predecessorsFile, Path directory, String pattern,
+        boolean saveZip
     ) throws IOException {
         validateRequiredFields(files, directory, provenanceRecordType, dataId);
         if (directory != null) {
@@ -112,7 +118,9 @@ public class SigningTool {
             throw new IllegalArgumentException("No files found matching the given --files or --directory/--pattern");
         }
         validator.validateFilesExist(paths);
-        validator.validateOutputDirectory(outputDir);
+        if (saveZip) {
+            validator.validateOutputDirectory(outputDir);
+        }
         validator.validateRegistrationConfig(registerUrl, keycloakUrl);
         validator.validatePredecessorsFile(predecessorsFile);
         return paths;
