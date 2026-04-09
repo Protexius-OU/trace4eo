@@ -32,7 +32,7 @@ java -jar signing-tool/build/libs/signing-tool-0.1.0-SNAPSHOT.jar <command> <opt
 
 ### create-provenance-record
 
-Create a provenance record containing multiple files with metadata. The record is saved as a ZIP container.
+Create a provenance record containing multiple files with metadata.
 
 **Options:**
 
@@ -46,11 +46,11 @@ Create a provenance record containing multiple files with metadata. The record i
 | `--predecessors`           | UUIDs of predecessor records                                                                                                                                                                                      | None              |
 | `--predecessors-file`      | Path to a plain-text file of predecessor record IDs, one UUID per line (as produced by `batch-sign --create-record-ids-file`); merged with `--predecessors`. Blank lines and lines starting with `#` are ignored. | None              |
 | `--hash-algorithm`         | Hash algorithm to use                                                                                                                                                                                             | SHA256            |
-| `--output`                 | Output directory for ZIP file                                                                                                                                                                                     | Current directory |
+| `--output`                 | Output directory for the saved record (used with `--save-record`)                                                                                                                                                 | Current directory |
 | `--register-url`           | Tracing backend URL to register provenance records                                                                                                                                                                | None              |
 | `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set)                                                                                                                                                       | None              |
 | `--realm`                  | Keycloak realm                                                                                                                                                                                                    | trace4eo          |
-| `--no-zip`                 | Skip writing the ZIP container to disk                                                                                                            | false             |
+| `--save-record`            | Save the provenance record                                                                                                                                                                        | true              |
 
 **Examples:**
 
@@ -95,7 +95,7 @@ Create and register with a tracing system:
 
 ### batch-sign
 
-Sign multiple files, creating one provenance record per file, all packaged into a single ZIP container.
+Sign multiple files, creating one provenance record per file.
 
 **Options:**
 
@@ -106,13 +106,13 @@ Sign multiple files, creating one provenance record per file, all packaged into 
 | `--pattern`                | Glob pattern for files in directory                                                                                                                                                                  | `*`               |
 | `--provenance-record-type` | Type of provenance record                                                                                                                                                                            | Required          |
 | `--data-id`                | Data ID prefix for provenance records; each file gets `<data-id>/<filename>`                                                                                                                         | Required          |
-| `--output`                 | Output directory for ZIP file                                                                                                                                                                        | Current directory |
+| `--output`                 | Output directory for saved records (used with `--save-record`)                                                                                                                                       | Current directory |
 | `--hash-algorithm`         | Hash algorithm to use                                                                                                                                                                                | SHA256            |
 | `--register-url`           | Tracing backend URL to register provenance records                                                                                                                                                   | None              |
 | `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set)                                                                                                                                          | None              |
 | `--realm`                  | Keycloak realm                                                                                                                                                                                       | trace4eo          |
-| `--no-zip`                 | Skip writing the ZIP container to disk                                                                                           | false             |
-| `--create-record-ids-file` | Write a plain-text file alongside the ZIP container with the IDs of all successfully signed provenance records, one UUID per line (written to `--output` directory, or current directory if omitted) | false             |
+| `--save-record`            | Save the provenance records                                                                                                                                                          | true              |
+| `--create-record-ids-file` | Write a plain-text file with the IDs of all successfully signed provenance records, one UUID per line (written to `--output` directory, or current directory if omitted)                              | false             |
 | `--threads`                | Maximum number of files to sign concurrently                                                                                                               | 4                 |
 
 **Examples:**
@@ -182,10 +182,9 @@ Obtain a Sigstore OIDC token interactively.
 
 ## Notes
 
-- Provenance records are saved as ZIP containers by default. The output filename is auto-generated (`<record-uuid>.zip`
-  for `create-provenance-record`, `<data-id>.zip` for `batch-sign`). Use `--output` to specify a directory; if omitted,
-  the file is written to the current directory. If the specified directory doesn't exist, it will be created
-  automatically. Use `--no-zip` to skip writing the ZIP (e.g. when only registering, or when signing large files).
+- Provenance records are saved by default. Pass `--save-record false` to skip saving (e.g. when only registering).
+  Use `--output` to specify a directory; if omitted, the record is saved to the current directory. If the specified
+  directory doesn't exist, it will be created automatically.
 - `batch-sign` always creates one provenance record per file; each file's record uses the data ID `<data-id>/<filename>`
 - The `--register-url` option POSTs each provenance record as JSON to the specified URL
 - When `--register-url` is used, `--keycloak-url` is required. The tool exchanges the Sigstore OIDC token for a Keycloak

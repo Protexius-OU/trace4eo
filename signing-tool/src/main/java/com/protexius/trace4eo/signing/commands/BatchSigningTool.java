@@ -67,7 +67,7 @@ public class BatchSigningTool {
         @Option(longName = "data-id",
             description = "Data ID prefix for provenance records; each file gets <data-id>/<filename>",
             required = true) String dataId,
-        @Option(longName = "output", description = "Output directory for ZIP file") Path outputDir,
+        @Option(longName = "output", description = "Output directory for saved records") Path outputDir,
         @Option(longName = "hash-algorithm", description = "Hash algorithm (SHA256, SHA384, SHA512)",
             defaultValue = "SHA256") String hashAlgorithm,
         @Option(longName = "register-url", description = "URL to register provenance records") String registerUrl,
@@ -76,16 +76,16 @@ public class BatchSigningTool {
         @Option(longName = "create-record-ids-file",
             description = "Write a plain-text file with the IDs of all successfully signed provenance records, one UUID per line",
             defaultValue = "false") boolean createRecordIdsFile,
-        @Option(longName = "no-zip",
-            description = "Skip writing the provenance records ZIP container to disk",
-            defaultValue = "false") boolean noZip,
+        @Option(longName = "save-record",
+            description = "Save the provenance records",
+            defaultValue = "true") boolean saveZip,
         @Option(longName = "threads",
             description = "Maximum concurrent signing threads (default: 4)",
             defaultValue = "4") int threads
     ) throws IOException, InterruptedException {
         HashAlgorithm algorithm = validator.validateHashAlgorithm(hashAlgorithm);
         List<Path> resolvedFiles = validateAndResolveFiles(files, directory, pattern, provenanceRecordType,
-            dataId, outputDir, registerUrl, keycloakUrl);
+            dataId, outputDir, registerUrl, keycloakUrl, saveZip);
         String oidcToken = resolveOidcToken();
         String accessToken = registrationClient.exchangeTokenIfConfigured(registerUrl, keycloakUrl, realm, oidcToken);
         if (accessToken != null) {
@@ -95,7 +95,7 @@ public class BatchSigningTool {
             oidcToken, Math.max(1, threads));
         List<UUID> recordIds = records.stream().map(ProvenanceRecord::id).toList();
         if (!records.isEmpty()) {
-            if (!noZip) {
+            if (saveZip) {
                 outputWriter.saveAll(records, outputDir, dataId);
             }
             registrationClient.registerIfConfigured(records, registerUrl, accessToken);
@@ -110,12 +110,14 @@ public class BatchSigningTool {
 
     private List<Path> validateAndResolveFiles(
         List<String> files, Path directory, String pattern, String provenanceRecordType,
-        String dataId, Path outputDir, String registerUrl, String keycloakUrl
+        String dataId, Path outputDir, String registerUrl, String keycloakUrl, boolean saveZip
     ) throws IOException {
         List<Path> filePaths = files != null ? files.stream().map(Path::of).toList() : List.of();
         validateInput(filePaths, provenanceRecordType, dataId, directory);
         validator.validateFilesExist(filePaths);
-        validator.validateOutputDirectory(outputDir);
+        if (saveZip) {
+            validator.validateOutputDirectory(outputDir);
+        }
         validator.validateGlobPattern(pattern);
         validator.validateRegistrationConfig(registerUrl, keycloakUrl);
 
