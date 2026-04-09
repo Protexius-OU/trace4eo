@@ -81,11 +81,14 @@ public class SigningTool {
             description = "Directory containing files to be included in provenance record") Path directory,
         @Option(longName = "pattern",
             description = "Glob pattern for files in --directory",
-            defaultValue = "*") String pattern
+            defaultValue = "*") String pattern,
+        @Option(longName = "no-zip",
+            description = "Skip writing the provenance record ZIP container to disk",
+            defaultValue = "false") boolean noZip
     ) throws IOException {
         HashAlgorithm algorithm = validator.validateHashAlgorithm(hashAlgorithm);
         List<Path> paths = validateAndResolveInput(files, provenanceRecordType, dataId, outputDir,
-            registerUrl, keycloakUrl, predecessorsFile, directory, pattern);
+            registerUrl, keycloakUrl, predecessorsFile, directory, pattern, noZip);
         List<Predecessor> parsedPredecessors = resolvePredecessors(predecessors, predecessorsFile);
         String accessToken = exchangeToken(registerUrl, keycloakUrl, realm);
         if (!parsedPredecessors.isEmpty()) {
@@ -93,14 +96,17 @@ public class SigningTool {
         }
         UnsignedRecord unsigned = buildRecord(paths, dataId, provenanceRecordType, parsedPredecessors, algorithm);
         ProvenanceRecord record = sign(unsigned);
-        outputWriter.saveRecord(record, outputDir);
+        if (!noZip) {
+            outputWriter.saveRecord(record, outputDir);
+        }
         registrationClient.registerIfConfigured(List.of(record), registerUrl, accessToken);
         return record.id();
     }
 
     private List<Path> validateAndResolveInput(
         List<String> files, String provenanceRecordType, String dataId, Path outputDir,
-        String registerUrl, String keycloakUrl, Path predecessorsFile, Path directory, String pattern
+        String registerUrl, String keycloakUrl, Path predecessorsFile, Path directory, String pattern,
+        boolean noZip
     ) throws IOException {
         validateRequiredFields(files, directory, provenanceRecordType, dataId);
         if (directory != null) {
@@ -112,7 +118,9 @@ public class SigningTool {
             throw new IllegalArgumentException("No files found matching the given --files or --directory/--pattern");
         }
         validator.validateFilesExist(paths);
-        validator.validateOutputDirectory(outputDir);
+        if (!noZip) {
+            validator.validateOutputDirectory(outputDir);
+        }
         validator.validateRegistrationConfig(registerUrl, keycloakUrl);
         validator.validatePredecessorsFile(predecessorsFile);
         return paths;

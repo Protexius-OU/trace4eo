@@ -76,6 +76,9 @@ public class BatchSigningTool {
         @Option(longName = "create-record-ids-file",
             description = "Write a plain-text file with the IDs of all successfully signed provenance records, one UUID per line",
             defaultValue = "false") boolean createRecordIdsFile,
+        @Option(longName = "no-zip",
+            description = "Skip writing the provenance records ZIP container to disk",
+            defaultValue = "false") boolean noZip,
         @Option(longName = "threads",
             description = "Maximum concurrent signing threads (default: 4)",
             defaultValue = "4") int threads
@@ -92,7 +95,9 @@ public class BatchSigningTool {
             oidcToken, Math.max(1, threads));
         List<UUID> recordIds = records.stream().map(ProvenanceRecord::id).toList();
         if (!records.isEmpty()) {
-            outputWriter.saveAll(records, outputDir, dataId);
+            if (!noZip) {
+                outputWriter.saveAll(records, outputDir, dataId);
+            }
             registrationClient.registerIfConfigured(records, registerUrl, accessToken);
             if (createRecordIdsFile) {
                 outputWriter.writeRecordIds(recordIds, outputDir, dataId);

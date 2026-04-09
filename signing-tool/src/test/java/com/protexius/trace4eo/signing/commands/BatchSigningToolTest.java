@@ -87,7 +87,7 @@ class BatchSigningToolTest {
         List<UUID> result = batchSigningTool.batchSign(
             List.of(file1.toString(), file2.toString()),
             null, "*", "test-type", "batch-2024", outputDir, "SHA256",
-            null, null, "trace4eo", false, 4
+            null, null, "trace4eo", false, false, 4
         );
 
         assertEquals(2, result.size());
@@ -111,7 +111,7 @@ class BatchSigningToolTest {
             outputDir,
             "SHA256",
             null,
-            null, "trace4eo", false, 4
+            null, "trace4eo", false, false, 4
         );
 
         assertEquals(2, result.size());
@@ -138,7 +138,7 @@ class BatchSigningToolTest {
             outputDir,
             "SHA256",
             null,
-            null, "trace4eo", false, 4
+            null, "trace4eo", false, false, 4
         );
 
         assertEquals(2, result.size());
@@ -160,7 +160,7 @@ class BatchSigningToolTest {
             null,
             "SHA256",
             null,
-            null, "trace4eo", false, 4
+            null, "trace4eo", false, false, 4
         );
 
         assertEquals(1, result.size());
@@ -184,7 +184,7 @@ class BatchSigningToolTest {
             nestedDir,
             "SHA256",
             null,
-            null, "trace4eo", false, 4
+            null, "trace4eo", false, false, 4
         );
 
         assertEquals(1, result.size());
@@ -197,7 +197,7 @@ class BatchSigningToolTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
                 List.of(), null, "*", "test", "test", null, "SHA256", null,
-                null, "trace4eo", false, 4
+                null, "trace4eo", false, false, 4
             )
         );
 
@@ -216,7 +216,7 @@ class BatchSigningToolTest {
                 null,
                 "SHA256",
                 null,
-                null, "trace4eo", false, 4
+                null, "trace4eo", false, false, 4
             )
         );
         assertTrue(exception.getMessage().contains("File does not exist"));
@@ -249,7 +249,7 @@ class BatchSigningToolTest {
             tempDir,
             "SHA256",
             "http://localhost:8080/api/records",
-            "http://localhost:8180", "trace4eo", false, 4
+            "http://localhost:8180", "trace4eo", false, false, 4
         );
 
         assertEquals(2, result.size());
@@ -284,7 +284,7 @@ class BatchSigningToolTest {
             tempDir,
             "SHA256",
             "http://localhost:8080/api/records",
-            "http://localhost:8180", "trace4eo", false, 4
+            "http://localhost:8180", "trace4eo", false, false, 4
         );
 
         assertEquals(1, result.size());
@@ -318,7 +318,7 @@ class BatchSigningToolTest {
             tempDir,
             "SHA256",
             "http://localhost:8080/api/records",
-            "http://localhost:8180", "trace4eo", false, 4
+            "http://localhost:8180", "trace4eo", false, false, 4
         );
 
         assertEquals(1, result.size());
@@ -334,7 +334,7 @@ class BatchSigningToolTest {
             batchSigningTool.batchSign(
                 List.of(file1.toString()), null, "*", "test", "test",
                 null, "SHA256",
-                "http://localhost:8080/api/records", null, "trace4eo", false, 4
+                "http://localhost:8080/api/records", null, "trace4eo", false, false, 4
             )
         );
         assertTrue(exception.getMessage().contains("--keycloak-url"));
@@ -345,7 +345,7 @@ class BatchSigningToolTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
                 List.of("file.txt"), null, "*", " ", "test",
-                null, "SHA256", null, null, "trace4eo", false, 4
+                null, "SHA256", null, null, "trace4eo", false, false, 4
             )
         );
         assertTrue(exception.getMessage().contains("--provenance-record-type"));
@@ -356,7 +356,7 @@ class BatchSigningToolTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
                 List.of("file.txt"), null, "*", null, "test",
-                null, "SHA256", null, null, "trace4eo", false, 4
+                null, "SHA256", null, null, "trace4eo", false, false, 4
             )
         );
         assertTrue(exception.getMessage().contains("--provenance-record-type"));
@@ -367,7 +367,7 @@ class BatchSigningToolTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
                 List.of("file.txt"), null, "*", "test", " ",
-                null, "SHA256", null, null, "trace4eo", false, 4
+                null, "SHA256", null, null, "trace4eo", false, false, 4
             )
         );
         assertTrue(exception.getMessage().contains("--data-id"));
@@ -378,7 +378,7 @@ class BatchSigningToolTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
                 List.of("file.txt"), null, "*", "test", null,
-                null, "SHA256", null, null, "trace4eo", false, 4
+                null, "SHA256", null, null, "trace4eo", false, false, 4
             )
         );
         assertTrue(exception.getMessage().contains("--data-id"));
@@ -389,7 +389,7 @@ class BatchSigningToolTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
                 null, Path.of("/nonexistent/path"), "*", "test", "test",
-                null, "SHA256", null, null, "trace4eo", false, 4
+                null, "SHA256", null, null, "trace4eo", false, false, 4
             )
         );
         assertTrue(exception.getMessage().contains("--directory"));
@@ -403,7 +403,7 @@ class BatchSigningToolTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
                 null, file, "*", "test", "test",
-                null, "SHA256", null, null, "trace4eo", false, 4
+                null, "SHA256", null, null, "trace4eo", false, false, 4
             )
         );
         assertTrue(exception.getMessage().contains("--directory"));
@@ -417,7 +417,7 @@ class BatchSigningToolTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
                 List.of(file.toString()), null, "*", "test", "test",
-                null, "INVALID", null, null, "trace4eo", false, 4
+                null, "INVALID", null, null, "trace4eo", false, false, 4
             )
         );
         assertTrue(exception.getMessage().contains("--hash-algorithm"));
@@ -428,7 +428,7 @@ class BatchSigningToolTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
                 List.of(tempDir.toString()), null, "*", "test", "test",
-                null, "SHA256", null, null, "trace4eo", false, 4
+                null, "SHA256", null, null, "trace4eo", false, false, 4
             )
         );
         assertTrue(exception.getMessage().contains("not a regular file"));
@@ -444,7 +444,7 @@ class BatchSigningToolTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
                 List.of(file.toString()), null, "*", "test", "test",
-                notADir, "SHA256", null, null, "trace4eo", false, 4
+                notADir, "SHA256", null, null, "trace4eo", false, false, 4
             )
         );
         assertTrue(exception.getMessage().contains("--output is not a directory"));
@@ -458,7 +458,7 @@ class BatchSigningToolTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
             batchSigningTool.batchSign(
                 null, tempDir, "[invalid", "test", "test",
-                null, "SHA256", null, null, "trace4eo", false, 4
+                null, "SHA256", null, null, "trace4eo", false, false, 4
             )
         );
         assertTrue(exception.getMessage().contains("--pattern"));
@@ -492,7 +492,7 @@ class BatchSigningToolTest {
             tempDir,
             "SHA256",
             "http://localhost:8080/api/records",
-            "http://localhost:8180", "trace4eo", false, 4
+            "http://localhost:8180", "trace4eo", false, false, 4
         );
 
         assertEquals(1, result.size());
@@ -500,6 +500,22 @@ class BatchSigningToolTest {
             .send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
         verify(mockHttpClient, times(1))
             .sendAsync(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
+    }
+
+    @Test
+    void batchSign_noZip_doesNotWriteZip(@TempDir Path tempDir) throws Exception {
+        Path file1 = tempDir.resolve("file1.txt");
+        Files.writeString(file1, "content1");
+        Path outputDir = tempDir.resolve("out");
+
+        List<UUID> result = batchSigningTool.batchSign(
+            List.of(file1.toString()),
+            null, "*", "test-type", "batch-2024", outputDir, "SHA256",
+            null, null, "trace4eo", false, true, 4
+        );
+
+        assertEquals(1, result.size());
+        assertFalse(Files.exists(outputDir.resolve("batch-2024.zip")));
     }
 
     @Test
@@ -519,7 +535,7 @@ class BatchSigningToolTest {
             outputDir,
             "SHA256",
             null,
-            null, "trace4eo", true, 4
+            null, "trace4eo", true, false, 4
         );
 
         assertEquals(2, result.size());
@@ -538,7 +554,7 @@ class BatchSigningToolTest {
         List<UUID> result = batchSigningTool.batchSign(
             List.of(file1.toString()),
             null, "*", "test-type", "cwd-record-ids-test",
-            null, "SHA256", null, null, "trace4eo", true, 4
+            null, "SHA256", null, null, "trace4eo", true, false, 4
         );
 
         assertEquals(1, result.size());
@@ -564,7 +580,7 @@ class BatchSigningToolTest {
             tempDir,
             "SHA256",
             null,
-            null, "trace4eo", false, 4
+            null, "trace4eo", false, false, 4
         );
 
         assertEquals(1, result.size());
@@ -579,7 +595,7 @@ class BatchSigningToolTest {
         List<UUID> result = batchSigningTool.batchSign(
             List.of(file1.toString()),
             null, "*", "test-type", "batch-2024",
-            tempDir, "SHA256", null, null, "trace4eo", false, 0
+            tempDir, "SHA256", null, null, "trace4eo", false, false, 0
         );
 
         assertEquals(1, result.size());
@@ -615,7 +631,7 @@ class BatchSigningToolTest {
         List<UUID> result = createTool(failingSigningService).batchSign(
             List.of(file1.toString(), file2.toString(), file3.toString()),
             null, "*", "test-type", "batch-fail",
-            tempDir, "SHA256", null, null, "trace4eo", false, 4
+            tempDir, "SHA256", null, null, "trace4eo", false, false, 4
         );
 
         assertEquals(2, result.size());
