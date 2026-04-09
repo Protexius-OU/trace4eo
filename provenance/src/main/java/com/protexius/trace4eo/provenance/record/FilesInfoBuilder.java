@@ -47,6 +47,12 @@ public class FilesInfoBuilder {
             throw new RuntimeException(e);
         }
         FileHashInfo fileHashInfo = new FileHashInfo(destinationPath, this.hashAlgorithm, hashBytes);
+        boolean pathAlreadyUsed = this.filesInfo.files().stream()
+            .anyMatch(f -> f.path().equals(fileHashInfo.path()));
+        if (pathAlreadyUsed) {
+            throw new IllegalArgumentException(
+                String.format("Duplicate file path in provenance record: %s", destinationPath));
+        }
         filesContext.addFileMapping(fileHashInfo, filePath);
         this.filesInfo.files().add(fileHashInfo);
         return this;

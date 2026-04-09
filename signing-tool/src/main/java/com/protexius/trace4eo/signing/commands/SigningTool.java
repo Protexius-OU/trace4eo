@@ -15,8 +15,10 @@ import org.springframework.shell.core.command.annotation.Option;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -60,8 +62,7 @@ public class SigningTool {
 
     @Command(name = "create-provenance-record", description = "Create and sign provenance record")
     public UUID createProvenanceRecord(
-        @Option(longName = "files", description = "Files to be included in provenance record",
-            required = true) List<String> files,
+        @Option(longName = "files", description = "Files to be included in provenance record") List<String> files,
         @Option(longName = "provenance-record-type", description = "Provenance record type",
             required = true) String provenanceRecordType,
         @Option(longName = "data-id", description = "Provenance record data ID",
@@ -75,11 +76,16 @@ public class SigningTool {
         @Option(longName = "realm", description = "Keycloak realm", defaultValue = "trace4eo") String realm,
         @Option(longName = "predecessors-file",
             description = "Path to a plain-text file of predecessor record IDs, one UUID per line.")
-            Path predecessorsFile
+            Path predecessorsFile,
+        @Option(longName = "directory",
+            description = "Directory containing files to be included in provenance record") Path directory,
+        @Option(longName = "pattern",
+            description = "Glob pattern for files in --directory",
+            defaultValue = "*") String pattern
     ) throws IOException {
         HashAlgorithm algorithm = validator.validateHashAlgorithm(hashAlgorithm);
         List<Path> paths = validateAndResolveInput(files, provenanceRecordType, dataId, outputDir,
-            registerUrl, keycloakUrl, predecessorsFile);
+            registerUrl, keycloakUrl, predecessorsFile, directory, pattern);
         List<Predecessor> parsedPredecessors = resolvePredecessors(predecessors, predecessorsFile);
         String accessToken = exchangeToken(registerUrl, keycloakUrl, realm);
         if (!parsedPredecessors.isEmpty()) {
@@ -94,15 +100,47 @@ public class SigningTool {
 
     private List<Path> validateAndResolveInput(
         List<String> files, String provenanceRecordType, String dataId, Path outputDir,
-        String registerUrl, String keycloakUrl, Path predecessorsFile
-    ) {
-        List<Path> paths = toPaths(files);
-        validateRequiredFields(paths, provenanceRecordType, dataId);
+        String registerUrl, String keycloakUrl, Path predecessorsFile, Path directory, String pattern
+    ) throws IOException {
+        validateRequiredFields(files, directory, provenanceRecordType, dataId);
+        if (directory != null) {
+            validator.validateInputDirectory(directory);
+            validator.validateGlobPattern(pattern);
+        }
+        List<Path> paths = resolveFiles(files, directory, pattern);
+        if (paths.isEmpty()) {
+            throw new IllegalArgumentException("No files found matching the given --files or --directory/--pattern");
+        }
         validator.validateFilesExist(paths);
         validator.validateOutputDirectory(outputDir);
         validator.validateRegistrationConfig(registerUrl, keycloakUrl);
         validator.validatePredecessorsFile(predecessorsFile);
         return paths;
+    }
+
+    private List<Path> resolveFiles(List<String> files, Path directory, String pattern) throws IOException {
+        List<Path> result = new ArrayList<>(toPaths(files));
+        if (directory != null) {
+            try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory, pattern)) {
+                for (Path path : stream) {
+                    if (Files.isRegularFile(path)) {
+                        result.add(path);
+                    }
+                }
+            }
+        }
+        return deduplicatePaths(result);
+    }
+
+    private List<Path> deduplicatePaths(List<Path> paths) {
+        List<Path> unique = paths.stream()
+            .map(Path::toAbsolutePath)
+            .distinct()
+            .toList();
+        if (unique.size() < paths.size()) {
+            log.warn("Removed {} duplicate file(s) from input", paths.size() - unique.size());
+        }
+        return unique;
     }
 
     private List<Predecessor> resolvePredecessors(List<String> predecessors, Path predecessorsFile) {
@@ -147,9 +185,11 @@ public class SigningTool {
         return recordSigningService.sign(unsigned, oidcToken);
     }
 
-    private void validateRequiredFields(List<Path> files, String provenanceRecordType, String dataId) {
-        if (files == null || files.isEmpty()) {
-            throw new IllegalArgumentException("--files must not be null or empty");
+    private void validateRequiredFields(
+        List<String> files, Path directory, String provenanceRecordType, String dataId
+    ) {
+        if ((files == null || files.isEmpty()) && directory == null) {
+            throw new IllegalArgumentException("At least one of --files or --directory must be provided");
         }
         validator.validateProvenanceRecordType(provenanceRecordType);
         validator.validateDataId(dataId);
