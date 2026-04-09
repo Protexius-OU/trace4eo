@@ -38,7 +38,9 @@ Create a provenance record containing multiple files with metadata. The record i
 
 | Option                     | Description                                                                                                                                                                                                       | Default           |
 |----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|
-| `--files`                  | Files to include in the record                                                                                                                                                                                    | Required          |
+| `--files`                  | Files to include in the record (either this or `--directory` is required)                                                                                                                                         | None              |
+| `--directory`              | Directory containing files to include in the record (either this or `--files` is required)                                                                                                                        | None              |
+| `--pattern`                | Glob pattern for files in `--directory`                                                                                                                                                                           | `*`               |
 | `--provenance-record-type` | Type of provenance record                                                                                                                                                                                         | Required          |
 | `--data-id`                | Identifier for the data                                                                                                                                                                                           | Required          |
 | `--predecessors`           | UUIDs of predecessor records                                                                                                                                                                                      | None              |
@@ -54,6 +56,27 @@ Create a provenance record containing multiple files with metadata. The record i
 ```bash
 ./gradlew :signing-tool:bootRun --args="create-provenance-record \
   --files image.tif,metadata.xml \
+  --provenance-record-type sentinel2-processing \
+  --data-id S2A_MSIL1C_20240101"
+```
+
+Include all TIF files from a directory in a single record:
+
+```bash
+./gradlew :signing-tool:bootRun --args="create-provenance-record \
+  --directory /data/images \
+  --pattern '*.tif' \
+  --provenance-record-type sentinel2-processing \
+  --data-id S2A_MSIL1C_20240101"
+```
+
+Combine explicit files with a directory scan:
+
+```bash
+./gradlew :signing-tool:bootRun --args="create-provenance-record \
+  --files metadata.xml \
+  --directory /data/images \
+  --pattern '*.tif' \
   --provenance-record-type sentinel2-processing \
   --data-id S2A_MSIL1C_20240101"
 ```

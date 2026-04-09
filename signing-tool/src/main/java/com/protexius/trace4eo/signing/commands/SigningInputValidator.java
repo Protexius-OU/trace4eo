@@ -97,6 +97,18 @@ public class SigningInputValidator {
         }
     }
 
+    public void validateInputDirectory(Path directory) {
+        if (!Files.exists(directory)) {
+            throw new IllegalArgumentException(String.format("--directory does not exist: %s", directory));
+        }
+        if (!Files.isDirectory(directory)) {
+            throw new IllegalArgumentException(String.format("--directory is not a directory: %s", directory));
+        }
+        if (!Files.isReadable(directory)) {
+            throw new IllegalArgumentException(String.format("--directory is not readable: %s", directory));
+        }
+    }
+
     public void validateGlobPattern(String pattern) {
         try {
             FileSystems.getDefault().getPathMatcher("glob:" + pattern);
