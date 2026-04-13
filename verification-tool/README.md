@@ -69,7 +69,7 @@ openssl dgst -sha256 -binary data.csv | base64
 To generate a hash file for multiple files:
 
 ```bash
-for f in data.csv results.csv; do
-  echo "$f=$(openssl dgst -sha256 -binary "$f" | base64)"
+for f in /test-data/*; do
+  echo "$(basename "$f")=$(openssl dgst -sha256 -binary "$f" | base64)"
 done > hashes.txt
 ```
