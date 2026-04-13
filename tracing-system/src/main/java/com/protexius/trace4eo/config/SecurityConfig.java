@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
@@ -40,10 +41,10 @@ public class SecurityConfig {
     private List<String> signerAllowedDomains;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable())
+            .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
@@ -51,8 +52,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/provenance/check-access").hasRole(ROLE_SIGNER)
                 .requestMatchers(HttpMethod.POST, "/api/provenance").hasRole(ROLE_SIGNER)
                 .requestMatchers(HttpMethod.POST, "/api/provenance/validate-predecessors").hasRole(ROLE_SIGNER)
+                .requestMatchers(HttpMethod.POST, "/api/provenance/{id}/verify").hasAnyRole(ROLE_VIEWER, ROLE_SIGNER)
                 .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole(ROLE_VIEWER, ROLE_SIGNER)
-                .requestMatchers(HttpMethod.POST, "/api/provenance/*/verify").hasAnyRole(ROLE_VIEWER, ROLE_SIGNER)
                 .anyRequest().denyAll()
             )
             .oauth2ResourceServer(oauth2 ->
@@ -81,7 +82,7 @@ public class SecurityConfig {
             if (email != null && signerAllowedDomains != null) {
                 boolean domainMatch = signerAllowedDomains.stream()
                     .filter(domain -> !domain.isBlank())
-                    .anyMatch(domain -> email.endsWith(domain));
+                    .anyMatch(email::endsWith);
                 if (domainMatch && authorities.stream().noneMatch(a -> a.getAuthority().equals(ROLE_PREFIX + ROLE_SIGNER))) {
                     authorities.add(new SimpleGrantedAuthority(ROLE_PREFIX + ROLE_SIGNER));
                 }
