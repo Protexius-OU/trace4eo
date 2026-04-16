@@ -112,6 +112,10 @@
   color: #6b7280;
 }
 
+.ic-status-unknown {
+  color: #9ca3af;
+}
+
 /* Connectors (vertical lines between layers) */
 .ic-connector {
   display: flex;
@@ -262,6 +266,27 @@
   color: #6b7280;
   font-style: italic;
   margin-top: 0.25rem;
+}
+
+.ic-show-more {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.6875rem;
+  color: #4338ca;
+  text-align: left;
+  margin-top: 0.25rem;
+}
+
+.ic-show-more:hover {
+  text-decoration: underline;
+}
+
+.ic-file-section + .ic-file-section {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid #e5e7eb;
 }
 
 .ic-label .ic-connector-hash {
