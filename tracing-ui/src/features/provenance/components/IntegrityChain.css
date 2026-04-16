@@ -299,6 +299,33 @@
   letter-spacing: 0;
 }
 
+/* NOT_IN_RECORD files with predecessor search results */
+.ic-file-not-in-record {
+  opacity: 0.9;
+}
+
+.ic-predecessor-result {
+  font-size: 0.6875rem;
+  margin-top: 0.125rem;
+}
+
+.ic-predecessor-result a {
+  color: #4338ca;
+  text-decoration: none;
+}
+
+.ic-predecessor-result a:hover {
+  text-decoration: underline;
+}
+
+.ic-predecessor-matched {
+  color: #15803d;
+}
+
+.ic-predecessor-mismatch {
+  color: #b91c1c;
+}
+
 /* Summary */
 .ic-summary {
   margin-top: 0.75rem;

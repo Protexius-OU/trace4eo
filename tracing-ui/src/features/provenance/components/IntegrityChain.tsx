@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import type { ProvenanceRecord, VerificationResult, VerificationStepName, FileVerificationResponse, FileHashInfo } from '../types/provenance'
+import { Link } from 'react-router-dom'
+import type { ProvenanceRecord, VerificationResult, VerificationStepName, FileVerificationResponse, FileHashInfo, PredecessorFileResult } from '../types/provenance'
 import './IntegrityChain.css'
 
 const FILE_COLLAPSE_THRESHOLD = 5
@@ -8,6 +9,8 @@ interface Props {
   record: ProvenanceRecord
   verificationResult: VerificationResult | null
   fileVerificationResponse?: FileVerificationResponse | null
+  predecessorFileResults?: PredecessorFileResult[]
+  isSearchingPredecessors?: boolean
 }
 
 type Status = 'idle' | 'pass' | 'fail' | 'skipped' | 'unknown'
@@ -75,11 +78,52 @@ function renderFilesCollapsed(
   )
 }
 
+function NotInRecordRow({
+  filename,
+  predecessorResult,
+  isSearching,
+}: {
+  filename: string
+  predecessorResult: PredecessorFileResult | undefined
+  isSearching: boolean
+}) {
+  const topStatus: Status = predecessorResult
+    ? predecessorResult.status === 'MATCHED' ? 'pass' : 'fail'
+    : 'unknown'
+
+  return (
+    <div className="ic-file ic-file-not-in-record">
+      <StatusIcon status={topStatus} />
+      <div className="ic-file-info">
+        <span className="ic-file-path">{filename}</span>
+        <span className="ic-note">Not in this record</span>
+        {predecessorResult ? (
+          <span className={`ic-predecessor-result ic-predecessor-${predecessorResult.status === 'MATCHED' ? 'matched' : 'mismatch'}`}>
+            {'↳ '}
+            <Link to={`/records/${predecessorResult.foundInRecordId}/graph`}>
+              {predecessorResult.recordDataId} ({predecessorResult.recordDataType})
+            </Link>
+            {' — '}
+            {predecessorResult.status === 'MATCHED' ? '✓ Matched' : '✗ Mismatch'}
+            {` at depth ${predecessorResult.foundAtDepth}`}
+          </span>
+        ) : isSearching ? (
+          <span className="ic-note">Searching predecessors…</span>
+        ) : (
+          <span className="ic-note">Not found in any predecessor record</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function renderFilesWithVerification(
   files: FileHashInfo[],
   fvr: FileVerificationResponse,
   uncheckedExpanded: boolean,
-  setUncheckedExpanded: (v: boolean) => void
+  setUncheckedExpanded: (v: boolean) => void,
+  predecessorFileResults: PredecessorFileResult[],
+  isSearchingPredecessors: boolean,
 ) {
   const checkedFiles = files
     .filter(f => fvr.fileResults.some(r => r.recordPath === f.path))
@@ -89,6 +133,7 @@ function renderFilesWithVerification(
       return ai - bi
     })
   const uncheckedFiles = files.filter(f => !fvr.fileResults.some(r => r.recordPath === f.path))
+  const notInRecord = fvr.fileResults.filter(r => r.status === 'NOT_IN_RECORD')
 
   const visibleUnchecked = uncheckedExpanded
     ? uncheckedFiles
@@ -114,6 +159,18 @@ function renderFilesWithVerification(
           />
         </div>
       )}
+      {notInRecord.length > 0 && (
+        <div className="ic-file-section">
+          {notInRecord.map(r => (
+            <NotInRecordRow
+              key={r.filename}
+              filename={r.filename}
+              predecessorResult={predecessorFileResults.find(p => p.filename === r.filename)}
+              isSearching={isSearchingPredecessors && !predecessorFileResults.some(p => p.filename === r.filename)}
+            />
+          ))}
+        </div>
+      )}
     </>
   )
 }
@@ -131,7 +188,7 @@ function Connector({ label, status }: {
   )
 }
 
-export default function IntegrityChain({ record, verificationResult, fileVerificationResponse }: Props) {
+export default function IntegrityChain({ record, verificationResult, fileVerificationResponse, predecessorFileResults = [], isSearchingPredecessors = false }: Props) {
   const { manifest, filesInfo, metadata, signature } = record
   const details = signature?.details
 
@@ -278,19 +335,21 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
             )}
           </div>
           <div className="ic-node-body">
-            {filesInfo && fileVerificationResponse ? (
+            {fileVerificationResponse ? (
               renderFilesWithVerification(
-                filesInfo.files,
+                filesInfo?.files ?? [],
                 fileVerificationResponse,
                 uncheckedExpanded,
-                setUncheckedExpanded
+                setUncheckedExpanded,
+                predecessorFileResults,
+                isSearchingPredecessors,
               )
             ) : filesInfo ? (
               renderFilesCollapsed(
                 filesInfo.files,
                 filesNodeStatus,
                 allFilesExpanded,
-                setAllFilesExpanded
+                setAllFilesExpanded,
               )
             ) : null}
             {fileVerificationResponse && (
