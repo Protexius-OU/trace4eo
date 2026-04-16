@@ -1,6 +1,8 @@
-import React from 'react'
-import type { ProvenanceRecord, VerificationResult, VerificationStepName, FileVerificationResponse } from '../types/provenance'
+import React, { useState, useEffect } from 'react'
+import type { ProvenanceRecord, VerificationResult, VerificationStepName, FileVerificationResponse, FileHashInfo } from '../types/provenance'
 import './IntegrityChain.css'
+
+const FILE_COLLAPSE_THRESHOLD = 5
 
 interface Props {
   record: ProvenanceRecord
@@ -8,7 +10,7 @@ interface Props {
   fileVerificationResponse?: FileVerificationResponse | null
 }
 
-type Status = 'idle' | 'pass' | 'fail' | 'skipped'
+type Status = 'idle' | 'pass' | 'fail' | 'skipped' | 'unknown'
 
 function findStepStatus(result: VerificationResult | null, name: VerificationStepName): Status {
   const step = result?.steps?.find(s => s.name === name)
@@ -30,8 +32,90 @@ function StatusIcon({ status }: { status: Status }) {
     case 'pass': return <span className="ic-status ic-status-pass">✓</span>
     case 'fail': return <span className="ic-status ic-status-fail">✗</span>
     case 'skipped': return <span className="ic-status ic-status-skipped">&ndash;</span>
+    case 'unknown': return <span className="ic-status ic-status-unknown">?</span>
     default: return null
   }
+}
+
+function FileRow({ file, status }: { file: { path: string | null; hashAlgorithm: string; hashValue: string }; status: Status }) {
+  const isDimmed = status === 'unknown'
+  return (
+    <div className={`ic-file${isDimmed ? ' ic-file-dimmed' : ''}`}>
+      <StatusIcon status={status} />
+      <div className="ic-file-info">
+        <span className="ic-file-path">{file.path}</span>
+        <code className="ic-hash-value">{file.hashAlgorithm}: {file.hashValue}</code>
+      </div>
+    </div>
+  )
+}
+
+function ShowMoreButton({ hidden, expanded, onToggle }: { hidden: number; expanded: boolean; onToggle: () => void }) {
+  if (hidden <= 0) return null
+  return (
+    <button className="ic-show-more" onClick={onToggle}>
+      {expanded ? 'Show less' : `Show ${hidden} more`}
+    </button>
+  )
+}
+
+function renderFilesCollapsed(
+  files: Array<{ path: string | null; hashAlgorithm: string; hashValue: string }>,
+  nodeStatus: Status,
+  expanded: boolean,
+  setExpanded: (v: boolean) => void
+) {
+  const visible = expanded ? files : files.slice(0, FILE_COLLAPSE_THRESHOLD)
+  const hidden = Math.max(0, files.length - FILE_COLLAPSE_THRESHOLD)
+  return (
+    <>
+      {visible.map(f => <FileRow key={f.path} file={f} status={nodeStatus} />)}
+      <ShowMoreButton hidden={hidden} expanded={expanded} onToggle={() => setExpanded(!expanded)} />
+    </>
+  )
+}
+
+function renderFilesWithVerification(
+  files: FileHashInfo[],
+  fvr: FileVerificationResponse,
+  uncheckedExpanded: boolean,
+  setUncheckedExpanded: (v: boolean) => void
+) {
+  const checkedFiles = files
+    .filter(f => fvr.fileResults.some(r => r.recordPath === f.path))
+    .sort((a, b) => {
+      const ai = fvr.fileResults.findIndex(r => r.recordPath === a.path)
+      const bi = fvr.fileResults.findIndex(r => r.recordPath === b.path)
+      return ai - bi
+    })
+  const uncheckedFiles = files.filter(f => !fvr.fileResults.some(r => r.recordPath === f.path))
+
+  const visibleUnchecked = uncheckedExpanded
+    ? uncheckedFiles
+    : uncheckedFiles.slice(0, FILE_COLLAPSE_THRESHOLD)
+  const hiddenUnchecked = Math.max(0, uncheckedFiles.length - FILE_COLLAPSE_THRESHOLD)
+
+  return (
+    <>
+      <div className="ic-file-section">
+        {checkedFiles.map(f => {
+          const result = fvr.fileResults.find(r => r.recordPath === f.path)!
+          const status: Status = result.status === 'MATCHED' ? 'pass' : 'fail'
+          return <FileRow key={f.path} file={f} status={status} />
+        })}
+      </div>
+      {uncheckedFiles.length > 0 && (
+        <div className="ic-file-section">
+          {visibleUnchecked.map(f => <FileRow key={f.path} file={f} status="unknown" />)}
+          <ShowMoreButton
+            hidden={hiddenUnchecked}
+            expanded={uncheckedExpanded}
+            onToggle={() => setUncheckedExpanded(!uncheckedExpanded)}
+          />
+        </div>
+      )}
+    </>
+  )
 }
 
 function Connector({ label, status }: {
@@ -50,6 +134,14 @@ function Connector({ label, status }: {
 export default function IntegrityChain({ record, verificationResult, fileVerificationResponse }: Props) {
   const { manifest, filesInfo, metadata, signature } = record
   const details = signature?.details
+
+  const [allFilesExpanded, setAllFilesExpanded] = useState(false)
+  const [uncheckedExpanded, setUncheckedExpanded] = useState(false)
+
+  useEffect(() => {
+    setAllFilesExpanded(false)
+    setUncheckedExpanded(false)
+  }, [fileVerificationResponse])
 
   const verified = verificationResult !== null
 
@@ -186,22 +278,21 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
             )}
           </div>
           <div className="ic-node-body">
-            {filesInfo?.files.map(file => {
-              const fileResult = fileVerificationResponse?.fileResults.find(r => r.recordPath === file.path)
-              const isDimmed = fileVerificationResponse != null && fileResult == null
-              const perFileStatus: Status = fileResult
-                ? (fileResult.status === 'MATCHED' ? 'pass' : 'fail')
-                : filesNodeStatus
-              return (
-                <div key={file.path} className={`ic-file${isDimmed ? ' ic-file-dimmed' : ''}`}>
-                  <StatusIcon status={perFileStatus} />
-                  <div className="ic-file-info">
-                    <span className="ic-file-path">{file.path}</span>
-                    <code className="ic-hash-value">{file.hashAlgorithm}: {file.hashValue}</code>
-                  </div>
-                </div>
+            {filesInfo && fileVerificationResponse ? (
+              renderFilesWithVerification(
+                filesInfo.files,
+                fileVerificationResponse,
+                uncheckedExpanded,
+                setUncheckedExpanded
               )
-            })}
+            ) : filesInfo ? (
+              renderFilesCollapsed(
+                filesInfo.files,
+                filesNodeStatus,
+                allFilesExpanded,
+                setAllFilesExpanded
+              )
+            ) : null}
             {fileVerificationResponse && (
               <div className="ic-note">
                 Checked {fileVerificationResponse.fileResults.length} of {filesInfo?.files.length ?? 0} files
