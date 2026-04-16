@@ -132,3 +132,12 @@ export interface FileCheckResult {
 export interface FileVerificationResponse extends VerificationResult {
   fileResults: FileCheckResult[]
 }
+
+export interface PredecessorFileResult {
+  filename: string
+  foundInRecordId: string
+  foundAtDepth: number
+  status: 'MATCHED' | 'MISMATCH'
+  recordDataId: string
+  recordDataType: string
+}
