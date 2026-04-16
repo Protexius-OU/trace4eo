@@ -1,6 +1,8 @@
 package com.protexius.trace4eo.provenance;
 
 import com.protexius.trace4eo.provenance.graph.ProvenanceGraph;
+import com.protexius.trace4eo.provenance.record.FileHashInfo;
+import com.protexius.trace4eo.provenance.record.FilesInfo;
 import com.protexius.trace4eo.provenance.record.Manifest;
 import com.protexius.trace4eo.provenance.record.Metadata;
 import com.protexius.trace4eo.provenance.record.Predecessor;
@@ -19,8 +21,11 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
+import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,6 +45,9 @@ class ProvenanceControllerIntegrationTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @Autowired
+    private ProvenanceService provenanceService;
 
     @Test
     void checkAccessReturns200() {
@@ -286,6 +294,45 @@ class ProvenanceControllerIntegrationTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertTrue(response.getBody().contains(nonExistingPredecessorId.toString()));
+    }
+
+    @Test
+    void verifyFileHashesEndpointMatchesCorrectHash() throws Exception {
+        UUID id = UUID.randomUUID();
+        byte[] fileBytes = {42, 84, 126};
+        byte[] fileHash = MessageDigest.getInstance("SHA-256").digest(fileBytes);
+        String hashBase64 = Base64.getEncoder().encodeToString(fileHash);
+
+        FileHashInfo fileHashInfo = new FileHashInfo("test.dat", HashAlgorithm.SHA256, fileHash);
+        FileHashInfo dummyHash = new FileHashInfo(HashAlgorithm.SHA256, new byte[32]);
+        FilesInfo filesInfo = new FilesInfo(new LinkedHashSet<>(List.of(fileHashInfo)), null);
+        Manifest manifest = new Manifest(dummyHash, dummyHash);
+        Metadata metadata = new Metadata("data-" + id, "test-type", Collections.emptyList());
+        Instant signingTime = Instant.parse("2024-01-15T10:30:00Z");
+        ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1, 2, 3}, signingTime, HashAlgorithm.SHA256);
+        ProvenanceRecord record = new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature);
+        provenanceService.save(record);
+
+        List<FileHashInput> inputs = List.of(new FileHashInput("test.dat", hashBase64));
+        ResponseEntity<String> response = restTemplate.postForEntity(
+            "/api/provenance/{id}/verify-files", inputs, String.class, id
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().contains("\"MATCHED\""));
+    }
+
+    @Test
+    void verifyFileHashesEndpointReturns404WhenRecordNotFound() {
+        UUID unknownId = UUID.randomUUID();
+        List<FileHashInput> inputs = List.of(new FileHashInput("test.dat", "AAAA"));
+
+        ResponseEntity<String> response = restTemplate.postForEntity(
+            "/api/provenance/{id}/verify-files", inputs, String.class, unknownId
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
     }
 
     private void createAndSaveRecord(String dataType, String signerIdentity) {

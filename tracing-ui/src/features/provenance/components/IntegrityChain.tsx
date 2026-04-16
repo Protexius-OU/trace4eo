@@ -1,10 +1,11 @@
 import React from 'react'
-import type { ProvenanceRecord, VerificationResult, VerificationStepName } from '../types/provenance'
+import type { ProvenanceRecord, VerificationResult, VerificationStepName, FileVerificationResponse } from '../types/provenance'
 import './IntegrityChain.css'
 
 interface Props {
   record: ProvenanceRecord
   verificationResult: VerificationResult | null
+  fileVerificationResponse?: FileVerificationResponse | null
 }
 
 type Status = 'idle' | 'pass' | 'fail' | 'skipped'
@@ -46,7 +47,7 @@ function Connector({ label, status }: {
   )
 }
 
-export default function IntegrityChain({ record, verificationResult }: Props) {
+export default function IntegrityChain({ record, verificationResult, fileVerificationResponse }: Props) {
   const { manifest, filesInfo, metadata, signature } = record
   const details = signature?.details
 
@@ -56,7 +57,11 @@ export default function IntegrityChain({ record, verificationResult }: Props) {
   const metaHashStatus = findStepStatus(verificationResult, 'METADATA')
   const filesHashStatus = findStepStatus(verificationResult, 'FILES_INFO')
   const fileContentsStatus = findStepStatus(verificationResult, 'FILE_CONTENTS')
-  const filesNodeStatus: Status = fileContentsStatus === 'skipped' ? 'idle' : fileContentsStatus
+  const fileVerificationContentsStatus = fileVerificationResponse
+    ? findStepStatus(fileVerificationResponse, 'FILE_CONTENTS')
+    : null
+  const activeFileContentsStatus = fileVerificationContentsStatus ?? fileContentsStatus
+  const filesNodeStatus: Status = activeFileContentsStatus === 'skipped' ? 'idle' : activeFileContentsStatus
 
   const sigConnectorLabel = details?.manifestHash
     ? (
@@ -181,16 +186,28 @@ export default function IntegrityChain({ record, verificationResult }: Props) {
             )}
           </div>
           <div className="ic-node-body">
-            {filesInfo?.files.map(file => (
-              <div key={file.path} className="ic-file">
-                <StatusIcon status={filesNodeStatus} />
-                <div className="ic-file-info">
-                  <span className="ic-file-path">{file.path}</span>
-                  <code className="ic-hash-value">{file.hashAlgorithm}: {file.hashValue}</code>
+            {filesInfo?.files.map(file => {
+              const fileResult = fileVerificationResponse?.fileResults.find(r => r.recordPath === file.path)
+              const isDimmed = fileVerificationResponse != null && fileResult == null
+              const perFileStatus: Status = fileResult
+                ? (fileResult.status === 'MATCHED' ? 'pass' : 'fail')
+                : filesNodeStatus
+              return (
+                <div key={file.path} className={`ic-file${isDimmed ? ' ic-file-dimmed' : ''}`}>
+                  <StatusIcon status={perFileStatus} />
+                  <div className="ic-file-info">
+                    <span className="ic-file-path">{file.path}</span>
+                    <code className="ic-hash-value">{file.hashAlgorithm}: {file.hashValue}</code>
+                  </div>
                 </div>
+              )
+            })}
+            {fileVerificationResponse && (
+              <div className="ic-note">
+                Checked {fileVerificationResponse.fileResults.length} of {filesInfo?.files.length ?? 0} files
               </div>
-            ))}
-            {fileContentsStatus === 'skipped' && (
+            )}
+            {!fileVerificationResponse && fileContentsStatus === 'skipped' && (
               <div className="ic-note">
                 Content not stored — inventory verified by hash above
               </div>

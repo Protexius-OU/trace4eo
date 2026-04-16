@@ -90,6 +90,19 @@ public class ProvenanceController {
         return ResponseEntity.ok(result);
     }
 
+    @PostMapping("/{id}/verify-files")
+    public ResponseEntity<FileVerificationResponse> verifyFileHashes(
+        @PathVariable("id") UUID id,
+        @RequestBody List<FileHashInput> inputs
+    ) {
+        Optional<ProvenanceRecord> provenanceRecord = provenanceService.get(id);
+        if (provenanceRecord.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        FileVerificationResponse result = provenanceService.verifyFileHashes(provenanceRecord.get(), inputs);
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping("/{id}/zip")
     public ResponseEntity<StreamingResponseBody> downloadProvenanceRecordZip(@PathVariable("id") UUID id) {
         var optionalResult = provenanceGraphService.buildGraphWithRecords(id);
