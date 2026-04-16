@@ -352,11 +352,19 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
                 setAllFilesExpanded,
               )
             ) : null}
-            {fileVerificationResponse && (
-              <div className="ic-note">
-                Checked {fileVerificationResponse.fileResults.length} of {filesInfo?.files.length ?? 0} files
-              </div>
-            )}
+            {fileVerificationResponse && (() => {
+              const total = fileVerificationResponse.fileResults.length
+              const matched =
+                fileVerificationResponse.fileResults.filter(r => r.status === 'MATCHED').length +
+                predecessorFileResults.filter(r => r.status === 'MATCHED').length
+              return (
+                <div className="ic-note">
+                  {isSearchingPredecessors
+                    ? `Checking ${total} ${total === 1 ? 'file' : 'files'}…`
+                    : `${matched} of ${total} ${total === 1 ? 'file' : 'files'} matched`}
+                </div>
+              )
+            })()}
             {!fileVerificationResponse && fileContentsStatus === 'skipped' && (
               <div className="ic-note">
                 Content not stored — inventory verified by hash above
