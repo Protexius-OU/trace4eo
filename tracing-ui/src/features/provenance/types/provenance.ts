@@ -120,3 +120,15 @@ export interface SignatureDetails {
   certificateIssuer: string
   manifestHash: string | null
 }
+
+export type FileCheckStatus = 'MATCHED' | 'MISMATCH' | 'NOT_IN_RECORD'
+
+export interface FileCheckResult {
+  filename: string
+  recordPath: string | null
+  status: FileCheckStatus
+}
+
+export interface FileVerificationResponse extends VerificationResult {
+  fileResults: FileCheckResult[]
+}

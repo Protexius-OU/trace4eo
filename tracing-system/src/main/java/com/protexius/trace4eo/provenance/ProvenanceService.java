@@ -1,5 +1,7 @@
 package com.protexius.trace4eo.provenance;
 
+import com.protexius.trace4eo.provenance.record.FileHashInfo;
+import com.protexius.trace4eo.provenance.record.FilesInfo;
 import com.protexius.trace4eo.provenance.record.Predecessor;
 import com.protexius.trace4eo.provenance.record.ProvenanceRecord;
 import com.protexius.trace4eo.provenance.signing.SignatureDetails;
@@ -14,8 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,6 +48,48 @@ public class ProvenanceService {
         ProvenanceVerificationResult result = provenanceVerificationService.verify(provenanceRecord);
         provenanceRegistry.addVerificationLog(provenanceRecord.id(), verificationLogCreatedAt, result.status());
         return result;
+    }
+
+    public FileVerificationResponse verifyFileHashes(ProvenanceRecord record, List<FileHashInput> inputs) {
+        Map<String, byte[]> resolvedHashes = resolveHashes(record, inputs);
+        List<FileCheckResult> fileResults = buildFileCheckResults(record.filesInfo(), inputs);
+        ProvenanceVerificationResult result = provenanceVerificationService.verifyWithFileHashes(record, resolvedHashes);
+        return FileVerificationResponse.from(result, fileResults);
+    }
+
+    private Map<String, byte[]> resolveHashes(ProvenanceRecord record, List<FileHashInput> inputs) {
+        Map<String, byte[]> resolved = new HashMap<>();
+        for (FileHashInput input : inputs) {
+            findRecordFile(record.filesInfo(), input.filename())
+                .ifPresent(f -> resolved.put(f.path(), input.decodedHash()));
+        }
+        return resolved;
+    }
+
+    private List<FileCheckResult> buildFileCheckResults(FilesInfo filesInfo, List<FileHashInput> inputs) {
+        return inputs.stream().map(input -> {
+            Optional<FileHashInfo> match = findRecordFile(filesInfo, input.filename());
+            if (match.isEmpty()) {
+                return new FileCheckResult(input.filename(), null, FileCheckStatus.NOT_IN_RECORD);
+            }
+            FileHashInfo expected = match.get();
+            boolean matched = Arrays.equals(input.decodedHash(), expected.hashValue());
+            return new FileCheckResult(
+                input.filename(),
+                expected.path(),
+                matched ? FileCheckStatus.MATCHED : FileCheckStatus.MISMATCH
+            );
+        }).toList();
+    }
+
+    private Optional<FileHashInfo> findRecordFile(FilesInfo filesInfo, String filename) {
+        if (filesInfo == null || filesInfo.files() == null) {
+            return Optional.empty();
+        }
+        return filesInfo.files().stream()
+            .filter(f -> f.path() != null)
+            .filter(f -> f.path().equals(filename) || f.path().endsWith("/" + filename))
+            .findFirst();
     }
 
     public Optional<ProvenanceRecord> get(UUID id) {

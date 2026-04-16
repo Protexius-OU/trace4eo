@@ -1,5 +1,5 @@
 import { authFetch } from '../../../core/auth/authFetch'
-import type { ProvenanceRecord, ProvenanceGraph, PagedResponse, RecordFilters, FilterOptions, VerificationResult } from '../types/provenance'
+import type { ProvenanceRecord, ProvenanceGraph, PagedResponse, RecordFilters, FilterOptions, VerificationResult, FileVerificationResponse } from '../types/provenance'
 
 const API_BASE = '/api/provenance'
 
@@ -81,6 +81,21 @@ export async function verifyRecord(id: string): Promise<VerificationResult> {
   const response = await authFetch(`${API_BASE}/${id}/verify`, { method: 'POST' })
   if (!response.ok) {
     throw new Error(`Verification failed: ${response.statusText}`)
+  }
+  return response.json()
+}
+
+export async function verifyFileHashes(
+  id: string,
+  inputs: Array<{ filename: string; hashValue: string }>
+): Promise<FileVerificationResponse> {
+  const response = await authFetch(`${API_BASE}/${id}/verify-files`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(inputs),
+  })
+  if (!response.ok) {
+    throw new Error(`File verification failed: ${response.statusText}`)
   }
   return response.json()
 }

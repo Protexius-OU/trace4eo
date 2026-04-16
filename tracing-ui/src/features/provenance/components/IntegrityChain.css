@@ -244,6 +244,10 @@
   font-size: 0.6875rem;
 }
 
+.ic-file-dimmed {
+  opacity: 0.4;
+}
+
 .ic-file-count {
   font-size: 0.6875rem;
   color: #6b7280;

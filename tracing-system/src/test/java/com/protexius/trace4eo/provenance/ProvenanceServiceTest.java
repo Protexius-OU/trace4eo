@@ -1,5 +1,6 @@
 package com.protexius.trace4eo.provenance;
 
+import com.protexius.trace4eo.provenance.record.FileHashInfo;
 import com.protexius.trace4eo.provenance.record.FilesInfo;
 import com.protexius.trace4eo.provenance.record.Manifest;
 import com.protexius.trace4eo.provenance.record.Metadata;
@@ -15,7 +16,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.Base64;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -369,6 +372,104 @@ class ProvenanceServiceTest {
         Manifest manifest = new Manifest("1", null, null);
         FilesInfo filesInfo = new FilesInfo(null, null);
         ProvenanceSignature signature = new ProvenanceSignature(signatureBytes, signingTime, HashAlgorithm.SHA256);
+        return new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature);
+    }
+
+    @Test
+    void verifyFileHashesMatchedWhenHashMatches() {
+        byte[] knownHash = {1, 2, 3, 4, 5, 6, 7, 8};
+        FileHashInfo fileHashInfo = new FileHashInfo("image.tif", HashAlgorithm.SHA256, knownHash);
+        ProvenanceRecord record = createTestRecordWithFiles(UUID.randomUUID(), fileHashInfo);
+        FileHashInput input = new FileHashInput("image.tif", Base64.getEncoder().encodeToString(knownHash));
+        when(provenanceVerificationService.verifyWithFileHashes(any(), any())).thenReturn(new ProvenanceVerificationResult());
+
+        FileVerificationResponse response = provenanceService.verifyFileHashes(record, List.of(input));
+
+        assertEquals(1, response.fileResults().size());
+        FileCheckResult result = response.fileResults().getFirst();
+        assertEquals("image.tif", result.filename());
+        assertEquals("image.tif", result.recordPath());
+        assertEquals(FileCheckStatus.MATCHED, result.status());
+    }
+
+    @Test
+    void verifyFileHashesMatchesBySuffixPath() {
+        byte[] knownHash = {10, 20, 30};
+        FileHashInfo fileHashInfo = new FileHashInfo("data/subdir/image.tif", HashAlgorithm.SHA256, knownHash);
+        ProvenanceRecord record = createTestRecordWithFiles(UUID.randomUUID(), fileHashInfo);
+        FileHashInput input = new FileHashInput("image.tif", Base64.getEncoder().encodeToString(knownHash));
+        when(provenanceVerificationService.verifyWithFileHashes(any(), any())).thenReturn(new ProvenanceVerificationResult());
+
+        FileVerificationResponse response = provenanceService.verifyFileHashes(record, List.of(input));
+
+        FileCheckResult result = response.fileResults().getFirst();
+        assertEquals("data/subdir/image.tif", result.recordPath());
+        assertEquals(FileCheckStatus.MATCHED, result.status());
+    }
+
+    @Test
+    void verifyFileHashesMismatchWhenHashDiffers() {
+        byte[] storedHash = {1, 2, 3, 4};
+        byte[] wrongHash = {9, 8, 7, 6};
+        FileHashInfo fileHashInfo = new FileHashInfo("image.tif", HashAlgorithm.SHA256, storedHash);
+        ProvenanceRecord record = createTestRecordWithFiles(UUID.randomUUID(), fileHashInfo);
+        FileHashInput input = new FileHashInput("image.tif", Base64.getEncoder().encodeToString(wrongHash));
+        when(provenanceVerificationService.verifyWithFileHashes(any(), any())).thenReturn(new ProvenanceVerificationResult());
+
+        FileVerificationResponse response = provenanceService.verifyFileHashes(record, List.of(input));
+
+        FileCheckResult result = response.fileResults().getFirst();
+        assertEquals("image.tif", result.recordPath());
+        assertEquals(FileCheckStatus.MISMATCH, result.status());
+    }
+
+    @Test
+    void verifyFileHashesNotInRecordWhenFilenameUnmatched() {
+        FileHashInfo fileHashInfo = new FileHashInfo("other.tif", HashAlgorithm.SHA256, new byte[]{1});
+        ProvenanceRecord record = createTestRecordWithFiles(UUID.randomUUID(), fileHashInfo);
+        FileHashInput input = new FileHashInput("missing.tif", Base64.getEncoder().encodeToString(new byte[]{1}));
+        when(provenanceVerificationService.verifyWithFileHashes(any(), any())).thenReturn(new ProvenanceVerificationResult());
+
+        FileVerificationResponse response = provenanceService.verifyFileHashes(record, List.of(input));
+
+        FileCheckResult result = response.fileResults().getFirst();
+        assertEquals("missing.tif", result.filename());
+        assertSame(null, result.recordPath());
+        assertEquals(FileCheckStatus.NOT_IN_RECORD, result.status());
+    }
+
+    @Test
+    void verifyFileHashesWithNullFilesInfoReturnsNotInRecord() {
+        ProvenanceRecord record = createTestRecordWithNullFilesInfo(UUID.randomUUID(), Instant.now());
+        FileHashInput input = new FileHashInput("image.tif", Base64.getEncoder().encodeToString(new byte[]{1}));
+        when(provenanceVerificationService.verifyWithFileHashes(any(), any())).thenReturn(new ProvenanceVerificationResult());
+
+        FileVerificationResponse response = provenanceService.verifyFileHashes(record, List.of(input));
+
+        assertEquals(1, response.fileResults().size());
+        assertEquals(FileCheckStatus.NOT_IN_RECORD, response.fileResults().getFirst().status());
+    }
+
+    @Test
+    void verifyFileHashesWithEmptyFilesCollectionReturnsNotInRecord() {
+        Metadata metadata = new Metadata("data-id", "test-type", Collections.emptyList());
+        Manifest manifest = new Manifest("1", null, null);
+        FilesInfo filesInfo = new FilesInfo(null, null);
+        ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256);
+        ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(), metadata, filesInfo, manifest, signature);
+        FileHashInput input = new FileHashInput("image.tif", Base64.getEncoder().encodeToString(new byte[]{1}));
+        when(provenanceVerificationService.verifyWithFileHashes(any(), any())).thenReturn(new ProvenanceVerificationResult());
+
+        FileVerificationResponse response = provenanceService.verifyFileHashes(record, List.of(input));
+
+        assertEquals(FileCheckStatus.NOT_IN_RECORD, response.fileResults().getFirst().status());
+    }
+
+    private ProvenanceRecord createTestRecordWithFiles(UUID id, FileHashInfo... files) {
+        Metadata metadata = new Metadata("data-id", "test-type", Collections.emptyList());
+        Manifest manifest = new Manifest("1", null, null);
+        FilesInfo filesInfo = new FilesInfo(new LinkedHashSet<>(List.of(files)), null);
+        ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256);
         return new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature);
     }
 
