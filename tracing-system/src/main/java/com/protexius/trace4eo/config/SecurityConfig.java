@@ -52,7 +52,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/provenance/check-access").hasRole(ROLE_SIGNER)
                 .requestMatchers(HttpMethod.POST, "/api/provenance").hasRole(ROLE_SIGNER)
                 .requestMatchers(HttpMethod.POST, "/api/provenance/validate-predecessors").hasRole(ROLE_SIGNER)
-                .requestMatchers("/api/**").hasAnyRole(ROLE_VIEWER, ROLE_SIGNER)
+                .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole(ROLE_VIEWER, ROLE_SIGNER)
+                .requestMatchers(HttpMethod.POST, "/api/**").hasAnyRole(ROLE_VIEWER, ROLE_SIGNER)
                 .anyRequest().denyAll()
             )
             .oauth2ResourceServer(oauth2 ->
