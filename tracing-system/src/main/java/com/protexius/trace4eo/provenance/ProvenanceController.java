@@ -59,6 +59,10 @@ public class ProvenanceController {
     public void checkAccess() {
     }
 
+    @GetMapping("/check-uploader-access")
+    public void checkUploaderAccess() {
+    }
+
     @GetMapping("/filters")
     public FilterOptions getFilterOptions() {
         return provenanceService.getFilterOptions();

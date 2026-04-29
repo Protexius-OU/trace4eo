@@ -67,7 +67,7 @@ public class RegisterRecordsTool {
     ) throws IOException {
         List<Path> sources = validateAndResolveSources(records, directory, pattern, registerUrl, keycloakUrl);
         String accessToken = exchangeToken(keycloakUrl, realm);
-        registrationClient.checkSignerAccess(registerUrl, accessToken);
+        registrationClient.checkUploaderAccess(registerUrl, accessToken);
         List<ProvenanceRecord> loaded = loadRecords(sources);
         if (loaded.isEmpty()) {
             throw new IllegalArgumentException("No provenance records found in input files");

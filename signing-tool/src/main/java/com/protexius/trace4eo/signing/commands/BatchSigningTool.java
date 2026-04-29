@@ -87,9 +87,11 @@ public class BatchSigningTool {
         List<Path> resolvedFiles = validateAndResolveFiles(files, directory, pattern, provenanceRecordType,
             dataId, outputDir, registerUrl, keycloakUrl, saveZip);
         String oidcToken = resolveOidcToken();
-        String accessToken = registrationClient.exchangeTokenIfConfigured(registerUrl, keycloakUrl, realm, oidcToken);
-        if (accessToken != null) {
+        String accessToken = null;
+        if (registerUrl != null && !registerUrl.isBlank()) {
+            accessToken = registrationClient.exchangeToken(keycloakUrl, realm, oidcToken);
             registrationClient.checkSignerAccess(registerUrl, accessToken);
+            registrationClient.checkUploaderAccess(registerUrl, accessToken);
         }
         List<ProvenanceRecord> records = signFilesIndividually(resolvedFiles, dataId, provenanceRecordType, algorithm,
             oidcToken, Math.max(1, threads));
