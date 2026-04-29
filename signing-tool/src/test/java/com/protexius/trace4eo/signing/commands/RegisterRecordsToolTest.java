@@ -89,7 +89,7 @@ class RegisterRecordsToolTest {
 
         assertEquals(Set.of(recordA.id(), recordB.id()), Set.copyOf(registered));
         verify(mockRegistrationClient).exchangeToken("http://localhost:8180", "trace4eo", "oidc-token");
-        verify(mockRegistrationClient).checkSignerAccess("http://localhost:8080/api/provenance", "access-token");
+        verify(mockRegistrationClient).checkUploaderAccess("http://localhost:8080/api/provenance", "access-token");
         verify(mockRegistrationClient, never()).findMissingPredecessors(anyList(), anyString(), anyString());
         verify(mockRegistrationClient).registerRecords(
             argThat(list -> list.size() == 2

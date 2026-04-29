@@ -56,6 +56,12 @@ class ProvenanceControllerIntegrationTest {
     }
 
     @Test
+    void checkUploaderAccessReturns200() {
+        ResponseEntity<Void> response = restTemplate.getForEntity("/api/provenance/check-uploader-access", Void.class);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    @Test
     void saveAndGetProvenanceRecord() {
         UUID id = UUID.randomUUID();
         String dataId = "data-" + id;

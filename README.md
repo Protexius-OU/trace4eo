@@ -15,9 +15,11 @@ The project consists of multiple software components:
 
 ## Running via Docker
 
-Use `./build-dev.sh` to build the backend image, frontend, and Docker images. Then `./start-dev.sh` to start all services (PostgreSQL, Keycloak, backend, frontend).
+Use `./build-dev.sh` to build the backend image, frontend, and Docker images. Then `./start-dev.sh` to start all
+services (PostgreSQL, Keycloak, backend, frontend).
 
-Database volumes are preserved across `./stop-dev.sh` / `./start-dev.sh` cycles. To start with a clean database, pass the `--fresh` flag:
+Database volumes are preserved across `./stop-dev.sh` / `./start-dev.sh` cycles. To start with a clean database, pass
+the `--fresh` flag:
 
 ```bash
 ./start-dev.sh --fresh
@@ -33,22 +35,28 @@ This uses Spring Boot's built-in Buildpacks support to produce an OCI image.
 
 ### Access control
 
-Two roles are defined in the `trace4eo` realm:
+Three roles are defined in the `trace4eo` realm:
 
-| Role     | Permissions                                      |
-|----------|--------------------------------------------------|
-| `viewer` | Read and verify provenance records (default)     |
-| `signer` | Submit and sign provenance records               |
+| Role       | Permissions                                         |
+|------------|-----------------------------------------------------|
+| `viewer`   | Read and verify provenance records (default)        |
+| `signer`   | Sign provenance records                             |
+| `uploader` | Register provenance records with the tracing system |
 
-All users authenticated via Sigstore get `viewer` by default. `signer` access is granted by either:
+All users authenticated via Sigstore get `viewer` by default. Signing and registering are independent: an account needs
+both `signer` and `uploader` to do both in one step.
 
-**1. Domain allowlist** — set `SIGNER_ALLOWED_DOMAINS` in `.env` to a comma-separated list of email domain suffixes. Any Sigstore user whose email matches is automatically granted `signer`:
+`signer` and `uploader` are granted by either:
+
+**1. Domain allowlist** — set `SIGNER_ALLOWED_DOMAINS` in `.env` to a comma-separated list of email domain suffixes. Any
+Sigstore user whose email matches is automatically granted both `signer` and `uploader`:
 
 ```
 SIGNER_ALLOWED_DOMAINS=@esa.int,@example.com
 ```
 
-**2. Manual assignment** — log into the Keycloak admin console at `https://<VM_HOST>/admin`, navigate to the `trace4eo` realm → Users → select user → Role mapping, and assign the `signer` realm role.
+**2. Manual assignment** — log into the Keycloak admin console at `https://<VM_HOST>/admin`, navigate to the `trace4eo`
+realm → Users → select user → Role mapping, and assign the desired realm role(s).
 
 ## Static code analysis
 
@@ -73,4 +81,5 @@ Run `./gradlew rewriteRun` to automatically fix some checkstyle errors.
 Dependency-Check is a utility that identifies project dependencies
 and checks if there are any known, publicly disclosed, vulnerabilities.
 
-To run the analysis, configure `dependencyCheck.nvd.apiKey` in your local `gradle.properties` file and run `./gradlew dependencyCheckAnalyze`
+To run the analysis, configure `dependencyCheck.nvd.apiKey` in your local `gradle.properties` file and run
+`./gradlew dependencyCheckAnalyze`

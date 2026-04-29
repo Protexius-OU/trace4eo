@@ -74,7 +74,7 @@ class RecordRegistrationClientTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void checkSignerAccess_throwsWithDomainMessageOn403() throws Exception {
+    void checkSignerAccess_throwsOn403() throws Exception {
         HttpResponse<String> mockResponse = mock(HttpResponse.class);
         when(mockResponse.statusCode()).thenReturn(403);
         when(mockResponse.body()).thenReturn("Forbidden");
@@ -84,13 +84,38 @@ class RecordRegistrationClientTest {
         RegistrationException exception = assertThrows(RegistrationException.class, () ->
             client.checkSignerAccess("http://localhost:8080/api/provenance", "token"));
 
-        assertTrue(exception.getMessage().contains("domain"));
-        assertTrue(exception.getMessage().contains("allowlist"));
+        assertTrue(exception.getMessage().contains("signer"));
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void checkSignerAccess_throwsOnOtherNon200Response() throws Exception {
+    void checkUploaderAccess_succeedsOn200() throws Exception {
+        HttpResponse<String> mockResponse = mock(HttpResponse.class);
+        when(mockResponse.statusCode()).thenReturn(200);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(mockResponse);
+
+        client.checkUploaderAccess("http://localhost:8080/api/provenance", "token");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void checkUploaderAccess_throwsWithRoleMessageOn403() throws Exception {
+        HttpResponse<String> mockResponse = mock(HttpResponse.class);
+        when(mockResponse.statusCode()).thenReturn(403);
+        when(mockResponse.body()).thenReturn("Forbidden");
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+            .thenReturn(mockResponse);
+
+        RegistrationException exception = assertThrows(RegistrationException.class, () ->
+            client.checkUploaderAccess("http://localhost:8080/api/provenance", "token"));
+
+        assertTrue(exception.getMessage().contains("uploader"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void checkUploaderAccess_throwsOnOtherNon200Response() throws Exception {
         HttpResponse<String> mockResponse = mock(HttpResponse.class);
         when(mockResponse.statusCode()).thenReturn(500);
         when(mockResponse.body()).thenReturn("Internal Server Error");
@@ -98,7 +123,7 @@ class RecordRegistrationClientTest {
             .thenReturn(mockResponse);
 
         RegistrationException exception = assertThrows(RegistrationException.class, () ->
-            client.checkSignerAccess("http://localhost:8080/api/provenance", "token"));
+            client.checkUploaderAccess("http://localhost:8080/api/provenance", "token"));
 
         assertTrue(exception.getMessage().contains("500"));
     }

@@ -100,7 +100,19 @@ public class RecordRegistrationClient {
     }
 
     public void checkSignerAccess(String registerUrl, String accessToken) {
-        String url = registerUrl + "/check-access";
+        checkAccess(registerUrl + "/check-access", accessToken,
+            "Your account is not authorised to sign records. "
+                + "Ask the system administrator to grant the 'signer' role "
+                + "or add your email domain to the allowlist.");
+    }
+
+    public void checkUploaderAccess(String registerUrl, String accessToken) {
+        checkAccess(registerUrl + "/check-uploader-access", accessToken,
+            "Your account is not authorised to register provenance records. "
+                + "Ask the system administrator to grant the 'uploader' role.");
+    }
+
+    private void checkAccess(String url, String accessToken, String forbiddenMessage) {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -109,9 +121,7 @@ public class RecordRegistrationClient {
                 .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 403) {
-                throw new RegistrationException(
-                    "Your email domain is not authorised to sign records. "
-                        + "Ask the system administrator to add your domain to the allowlist.");
+                throw new RegistrationException(forbiddenMessage);
             }
             if (response.statusCode() != 200) {
                 throw new RegistrationException(
@@ -141,17 +151,6 @@ public class RecordRegistrationClient {
         } catch (Exception e) {
             return "unknown";
         }
-    }
-
-    public String exchangeTokenIfConfigured(String registerUrl, String keycloakUrl, String realm, String oidcToken) {
-        if (registerUrl == null || registerUrl.isBlank()) {
-            return null;
-        }
-        if (oidcToken != null) {
-            return exchangeToken(keycloakUrl, realm, oidcToken);
-        }
-        log.warn("No OIDC token available for token exchange. Attempting registration without auth.");
-        return null;
     }
 
     public void validatePredecessorsExist(List<Predecessor> predecessors, String registerUrl, String accessToken) {

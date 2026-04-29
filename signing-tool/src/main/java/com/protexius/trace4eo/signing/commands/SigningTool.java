@@ -168,10 +168,13 @@ public class SigningTool {
             return null;
         }
         String oidcToken = oidcTokenResolver.resolve();
-        String accessToken = registrationClient.exchangeTokenIfConfigured(registerUrl, keycloakUrl, realm, oidcToken);
-        if (accessToken != null) {
-            registrationClient.checkSignerAccess(registerUrl, accessToken);
+        if (oidcToken == null) {
+            throw new IllegalStateException(
+                "No OIDC token available. Set SIGSTORE_ID_TOKEN or enable browser-based login.");
         }
+        String accessToken = registrationClient.exchangeToken(keycloakUrl, realm, oidcToken);
+        registrationClient.checkSignerAccess(registerUrl, accessToken);
+        registrationClient.checkUploaderAccess(registerUrl, accessToken);
         return accessToken;
     }
 

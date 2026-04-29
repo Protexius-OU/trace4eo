@@ -82,7 +82,7 @@ class SigningToolTest {
 
     @Test
     void createProvenanceRecord_withRegistration(@TempDir Path tempDir) throws IOException {
-        when(mockRegistrationClient.exchangeTokenIfConfigured(anyString(), anyString(), anyString(), anyString()))
+        when(mockRegistrationClient.exchangeToken(anyString(), anyString(), anyString()))
             .thenReturn("access-token");
 
         UUID predecessorId = UUID.randomUUID();
@@ -91,8 +91,7 @@ class SigningToolTest {
             files, "test", "test", List.of(predecessorId.toString()), "SHA256", tempDir,
             "http://localhost:8080/api/provenance", "http://localhost:8180", "trace4eo", null, null, "*", true
         );
-        verify(mockRegistrationClient).exchangeTokenIfConfigured(
-            "http://localhost:8080/api/provenance", "http://localhost:8180", "trace4eo", "test-token");
+        verify(mockRegistrationClient).exchangeToken("http://localhost:8180", "trace4eo", "test-token");
         verify(mockRegistrationClient).validatePredecessorsExist(
             List.of(new Predecessor(predecessorId)), "http://localhost:8080/api/provenance", "access-token");
         verify(mockRegistrationClient).registerIfConfigured(anyList(), anyString(), anyString());
@@ -104,7 +103,7 @@ class SigningToolTest {
         signingTool.createProvenanceRecord(
             files, "test", "test", List.of(), "SHA256", tempDir, null, null, "trace4eo", null, null, "*", true
         );
-        verify(mockRegistrationClient, never()).exchangeTokenIfConfigured(any(), any(), any(), any());
+        verify(mockRegistrationClient, never()).exchangeToken(any(), any(), any());
     }
 
     @Test
@@ -284,7 +283,7 @@ class SigningToolTest {
     @Test
     void createProvenanceRecord_missingPredecessors_throws(@TempDir Path tempDir) {
         UUID missingId = UUID.randomUUID();
-        when(mockRegistrationClient.exchangeTokenIfConfigured(anyString(), anyString(), anyString(), anyString()))
+        when(mockRegistrationClient.exchangeToken(anyString(), anyString(), anyString()))
             .thenReturn("access-token");
         org.mockito.Mockito.doThrow(new IllegalArgumentException(
             String.format("Predecessor records not found: [%s]", missingId)))
