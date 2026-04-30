@@ -28,7 +28,7 @@ class ProvenanceServiceIntegrationTest {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18.2-alpine");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18.3-alpine");
 
     @Autowired
     private ProvenanceService provenanceService;

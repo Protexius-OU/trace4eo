@@ -108,7 +108,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": []
+      "realmRoles": ["viewer"]
     }
   ],
   "roles": {

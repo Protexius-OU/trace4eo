@@ -24,5 +24,13 @@ if [ "$FRESH" = true ]; then
 fi
 
 docker compose up -d --wait
+
+# Keycloak 26.6 enforces sslRequired=EXTERNAL on the master realm; port-forwarded
+# host requests fail "HTTPS required". Relax it for local dev via kcadm inside the container.
+docker compose exec -T keycloak /opt/keycloak/bin/kcadm.sh config credentials \
+  --server http://localhost:8180 --realm master \
+  --user admin --password "$KEYCLOAK_ADMIN_PASSWORD" >/dev/null
+docker compose exec -T keycloak /opt/keycloak/bin/kcadm.sh update realms/master -s sslRequired=NONE >/dev/null
+
 ./config/keycloak/configure-token-exchange.sh
 echo "All services started. Frontend at http://localhost:3000, backend at http://localhost:8080"
