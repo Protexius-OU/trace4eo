@@ -1,6 +1,7 @@
 package com.protexius.trace4eo.signing;
 
 import com.protexius.trace4eo.signing.commands.BatchSigningTool;
+import com.protexius.trace4eo.signing.commands.RegisterRecordsTool;
 import com.protexius.trace4eo.signing.commands.SigningTool;
 import org.springframework.aot.hint.MemberCategory;
 import org.springframework.aot.hint.RuntimeHints;
@@ -18,7 +19,7 @@ import java.util.List;
 @SuppressWarnings("checkstyle:HideUtilityClassConstructor")
 public class SigningToolApplication {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SpringApplication.run(SigningToolApplication.class, args);
     }
 
@@ -29,7 +30,8 @@ public class SigningToolApplication {
             // and CommandFactoryBean invokes the @Command methods via reflection.
             hints.reflection().registerType(SigningTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
             hints.reflection().registerType(BatchSigningTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
-hints.resources().registerPattern("dev/sigstore/**");
+            hints.reflection().registerType(RegisterRecordsTool.class, MemberCategory.INVOKE_DECLARED_METHODS);
+            hints.resources().registerPattern("dev/sigstore/**");
             registerProvenanceReflection(hints, classLoader);
             registerProtobufReflection(hints, classLoader);
             registerBouncyCastleReflection(hints, classLoader);
@@ -56,29 +58,29 @@ hints.resources().registerPattern("dev/sigstore/**");
         //    package to avoid per-class whack-a-mole.
         private static void registerProtobufReflection(RuntimeHints hints, ClassLoader classLoader) {
             hints.reflection().registerTypeIfPresent(classLoader,
-                    "com.google.protobuf.DescriptorProtos$FeatureSet",
-                    MemberCategory.INVOKE_DECLARED_METHODS);
+                "com.google.protobuf.DescriptorProtos$FeatureSet",
+                MemberCategory.INVOKE_DECLARED_METHODS);
             hints.reflection().registerTypeIfPresent(classLoader,
-                    "com.google.protobuf.DescriptorProtos$FeatureSet$Builder",
-                    MemberCategory.INVOKE_DECLARED_METHODS);
+                "com.google.protobuf.DescriptorProtos$FeatureSet$Builder",
+                MemberCategory.INVOKE_DECLARED_METHODS);
             registerProtocolMessageEnums(hints, classLoader,
-                    "com.google.protobuf", "com.google.api", "com.google.rpc", "dev.sigstore",
-                    "io.intoto");
+                "com.google.protobuf", "com.google.api", "com.google.rpc", "dev.sigstore",
+                "io.intoto");
             registerForGsonDeserialization(hints, classLoader, "com.google.protobuf", "dev.sigstore", "io.intoto");
         }
 
         private static void registerForGsonDeserialization(
-                RuntimeHints hints, ClassLoader classLoader, String... packages) {
+            RuntimeHints hints, ClassLoader classLoader, String... packages) {
             ClassPathScanningCandidateComponentProvider scanner =
-                    new ClassPathScanningCandidateComponentProvider(false);
+                new ClassPathScanningCandidateComponentProvider(false);
             scanner.addIncludeFilter((metadataReader, factory) -> true);
             for (String pkg : List.of(packages)) {
                 for (BeanDefinition bd : scanner.findCandidateComponents(pkg)) {
                     hints.reflection().registerTypeIfPresent(classLoader,
-                            bd.getBeanClassName(),
-                            MemberCategory.ACCESS_DECLARED_FIELDS,
-                            MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
-                            MemberCategory.INVOKE_DECLARED_METHODS);
+                        bd.getBeanClassName(),
+                        MemberCategory.ACCESS_DECLARED_FIELDS,
+                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                        MemberCategory.INVOKE_DECLARED_METHODS);
                 }
             }
         }
@@ -89,17 +91,17 @@ hints.resources().registerPattern("dev/sigstore/**");
         // Scanning the whole com.protexius.trace4eo.provenance package covers all current and
         // future record types without per-class maintenance.
         private static void registerProvenanceReflection(
-                RuntimeHints hints, ClassLoader classLoader) {
+            RuntimeHints hints, ClassLoader classLoader) {
             ClassPathScanningCandidateComponentProvider scanner =
-                    new ClassPathScanningCandidateComponentProvider(false);
+                new ClassPathScanningCandidateComponentProvider(false);
             scanner.addIncludeFilter((metadataReader, factory) -> true);
             for (BeanDefinition bd : scanner.findCandidateComponents(
-                    "com.protexius.trace4eo.provenance")) {
+                "com.protexius.trace4eo.provenance")) {
                 hints.reflection().registerTypeIfPresent(classLoader,
-                        bd.getBeanClassName(),
-                        MemberCategory.ACCESS_DECLARED_FIELDS,
-                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
-                        MemberCategory.INVOKE_DECLARED_METHODS);
+                    bd.getBeanClassName(),
+                    MemberCategory.ACCESS_DECLARED_FIELDS,
+                    MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                    MemberCategory.INVOKE_DECLARED_METHODS);
             }
         }
 
@@ -109,22 +111,22 @@ hints.resources().registerPattern("dev/sigstore/**");
         // runtime. Scanning the whole org.bouncycastle package and registering all classes for
         // construction ensures every provider implementation is reachable.
         private static void registerBouncyCastleReflection(
-                RuntimeHints hints, ClassLoader classLoader) {
+            RuntimeHints hints, ClassLoader classLoader) {
             ClassPathScanningCandidateComponentProvider scanner =
-                    new ClassPathScanningCandidateComponentProvider(false);
+                new ClassPathScanningCandidateComponentProvider(false);
             scanner.addIncludeFilter((metadataReader, factory) -> true);
             for (BeanDefinition bd : scanner.findCandidateComponents("org.bouncycastle")) {
                 hints.reflection().registerTypeIfPresent(classLoader,
-                        bd.getBeanClassName(),
-                        MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
-                        MemberCategory.INVOKE_DECLARED_METHODS);
+                    bd.getBeanClassName(),
+                    MemberCategory.INVOKE_DECLARED_CONSTRUCTORS,
+                    MemberCategory.INVOKE_DECLARED_METHODS);
             }
         }
 
         private static void registerProtocolMessageEnums(
-                RuntimeHints hints, ClassLoader classLoader, String... packages) {
+            RuntimeHints hints, ClassLoader classLoader, String... packages) {
             ClassPathScanningCandidateComponentProvider scanner =
-                    new ClassPathScanningCandidateComponentProvider(false);
+                new ClassPathScanningCandidateComponentProvider(false);
             scanner.addIncludeFilter((metadataReader, factory) -> {
                 for (String iface : metadataReader.getClassMetadata().getInterfaceNames()) {
                     if ("com.google.protobuf.ProtocolMessageEnum".equals(iface)) {
@@ -136,7 +138,7 @@ hints.resources().registerPattern("dev/sigstore/**");
             for (String pkg : List.of(packages)) {
                 for (BeanDefinition bd : scanner.findCandidateComponents(pkg)) {
                     hints.reflection().registerTypeIfPresent(classLoader,
-                            bd.getBeanClassName(), MemberCategory.INVOKE_DECLARED_METHODS);
+                        bd.getBeanClassName(), MemberCategory.INVOKE_DECLARED_METHODS);
                 }
             }
         }
