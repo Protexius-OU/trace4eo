@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:18.2-alpine
+    image: postgres:18.3-alpine
     environment:
       POSTGRES_DB: trace4eo
       POSTGRES_USER: trace4eo
@@ -48,7 +48,7 @@ services:
         condition: service_started
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.5
+    image: quay.io/keycloak/keycloak:26.6.1
     command: start-dev --import-realm
     environment:
       KC_DB: postgres
@@ -59,8 +59,8 @@ services:
       KC_HTTP_PORT: 8180
       KC_FEATURES: token-exchange,admin-fine-grained-authz:v1
       KC_HEALTH_ENABLED: "true"
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
     volumes:
       - ./config/keycloak/trace4eo-realm.json:/opt/keycloak/data/import/trace4eo-realm.json:ro
     ports:
