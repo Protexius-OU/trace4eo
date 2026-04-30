@@ -107,7 +107,9 @@ public class ProvenanceService {
             d.signingTime(), d.rekorLogIndex(), d.signerIdentity(), d.certificateIssuer(), manifestHash
         );
         var newSig = new ProvenanceSignature(sig.bytes(), sig.signingTime(), sig.hashAlgorithm(), newDetails);
-        return new ProvenanceRecordImpl(record.id(), record.metadata(), record.filesInfo(), record.manifest(), newSig);
+        return new ProvenanceRecordImpl(
+            record.id(), record.metadata(), record.filesInfo(), record.manifest(), newSig, record.uploaderIdentity()
+        );
     }
 
     private String computeManifestHash(ProvenanceRecord record) {
@@ -147,10 +149,10 @@ public class ProvenanceService {
     }
 
     @Transactional
-    public void save(ProvenanceRecord provenanceRecord) {
+    public void save(ProvenanceRecord provenanceRecord, String uploaderIdentity) {
         validate(provenanceRecord);
         saveSignature(provenanceRecord);
-        saveProvenanceRecord(provenanceRecord);
+        saveProvenanceRecord(provenanceRecord, uploaderIdentity);
     }
 
     private void validate(ProvenanceRecord record) {
@@ -203,12 +205,12 @@ public class ProvenanceService {
         provenanceRegistry.addSignature(id, signingTime, signatureJson.getBytes(StandardCharsets.UTF_8), signerIdentity);
     }
 
-    public void saveProvenanceRecord(ProvenanceRecord provenanceRecord) {
+    public void saveProvenanceRecord(ProvenanceRecord provenanceRecord, String uploaderIdentity) {
         UUID id = provenanceRecord.id();
         Instant signingTime = provenanceRecord.signature().signingTime();
         String manifestJson = provenanceJsonMapper.writeValueAsString(provenanceRecord.manifest());
         String metadataJson = provenanceJsonMapper.writeValueAsString(provenanceRecord.metadata());
         String filesJson = provenanceJsonMapper.writeValueAsString(provenanceRecord.filesInfo());
-        provenanceRegistry.addProvenanceRecord(id, manifestJson, metadataJson, filesJson, signingTime);
+        provenanceRegistry.addProvenanceRecord(id, manifestJson, metadataJson, filesJson, signingTime, uploaderIdentity);
     }
 }

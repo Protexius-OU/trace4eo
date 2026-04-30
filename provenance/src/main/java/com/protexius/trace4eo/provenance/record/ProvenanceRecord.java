@@ -12,4 +12,5 @@ public interface ProvenanceRecord {
     FilesInfo filesInfo();
     Manifest manifest();
     ProvenanceSignature signature();
+    String uploaderIdentity();
 }

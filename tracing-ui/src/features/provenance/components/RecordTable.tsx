@@ -251,6 +251,7 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
                 onClearAll={signerFilter.clearAll}
               />
             </th>
+            <th>Uploaded By</th>
             <th>Direct Predecessors</th>
             <th style={{ width: '1%', whiteSpace: 'nowrap' }}>Actions</th>
           </tr>
@@ -258,7 +259,7 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
         <tbody>
           {records.length === 0 ? (
             <tr>
-              <td colSpan={5} style={{ textAlign: 'center', color: '#666' }}>
+              <td colSpan={6} style={{ textAlign: 'center', color: '#666' }}>
                 No records match the current filters
               </td>
             </tr>
@@ -272,6 +273,11 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
                 <td>
                   <Tooltip text={getSignerEmail(record)}>
                     {getRecordSignerDomain(record)}
+                  </Tooltip>
+                </td>
+                <td>
+                  <Tooltip text={record.uploaderIdentity ?? null}>
+                    {getSignerDomain(record.uploaderIdentity ?? null)}
                   </Tooltip>
                 </td>
                 <td>{record.metadata.predecessors?.length ?? 0}</td>
