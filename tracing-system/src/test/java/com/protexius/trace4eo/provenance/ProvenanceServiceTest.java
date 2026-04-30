@@ -101,14 +101,15 @@ class ProvenanceServiceTest {
         when(provenanceJsonMapper.writeValueAsString(record.metadata())).thenReturn("{\"metadata\":true}");
         when(provenanceJsonMapper.writeValueAsString(record.filesInfo())).thenReturn("{\"files\":true}");
 
-        provenanceService.saveProvenanceRecord(record);
+        provenanceService.saveProvenanceRecord(record, "uploader@example.com");
 
         verify(provenanceRegistry).addProvenanceRecord(
             eq(id),
             eq("{\"manifest\":true}"),
             eq("{\"metadata\":true}"),
             eq("{\"files\":true}"),
-            eq(signingTime)
+            eq(signingTime),
+            eq("uploader@example.com")
         );
     }
 
@@ -122,14 +123,15 @@ class ProvenanceServiceTest {
         when(provenanceJsonMapper.writeValueAsString(record.metadata())).thenReturn("{\"metadata\":true}");
         when(provenanceJsonMapper.writeValueAsString(null)).thenReturn(null);
 
-        provenanceService.saveProvenanceRecord(record);
+        provenanceService.saveProvenanceRecord(record, null);
 
         verify(provenanceRegistry).addProvenanceRecord(
             eq(id),
             eq("{\"manifest\":true}"),
             eq("{\"metadata\":true}"),
             eq((String) null),
-            eq(signingTime)
+            eq(signingTime),
+            eq((String) null)
         );
     }
 
@@ -214,10 +216,10 @@ class ProvenanceServiceTest {
         ProvenanceRecord record = new ProvenanceRecordImpl(null,
             new Metadata("data-id", "test-type", Collections.emptyList()),
             new FilesInfo(null, null), new Manifest("1", null, null),
-            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256));
+            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256), null);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> provenanceService.save(record));
+            () -> provenanceService.save(record, null));
         assertEquals("Record ID must not be null", ex.getMessage());
     }
 
@@ -225,10 +227,10 @@ class ProvenanceServiceTest {
     void saveWithNullMetadataThrows() {
         ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
             null, new FilesInfo(null, null), new Manifest("1", null, null),
-            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256));
+            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256), null);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> provenanceService.save(record));
+            () -> provenanceService.save(record, null));
         assertEquals("Metadata must not be null", ex.getMessage());
     }
 
@@ -237,10 +239,10 @@ class ProvenanceServiceTest {
         ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
             new Metadata(null, "test-type", Collections.emptyList()),
             new FilesInfo(null, null), new Manifest("1", null, null),
-            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256));
+            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256), null);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> provenanceService.save(record));
+            () -> provenanceService.save(record, null));
         assertEquals("dataId must not be null or blank", ex.getMessage());
     }
 
@@ -249,10 +251,10 @@ class ProvenanceServiceTest {
         ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
             new Metadata("data-id", "  ", Collections.emptyList()),
             new FilesInfo(null, null), new Manifest("1", null, null),
-            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256));
+            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256), null);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> provenanceService.save(record));
+            () -> provenanceService.save(record, null));
         assertEquals("dataType must not be null or blank", ex.getMessage());
     }
 
@@ -260,10 +262,10 @@ class ProvenanceServiceTest {
     void saveWithNullSignatureThrows() {
         ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
             new Metadata("data-id", "test-type", Collections.emptyList()),
-            new FilesInfo(null, null), new Manifest("1", null, null), null);
+            new FilesInfo(null, null), new Manifest("1", null, null), null, null);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> provenanceService.save(record));
+            () -> provenanceService.save(record, null));
         assertEquals("Signature must not be null", ex.getMessage());
     }
 
@@ -272,10 +274,10 @@ class ProvenanceServiceTest {
         ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
             new Metadata("data-id", "test-type", Collections.emptyList()),
             new FilesInfo(null, null), null,
-            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256));
+            new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256), null);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> provenanceService.save(record));
+            () -> provenanceService.save(record, null));
         assertEquals("Manifest must not be null", ex.getMessage());
     }
 
@@ -286,7 +288,7 @@ class ProvenanceServiceTest {
         when(provenanceRegistry.get(id)).thenReturn(Optional.of(record));
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> provenanceService.save(record));
+            () -> provenanceService.save(record, null));
         assertTrue(ex.getMessage().contains(id.toString()));
         verify(provenanceRegistry, never()).addSignature(any(), any(), any(), any());
     }
@@ -298,15 +300,15 @@ class ProvenanceServiceTest {
         Manifest manifest = new Manifest("1", null, null);
         FilesInfo filesInfo = new FilesInfo(null, null);
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1, 2, 3}, Instant.now(), HashAlgorithm.SHA256);
-        ProvenanceRecord record = new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature);
+        ProvenanceRecord record = new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature, null);
         when(provenanceRegistry.get(id)).thenReturn(Optional.empty());
         when(provenanceJsonMapper.writeValueAsString(any())).thenReturn("{}");
 
-        provenanceService.save(record);
+        provenanceService.save(record, null);
 
         verify(provenanceRegistry, never()).findMissing(any());
         verify(provenanceRegistry).addSignature(any(), any(), any(), any());
-        verify(provenanceRegistry).addProvenanceRecord(any(), any(), any(), any(), any());
+        verify(provenanceRegistry).addProvenanceRecord(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -316,11 +318,11 @@ class ProvenanceServiceTest {
         when(provenanceRegistry.get(id)).thenReturn(Optional.empty());
         when(provenanceJsonMapper.writeValueAsString(any())).thenReturn("{}");
 
-        provenanceService.save(record);
+        provenanceService.save(record, null);
 
         verify(provenanceRegistry, never()).findMissing(any());
         verify(provenanceRegistry).addSignature(any(), any(), any(), any());
-        verify(provenanceRegistry).addProvenanceRecord(any(), any(), any(), any(), any());
+        verify(provenanceRegistry).addProvenanceRecord(any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -332,11 +334,11 @@ class ProvenanceServiceTest {
         when(provenanceRegistry.findMissing(List.of(predecessorId))).thenReturn(List.of());
         when(provenanceJsonMapper.writeValueAsString(any())).thenReturn("{}");
 
-        provenanceService.save(record);
+        provenanceService.save(record, "uploader@example.com");
 
         verify(provenanceRegistry).findMissing(List.of(predecessorId));
         verify(provenanceRegistry).addSignature(any(), any(), any(), any());
-        verify(provenanceRegistry).addProvenanceRecord(any(), any(), any(), any(), any());
+        verify(provenanceRegistry).addProvenanceRecord(any(), any(), any(), any(), any(), eq("uploader@example.com"));
     }
 
     @Test
@@ -348,11 +350,11 @@ class ProvenanceServiceTest {
         when(provenanceRegistry.findMissing(List.of(missingId))).thenReturn(List.of(missingId));
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-            () -> provenanceService.save(record));
+            () -> provenanceService.save(record, null));
 
         assertTrue(ex.getMessage().contains(missingId.toString()));
         verify(provenanceRegistry, never()).addSignature(any(), any(), any(), any());
-        verify(provenanceRegistry, never()).addProvenanceRecord(any(), any(), any(), any(), any());
+        verify(provenanceRegistry, never()).addProvenanceRecord(any(), any(), any(), any(), any(), any());
     }
 
     private ProvenanceRecord createTestRecordWithPredecessors(UUID id, List<Predecessor> predecessors) {
@@ -360,7 +362,7 @@ class ProvenanceServiceTest {
         Manifest manifest = new Manifest("1", null, null);
         FilesInfo filesInfo = new FilesInfo(null, null);
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1, 2, 3}, Instant.now(), HashAlgorithm.SHA256);
-        return new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature);
+        return new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature, null);
     }
 
     private ProvenanceRecord createTestRecord(UUID id) {
@@ -372,7 +374,7 @@ class ProvenanceServiceTest {
         Manifest manifest = new Manifest("1", null, null);
         FilesInfo filesInfo = new FilesInfo(null, null);
         ProvenanceSignature signature = new ProvenanceSignature(signatureBytes, signingTime, HashAlgorithm.SHA256);
-        return new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature);
+        return new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature, null);
     }
 
     @Test
@@ -456,7 +458,7 @@ class ProvenanceServiceTest {
         Manifest manifest = new Manifest("1", null, null);
         FilesInfo filesInfo = new FilesInfo(null, null);
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256);
-        ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(), metadata, filesInfo, manifest, signature);
+        ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(), metadata, filesInfo, manifest, signature, null);
         FileHashInput input = new FileHashInput("image.tif", Base64.getEncoder().encodeToString(new byte[]{1}));
         when(provenanceVerificationService.verifyWithFileHashes(any(), any())).thenReturn(new ProvenanceVerificationResult());
 
@@ -470,13 +472,13 @@ class ProvenanceServiceTest {
         Manifest manifest = new Manifest("1", null, null);
         FilesInfo filesInfo = new FilesInfo(new LinkedHashSet<>(List.of(files)), null);
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256);
-        return new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature);
+        return new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature, null);
     }
 
     private ProvenanceRecord createTestRecordWithNullFilesInfo(UUID id, Instant signingTime) {
         Metadata metadata = new Metadata("data-id", "test-type", Collections.emptyList());
         Manifest manifest = new Manifest("1", null, null);
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1}, signingTime, HashAlgorithm.SHA256);
-        return new ProvenanceRecordImpl(id, metadata, null, manifest, signature);
+        return new ProvenanceRecordImpl(id, metadata, null, manifest, signature, null);
     }
 }

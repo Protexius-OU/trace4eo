@@ -253,7 +253,7 @@ class BatchSigningToolTest {
         );
 
         assertEquals(2, result.size());
-        verify(mockHttpClient, times(2))
+        verify(mockHttpClient, times(3))
             .send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
         verify(mockHttpClient, times(2))
             .sendAsync(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
@@ -288,7 +288,7 @@ class BatchSigningToolTest {
         );
 
         assertEquals(1, result.size());
-        verify(mockHttpClient, times(2))
+        verify(mockHttpClient, times(3))
             .send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
         verify(mockHttpClient, times(1))
             .sendAsync(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
@@ -496,7 +496,7 @@ class BatchSigningToolTest {
         );
 
         assertEquals(1, result.size());
-        verify(mockHttpClient, times(2))
+        verify(mockHttpClient, times(3))
             .send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
         verify(mockHttpClient, times(1))
             .sendAsync(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));

@@ -28,7 +28,7 @@ class ProvenanceRegistryTest {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18.2-alpine");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18.3-alpine");
 
     @Autowired
     private JdbcClient jdbcClient;
@@ -108,7 +108,8 @@ class ProvenanceRegistryTest {
             {"dataId":"test","dataType":"test-type","predecessors":[]}""",
             """
             {"files":[]}""",
-            createdAt
+            createdAt,
+            null
         );
 
         Integer count = jdbcClient.sql("SELECT COUNT(*) FROM provenance_record WHERE id = :id")
@@ -130,7 +131,7 @@ class ProvenanceRegistryTest {
             {"dataId":"%s","dataType":"%s","predecessors":[]}""".formatted(dataId, dataType);
 
         provenanceRegistry.addSignature(id, createdAt, new byte[]{1, 2, 3}, null);
-        provenanceRegistry.addProvenanceRecord(id, manifestJson, metadataJson, null, createdAt);
+        provenanceRegistry.addProvenanceRecord(id, manifestJson, metadataJson, null, createdAt, null);
 
         String storedMetadata = jdbcClient.sql("SELECT metadata::text FROM provenance_record WHERE id = :id")
             .param("id", id)
@@ -154,7 +155,8 @@ class ProvenanceRegistryTest {
             """
             {"dataId":"test","dataType":"test-type","predecessors":[]}""",
             null,
-            createdAt
+            createdAt,
+            null
         );
 
         String files = jdbcClient.sql("SELECT files::text FROM provenance_record WHERE id = :id")
@@ -179,7 +181,8 @@ class ProvenanceRegistryTest {
             """
             {"dataId":"test","dataType":"test-type","predecessors":[]}""",
             null,
-            createdAt
+            createdAt,
+            null
         );
 
         provenanceRegistry.addVerificationLog(id, Instant.now(), true);
@@ -204,7 +207,8 @@ class ProvenanceRegistryTest {
             """
             {"dataId":"test","dataType":"test-type","predecessors":[]}""",
             null,
-            createdAt
+            createdAt,
+            null
         );
 
         provenanceRegistry.addVerificationLog(id, Instant.now(), false);
@@ -229,7 +233,8 @@ class ProvenanceRegistryTest {
             """
             {"dataId":"test","dataType":"test-type","predecessors":[]}""",
             null,
-            createdAt
+            createdAt,
+            null
         );
 
         provenanceRegistry.addVerificationLog(id, Instant.now(), true);
@@ -269,7 +274,8 @@ class ProvenanceRegistryTest {
             """
             {"dataId":"%s","dataType":"%s","predecessors":[]}""".formatted(dataId, dataType),
             null,
-            signingTime
+            signingTime,
+            null
         );
 
         Optional<ProvenanceRecord> result = provenanceRegistry.get(id);
@@ -371,7 +377,7 @@ class ProvenanceRegistryTest {
             {"version":"1"}""",
             """
             {"dataId":"satellite-image-001","dataType":"type-a","predecessors":[]}""",
-            null, now);
+            null, now, null);
 
         provenanceRegistry.addSignature(id2, now, createSignatureBytes(), "user@example.com");
         provenanceRegistry.addProvenanceRecord(id2,
@@ -379,7 +385,7 @@ class ProvenanceRegistryTest {
             {"version":"1"}""",
             """
             {"dataId":"ground-truth-001","dataType":"type-a","predecessors":[]}""",
-            null, now);
+            null, now, null);
 
         List<ProvenanceRecord> results = provenanceRegistry.findAll(
             0, 20, null, "satellite", null
@@ -456,7 +462,8 @@ class ProvenanceRegistryTest {
             """
             {"dataId":"data-%s","dataType":"test-type","predecessors":[]}""".formatted(id),
             null,
-            now
+            now,
+            null
         );
     }
 
@@ -471,7 +478,8 @@ class ProvenanceRegistryTest {
             """
             {"dataId":"data-%s","dataType":"%s","predecessors":[]}""".formatted(id, dataType),
             null,
-            now
+            now,
+            null
         );
     }
 

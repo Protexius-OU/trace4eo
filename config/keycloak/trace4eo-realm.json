@@ -108,7 +108,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": []
+      "realmRoles": ["viewer"]
     }
   ],
   "roles": {
@@ -119,7 +119,11 @@
       },
       {
         "name": "signer",
-        "description": "Can upload and sign provenance records"
+        "description": "Can sign provenance records"
+      },
+      {
+        "name": "uploader",
+        "description": "Can upload provenance records"
       }
     ]
   }

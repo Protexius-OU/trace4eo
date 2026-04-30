@@ -9,6 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,6 +61,10 @@ public class ProvenanceController {
     public void checkAccess() {
     }
 
+    @GetMapping("/check-uploader-access")
+    public void checkUploaderAccess() {
+    }
+
     @GetMapping("/filters")
     public FilterOptions getFilterOptions() {
         return provenanceService.getFilterOptions();
@@ -70,8 +76,9 @@ public class ProvenanceController {
     }
 
     @PostMapping
-    public void save(@RequestBody ProvenanceRecord provenanceRecord) {
-        provenanceService.save(provenanceRecord);
+    public void save(@RequestBody ProvenanceRecord provenanceRecord, Authentication authentication) {
+        String uploaderIdentity = extractUploaderIdentity(authentication);
+        provenanceService.save(provenanceRecord, uploaderIdentity);
     }
 
     @GetMapping("/{id}")
@@ -123,4 +130,10 @@ public class ProvenanceController {
         return ResponseEntity.of(provenanceGraphService.buildGraph(id));
     }
 
+    private String extractUploaderIdentity(Authentication authentication) {
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt jwt) {
+            return jwt.getClaimAsString("email");
+        }
+        return null;
+    }
 }

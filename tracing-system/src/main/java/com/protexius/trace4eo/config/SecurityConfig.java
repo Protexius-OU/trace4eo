@@ -29,6 +29,7 @@ public class SecurityConfig {
 
     private static final String ROLE_VIEWER = "viewer";
     private static final String ROLE_SIGNER = "signer";
+    private static final String ROLE_UPLOADER = "uploader";
     private static final String ROLE_PREFIX = "ROLE_";
     private static final String CLAIM_REALM_ACCESS = "realm_access";
     private static final String CLAIM_ROLES = "roles";
@@ -50,8 +51,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/health/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/provenance/check-access").hasRole(ROLE_SIGNER)
-                .requestMatchers(HttpMethod.POST, "/api/provenance").hasRole(ROLE_SIGNER)
-                .requestMatchers(HttpMethod.POST, "/api/provenance/validate-predecessors").hasRole(ROLE_SIGNER)
+                .requestMatchers(HttpMethod.GET, "/api/provenance/check-uploader-access").hasRole(ROLE_UPLOADER)
+                .requestMatchers(HttpMethod.POST, "/api/provenance").hasRole(ROLE_UPLOADER)
+                .requestMatchers(HttpMethod.POST, "/api/provenance/validate-predecessors").hasRole(ROLE_UPLOADER)
                 .requestMatchers(HttpMethod.GET, "/api/**").hasAnyRole(ROLE_VIEWER, ROLE_SIGNER)
                 .requestMatchers(HttpMethod.POST, "/api/**").hasAnyRole(ROLE_VIEWER, ROLE_SIGNER)
                 .anyRequest().denyAll()
@@ -83,14 +85,22 @@ public class SecurityConfig {
                 boolean domainMatch = signerAllowedDomains.stream()
                     .filter(domain -> !domain.isBlank())
                     .anyMatch(email::endsWith);
-                if (domainMatch && authorities.stream().noneMatch(a -> a.getAuthority().equals(ROLE_PREFIX + ROLE_SIGNER))) {
-                    authorities.add(new SimpleGrantedAuthority(ROLE_PREFIX + ROLE_SIGNER));
+                if (domainMatch) {
+                    grantIfMissing(authorities, ROLE_SIGNER);
+                    grantIfMissing(authorities, ROLE_UPLOADER);
                 }
             }
 
             return Collections.unmodifiableList(authorities);
         });
         return converter;
+    }
+
+    private static void grantIfMissing(List<SimpleGrantedAuthority> authorities, String role) {
+        String prefixed = ROLE_PREFIX + role;
+        if (authorities.stream().noneMatch(a -> a.getAuthority().equals(prefixed))) {
+            authorities.add(new SimpleGrantedAuthority(prefixed));
+        }
     }
 
     @Bean

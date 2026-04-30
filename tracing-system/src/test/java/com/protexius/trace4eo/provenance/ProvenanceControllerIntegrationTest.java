@@ -41,7 +41,7 @@ class ProvenanceControllerIntegrationTest {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18.2-alpine");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18.3-alpine");
 
     @Autowired
     private TestRestTemplate restTemplate;
@@ -52,6 +52,12 @@ class ProvenanceControllerIntegrationTest {
     @Test
     void checkAccessReturns200() {
         ResponseEntity<Void> response = restTemplate.getForEntity("/api/provenance/check-access", Void.class);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    @Test
+    void checkUploaderAccessReturns200() {
+        ResponseEntity<Void> response = restTemplate.getForEntity("/api/provenance/check-uploader-access", Void.class);
         assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
@@ -310,8 +316,8 @@ class ProvenanceControllerIntegrationTest {
         Metadata metadata = new Metadata("data-" + id, "test-type", Collections.emptyList());
         Instant signingTime = Instant.parse("2024-01-15T10:30:00Z");
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1, 2, 3}, signingTime, HashAlgorithm.SHA256);
-        ProvenanceRecord record = new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature);
-        provenanceService.save(record);
+        ProvenanceRecord record = new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature, null);
+        provenanceService.save(record, null);
 
         List<FileHashInput> inputs = List.of(new FileHashInput("test.dat", hashBase64));
         ResponseEntity<String> response = restTemplate.postForEntity(
@@ -354,6 +360,6 @@ class ProvenanceControllerIntegrationTest {
             HashAlgorithm.SHA256,
             details
         );
-        return new ProvenanceRecordImpl(id, metadata, null, manifest, signature);
+        return new ProvenanceRecordImpl(id, metadata, null, manifest, signature, null);
     }
 }

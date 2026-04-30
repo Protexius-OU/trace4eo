@@ -36,6 +36,7 @@ export interface ProvenanceRecord {
   signature?: ProvenanceSignature
   manifest?: Manifest
   filesInfo?: FilesInfoData
+  uploaderIdentity?: string | null
 }
 
 export interface GraphNode {
