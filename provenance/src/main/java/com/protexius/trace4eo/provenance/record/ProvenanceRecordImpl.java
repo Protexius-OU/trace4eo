@@ -9,6 +9,7 @@ record ProvenanceRecordImpl(
     Metadata metadata,
     FilesInfo filesInfo,
     Manifest manifest,
-    ProvenanceSignature signature
+    ProvenanceSignature signature,
+    String uploaderIdentity
 ) implements ProvenanceRecord {
 }

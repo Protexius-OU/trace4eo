@@ -244,6 +244,7 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
         {details && (
           <div className="ic-node-body">
             <div>Signed by <strong>{details.signerIdentity}</strong></div>
+            <div>Uploaded by <strong>{record.uploaderIdentity ?? '—'}</strong></div>
             <div>
               <a
                 href={`https://search.sigstore.dev/?logIndex=${details.rekorLogIndex}`}

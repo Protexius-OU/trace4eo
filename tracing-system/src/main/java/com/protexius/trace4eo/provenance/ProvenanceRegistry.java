@@ -59,17 +59,19 @@ public class ProvenanceRegistry {
         String manifestJson,
         String metadataJson,
         String filesJson,
-        Instant createdAt
+        Instant createdAt,
+        String uploaderIdentity
     ) {
         int rowsUpdated = jdbcClient.sql("""
-                insert into provenance_record (id, manifest, metadata, files, created_at)
-                values (:id, :manifest::jsonb, :metadata::jsonb, :files::jsonb, :created_at)
+                insert into provenance_record (id, manifest, metadata, files, created_at, uploader_identity)
+                values (:id, :manifest::jsonb, :metadata::jsonb, :files::jsonb, :created_at, :uploader_identity)
                 """)
             .param("id", id)
             .param("manifest", manifestJson)
             .param("metadata", metadataJson)
             .param("files", filesJson)
             .param("created_at", Timestamp.from(createdAt))
+            .param("uploader_identity", uploaderIdentity)
             .update();
         if (rowsUpdated != 1) {
             String message = String.format("Expected to update exactly one row, updated %s instead", rowsUpdated);
@@ -99,6 +101,7 @@ public class ProvenanceRegistry {
                     pr.manifest,
                     pr.metadata,
                     pr.files,
+                    pr.uploader_identity,
                     s.signature
                 from provenance_record pr
                 inner join signature s on pr.id = s.id
@@ -128,6 +131,7 @@ public class ProvenanceRegistry {
                 pr.manifest,
                 pr.metadata,
                 pr.files,
+                pr.uploader_identity,
                 s.signature
             from provenance_record pr
             inner join signature s on pr.id = s.id
@@ -245,7 +249,8 @@ public class ProvenanceRegistry {
             metadata,
             filesInfo,
             manifest,
-            signature
+            signature,
+            rs.getString("uploader_identity")
         );
     }
 }

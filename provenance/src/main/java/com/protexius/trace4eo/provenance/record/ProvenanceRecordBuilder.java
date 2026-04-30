@@ -29,7 +29,7 @@ public class ProvenanceRecordBuilder {
             throw new IllegalStateException("Signature must not be null.");
         }
         UUID provenanceRecordId = SignatureUtil.createUuid(signature);
-        return new ProvenanceRecordImpl(provenanceRecordId, metadata, filesInfo, manifest, signature);
+        return new ProvenanceRecordImpl(provenanceRecordId, metadata, filesInfo, manifest, signature, null);
     }
 
     public ProvenanceRecordBuilder withMetadata(Metadata metadata) {

@@ -44,7 +44,7 @@ class ProvenanceServiceIntegrationTest {
         ProvenanceRecord record = createTestRecord(id, dataId, dataType);
 
         provenanceService.saveSignature(record);
-        provenanceService.saveProvenanceRecord(record);
+        provenanceService.saveProvenanceRecord(record, "uploader@example.com");
 
         Optional<ProvenanceRecord> retrieved = provenanceService.get(id);
 
@@ -52,6 +52,7 @@ class ProvenanceServiceIntegrationTest {
         assertEquals(id, retrieved.get().id());
         assertEquals(dataId, retrieved.get().metadata().dataId());
         assertEquals(dataType, retrieved.get().metadata().dataType());
+        assertEquals("uploader@example.com", retrieved.get().uploaderIdentity());
     }
 
     @Test
@@ -89,7 +90,7 @@ class ProvenanceServiceIntegrationTest {
         ProvenanceRecord record = createTestRecord(id, dataId, dataType);
 
         provenanceService.saveSignature(record);
-        provenanceService.saveProvenanceRecord(record);
+        provenanceService.saveProvenanceRecord(record, null);
 
         String storedMetadata = jdbcClient.sql("SELECT metadata::text FROM provenance_record WHERE id = :id")
             .param("id", id)
@@ -109,7 +110,7 @@ class ProvenanceServiceIntegrationTest {
             signingTime,
             HashAlgorithm.SHA256
         );
-        return new ProvenanceRecordImpl(id, metadata, null, manifest, signature);
+        return new ProvenanceRecordImpl(id, metadata, null, manifest, signature, null);
     }
 
     private ProvenanceRecord createTestRecord(UUID id, Instant signingTime, HashAlgorithm hashAlgorithm) {
@@ -120,6 +121,6 @@ class ProvenanceServiceIntegrationTest {
             signingTime,
             hashAlgorithm
         );
-        return new ProvenanceRecordImpl(id, metadata, null, manifest, signature);
+        return new ProvenanceRecordImpl(id, metadata, null, manifest, signature, null);
     }
 }
