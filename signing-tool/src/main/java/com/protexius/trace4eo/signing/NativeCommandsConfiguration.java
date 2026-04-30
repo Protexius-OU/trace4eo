@@ -1,6 +1,7 @@
 package com.protexius.trace4eo.signing;
 
 import com.protexius.trace4eo.signing.commands.BatchSigningTool;
+import com.protexius.trace4eo.signing.commands.RegisterRecordsTool;
 import com.protexius.trace4eo.signing.commands.SigningTool;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,6 +42,11 @@ class NativeCommandsConfiguration {
     @Bean
     CommandFactoryBean getOidcTokenCommand() {
         return commandBean(SigningTool.class, "getOidcToken");
+    }
+
+    @Bean
+    CommandFactoryBean registerRecordsCommand() {
+        return commandBean(RegisterRecordsTool.class, "registerRecords");
     }
 
     private CommandFactoryBean commandBean(Class<?> cls, String methodName) {
