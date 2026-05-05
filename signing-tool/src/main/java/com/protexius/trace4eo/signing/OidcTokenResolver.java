@@ -26,6 +26,7 @@ public class OidcTokenResolver {
 
     private static final Logger log = LoggerFactory.getLogger(OidcTokenResolver.class);
     private static final String CLIENT_ID = "sigstore";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final String ciToken;
     private final HttpClient httpClient;
@@ -173,7 +174,7 @@ public class OidcTokenResolver {
 
     private static String generateCodeVerifier() {
         byte[] bytes = new byte[32];
-        new SecureRandom().nextBytes(bytes);
+        SECURE_RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 

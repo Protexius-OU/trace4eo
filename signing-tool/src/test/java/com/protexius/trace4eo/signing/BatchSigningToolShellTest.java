@@ -11,6 +11,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
+@SuppressWarnings("UnusedVariable")
 class BatchSigningToolShellTest {
 
     @Autowired

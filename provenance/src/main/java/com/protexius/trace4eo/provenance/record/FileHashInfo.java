@@ -4,6 +4,7 @@ import com.protexius.trace4eo.provenance.HashAlgorithm;
 
 import java.util.Base64;
 
+@SuppressWarnings("ArrayRecordComponent")
 public record FileHashInfo(
     String path,
     HashAlgorithm hashAlgorithm,

@@ -16,6 +16,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -140,11 +141,11 @@ public class RecordRegistrationClient {
 
     private String extractEmail(String jwtToken) {
         try {
-            String[] parts = jwtToken.split("\\.");
+            String[] parts = jwtToken.split("\\.", -1);
             if (parts.length < 2) {
                 return "unknown";
             }
-            String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
+            String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
             Map<String, Object> claims = MAPPER.readValue(payload, new TypeReference<>() {});
             String email = (String) claims.get("email");
             return email != null ? email : "unknown";

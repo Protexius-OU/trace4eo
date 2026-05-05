@@ -25,10 +25,8 @@ import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -146,13 +144,16 @@ public class BatchSigningTool {
         }
         validator.validateProvenanceRecordType(provenanceRecordType);
         validator.validateDataId(dataId);
-        if (directory != null) {
-            if (!Files.exists(directory)) {
-                throw new IllegalArgumentException(String.format("--directory does not exist: %s", directory));
-            }
-            if (!Files.isDirectory(directory)) {
-                throw new IllegalArgumentException(String.format("--directory is not a directory: %s", directory));
-            }
+        validateDirectory(directory);
+    }
+
+    private void validateDirectory(Path directory) {
+        if (directory == null) return;
+        if (!Files.exists(directory)) {
+            throw new IllegalArgumentException(String.format("--directory does not exist: %s", directory));
+        }
+        if (!Files.isDirectory(directory)) {
+            throw new IllegalArgumentException(String.format("--directory is not a directory: %s", directory));
         }
     }
 
@@ -178,25 +179,21 @@ public class BatchSigningTool {
         return records;
     }
 
+    @SuppressWarnings("FutureReturnValueIgnored")
     private List<Future<Optional<ProvenanceRecord>>> submitSigningTasks(
         List<Path> files, String dataId, String provenanceRecordType,
         HashAlgorithm algorithm, BlockingQueue<KeylessSigner> signerPool,
         AtomicInteger completedCount, int total
     ) {
-        ScheduledExecutorService progressScheduler = Executors.newSingleThreadScheduledExecutor(
-            Thread.ofPlatform().daemon().factory());
-        try {
+        try (var progressScheduler = Executors.newSingleThreadScheduledExecutor();
+             var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             progressScheduler.scheduleAtFixedRate(
                 () -> log.info("Progress: {}/{} processed...", completedCount.get(), total),
                 10, 10, TimeUnit.SECONDS);
-            try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-                return files.stream()
-                    .map(file -> executor.submit(
-                        () -> signFile(file, dataId, provenanceRecordType, algorithm, signerPool, completedCount)))
-                    .toList();
-            }
-        } finally {
-            progressScheduler.shutdownNow();
+            return files.stream()
+                .map(file -> executor.submit(
+                    () -> signFile(file, dataId, provenanceRecordType, algorithm, signerPool, completedCount)))
+                .toList();
         }
     }
 
@@ -215,7 +212,7 @@ public class BatchSigningTool {
             log.warn("Failed to create provenance record for file: {}", file, e);
             return Optional.empty();
         } finally {
-            signerPool.offer(signer);
+            signerPool.put(signer);
             completedCount.incrementAndGet();
         }
     }
@@ -238,13 +235,10 @@ public class BatchSigningTool {
     private List<Path> resolveFiles(List<Path> files, Path directory, String pattern) throws IOException {
         List<Path> result = new ArrayList<>();
         if (files != null && !files.isEmpty()) result.addAll(files);
-        if (directory != null) {
-            try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory, pattern)) {
-                for (Path path : stream) {
-                    if (Files.isRegularFile(path)) {
-                        result.add(path);
-                    }
-                }
+        if (directory == null) return result;
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory, pattern)) {
+            for (Path path : stream) {
+                if (Files.isRegularFile(path)) result.add(path);
             }
         }
         return result;

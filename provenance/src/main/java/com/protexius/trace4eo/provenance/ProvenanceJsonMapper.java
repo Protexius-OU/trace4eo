@@ -16,6 +16,7 @@ import tools.jackson.databind.module.SimpleSerializers;
 
 import java.util.Base64;
 
+@SuppressWarnings("unchecked")
 public class ProvenanceJsonMapper extends JsonMapper {
 
     public ProvenanceJsonMapper() {

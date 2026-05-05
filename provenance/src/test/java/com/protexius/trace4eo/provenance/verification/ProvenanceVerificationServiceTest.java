@@ -114,9 +114,10 @@ class ProvenanceVerificationServiceTest {
         assertTrue(result.steps().stream()
             .filter(s -> s.name() == VerificationStepName.FILE_CONTENTS)
             .anyMatch(s -> !s.status() && s.errorMessage() != null
-                && s.errorMessage().contains("SHA-256")
-                && s.errorMessage().contains("64 bytes")),
-            "Expected error message to name the algorithm and the wrong length");
+                && s.errorMessage().contains("hash length mismatch")
+                && s.errorMessage().contains("32 bytes")
+                && s.errorMessage().contains("64")),
+            "Expected error message to flag the length mismatch with both byte counts");
     }
 
     @Test

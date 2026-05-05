@@ -92,7 +92,7 @@ public class TextVerificationResultFormatter implements VerificationResultFormat
     }
 
     private void appendErrorSection(StringBuilder sb, String errorMessage) {
-        String[] lines = errorMessage.split("\n");
+        String[] lines = errorMessage.split("\n", -1);
         sb.append("           Error: ").append(lines[0]).append("\n");
         for (int i = 1; i < lines.length; i++) {
             sb.append("                  ").append(lines[i]).append("\n");
