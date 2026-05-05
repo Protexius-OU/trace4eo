@@ -1,0 +1,28 @@
+// Shared build conventions for trace4eo modules. Apply from each module's build.gradle.
+
+// Silence JVM warnings from test runtime + Spring Boot AOT processing:
+//   Mockito self-attaches a Java agent; JLine loads native code (signing/verification only);
+//   AOT classpaths break CDS sharing; protobuf-java calls deprecated sun.misc.Unsafe.
+// Logger noise is handled by src/test/resources/logback-test.xml in each module.
+def quietJvmArgs = [
+    "-XX:+EnableDynamicAgentLoading",
+    "--enable-native-access=ALL-UNNAMED",
+    "-Xshare:off",
+    "--sun-misc-unsafe-memory-access=allow",
+]
+tasks.withType(Test).configureEach { jvmArgs(quietJvmArgs) }
+tasks.withType(JavaExec).configureEach { jvmArgs(quietJvmArgs) }
+
+// Sigstore's API surface references Guava's ImmutableList; expose runtimeClasspath so
+// SpotBugs analysis can resolve it. Filter excludes Spring DI false positives + tests.
+pluginManager.withPlugin("com.github.spotbugs") {
+    tasks.matching { it.name.startsWith("spotbugs") }.configureEach {
+        ignoreFailures = true
+        excludeFilter = rootProject.file("gradle/spotbugs-exclude.xml")
+        auxClassPaths.from(sourceSets.main.runtimeClasspath)
+        reports {
+            html.required = true
+            xml.required = true
+        }
+    }
+}

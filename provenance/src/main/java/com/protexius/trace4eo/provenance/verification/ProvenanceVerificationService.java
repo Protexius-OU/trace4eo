@@ -4,6 +4,7 @@ import com.protexius.trace4eo.provenance.HashAlgorithm;
 import com.protexius.trace4eo.provenance.ProvenanceJsonMapper;
 import com.protexius.trace4eo.provenance.ProvenanceSignature;
 import com.protexius.trace4eo.provenance.record.FileHashInfo;
+import com.protexius.trace4eo.provenance.record.FilesContext;
 import com.protexius.trace4eo.provenance.record.FilesInfo;
 import com.protexius.trace4eo.provenance.record.Manifest;
 import com.protexius.trace4eo.provenance.record.Metadata;
@@ -31,8 +32,9 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-public class ProvenanceVerificationService {
+public final class ProvenanceVerificationService {
 
     private static final Logger log = LoggerFactory.getLogger(ProvenanceVerificationService.class);
 
@@ -199,16 +201,8 @@ public class ProvenanceVerificationService {
                 continue;
             }
             byte[] provided = providedHashes.get(path);
-            if (provided.length != fileHashInfo.hashValue().length) {
-                mismatches.add(String.format(
-                    "%s: provided hash length (%d bytes) does not match expected length for %s (%d bytes)",
-                    path, provided.length, fileHashInfo.hashAlgorithm().getName(), fileHashInfo.hashValue().length));
-            } else if (!Arrays.equals(provided, fileHashInfo.hashValue())) {
-                mismatches.add(String.format("%s: hash does not match\n  expected: %s\n  actual:   %s",
-                    path,
-                    Base64.getEncoder().encodeToString(fileHashInfo.hashValue()),
-                    Base64.getEncoder().encodeToString(provided)));
-            }
+            verifyHash(fileHashInfo.hashValue(), provided)
+                .ifPresent(msg -> mismatches.add(path + ": " + msg));
         }
         return mismatches;
     }
@@ -276,31 +270,42 @@ public class ProvenanceVerificationService {
 
     private List<String> collectFileMismatches(FilesInfo filesInfo) {
         List<String> mismatches = new ArrayList<>();
+        FilesContext context = filesInfo.filesContext();
         for (FileHashInfo file : filesInfo.files()) {
             log.info("Verifying file {}", file);
-            MessageDigest md;
-            try {
-                md = MessageDigest.getInstance(file.hashAlgorithm().getName());
-            } catch (NoSuchAlgorithmException e) {
-                mismatches.add(String.format("%s: hash algorithm %s is not supported", file.path(), file.hashAlgorithm().name()));
-                continue;
-            }
-            try (InputStream fileContentsStream = filesInfo.filesContext().getFileContents(file)) {
-                try (DigestInputStream digestInputStream = new DigestInputStream(fileContentsStream, md)) {
-                    digestInputStream.transferTo(OutputStream.nullOutputStream());
-                    byte[] actual = md.digest();
-                    if (!Arrays.equals(actual, file.hashValue())) {
-                        mismatches.add(String.format("%s: hash does not match\n  expected: %s\n  actual:   %s",
-                            file.path(),
-                            Base64.getEncoder().encodeToString(file.hashValue()),
-                            Base64.getEncoder().encodeToString(actual)));
-                    }
-                }
-            } catch (IOException e) {
-                log.error("Failed to verify file {}", file.path(), e);
-                mismatches.add(String.format("%s: %s", file.path(), e.getMessage()));
-            }
+            verifyFileContent(context, file).ifPresent(mismatches::add);
         }
         return mismatches;
+    }
+
+    private Optional<String> verifyFileContent(FilesContext context, FileHashInfo file) {
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance(file.hashAlgorithm().getName());
+        } catch (NoSuchAlgorithmException e) {
+            return Optional.of(String.format("%s: hash algorithm %s is not supported",
+                file.path(), file.hashAlgorithm().name()));
+        }
+        try (InputStream fileContentsStream = context.getFileContents(file);
+             DigestInputStream digestInputStream = new DigestInputStream(fileContentsStream, md)) {
+            digestInputStream.transferTo(OutputStream.nullOutputStream());
+            return verifyHash(file.hashValue(), md.digest())
+                .map(msg -> file.path() + ": " + msg);
+        } catch (IOException e) {
+            log.error("Failed to verify file {}", file.path(), e);
+            return Optional.of(String.format("%s: %s", file.path(), e.getMessage()));
+        }
+    }
+
+    private static Optional<String> verifyHash(byte[] expected, byte[] actual) {
+        if (expected.length != actual.length) {
+            return Optional.of(String.format("hash length mismatch (expected %d bytes, got %d)",
+                expected.length, actual.length));
+        }
+        if (!Arrays.equals(expected, actual)) {
+            return Optional.of(String.format("hash does not match (expected: %s, actual: %s)",
+                Base64.getEncoder().encodeToString(expected), Base64.getEncoder().encodeToString(actual)));
+        }
+        return Optional.empty();
     }
 }

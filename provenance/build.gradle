@@ -1,5 +1,3 @@
-import com.github.spotbugs.snom.SpotBugsTask
-
 plugins {
     id("java-library")
 
@@ -10,6 +8,8 @@ plugins {
     alias(libs.plugins.spotbugs)
     alias(libs.plugins.openrewrite)
 }
+
+apply from: rootProject.file("gradle/build-conventions.gradle")
 
 group = "com.protexius.trace4eo"
 version = "0.1.0-SNAPSHOT"
@@ -41,21 +41,12 @@ testing {
     }
 }
 
-
 dependencyCheck {
     outputDirectory = layout.buildDirectory.dir("reports/dependency-check").get()
     formats = ["XML", "HTML"]
     scanConfigurations = ["compileClasspath", "runtimeClasspath"]
     nvd {
         apiKey = providers.gradleProperty("dependencyCheck.nvd.apiKey").getOrNull()
-    }
-}
-
-tasks.withType(SpotBugsTask).configureEach {
-    ignoreFailures = true
-    reports {
-        html.required = true
-        xml.required = true
     }
 }
 

@@ -19,11 +19,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+@SuppressWarnings("unchecked")
 class KeycloakBrokerTokenServiceTest {
 
     private KeycloakBrokerTokenService service;
     private HttpClient mockHttpClient;
-    @SuppressWarnings("unchecked")
     private HttpResponse<String> mockResponse = mock(HttpResponse.class);
 
     @BeforeEach

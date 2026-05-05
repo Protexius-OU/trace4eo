@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.spring.boot)
 }
 
+apply from: rootProject.file("gradle/build-conventions.gradle")
+
 group = "com.protexius.trace4eo"
 version = "0.1.0-SNAPSHOT"
 

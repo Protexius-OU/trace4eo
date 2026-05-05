@@ -4,6 +4,7 @@ import com.protexius.trace4eo.provenance.HashAlgorithm;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.DigestInputStream;
@@ -35,7 +36,11 @@ public class FilesInfoBuilder {
 
     public FilesInfoBuilder addFile(Path filePath) throws IOException {
         validateFilePath(filePath);
-        return addFile(filePath, filePath.getFileName().toString());
+        Path fileName = filePath.getFileName();
+        if (fileName == null) {
+            throw new IOException(String.format("File path has no name component: %s", filePath));
+        }
+        return addFile(filePath, fileName.toString());
     }
 
     public FilesInfoBuilder addFile(Path filePath, String destinationPath) throws IOException {
@@ -76,10 +81,7 @@ public class FilesInfoBuilder {
         try (InputStream inputStream = Files.newInputStream(filePath);
              DigestInputStream digestInputStream = new DigestInputStream(inputStream, md)
         ) {
-            byte[] buffer = new byte[8192];
-            while (digestInputStream.read(buffer) != -1) {
-                continue;
-            }
+            digestInputStream.transferTo(OutputStream.nullOutputStream());
             return md.digest();
         }
     }

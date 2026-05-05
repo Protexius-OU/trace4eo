@@ -36,7 +36,7 @@ class EmailOidcClient implements OidcClient {
     @Override
     public OidcToken getIDToken(Map<String, String> env) throws OidcException {
         try {
-            String[] parts = idToken.split("\\.");
+            String[] parts = idToken.split("\\.", -1);
             if (parts.length < 2) {
                 throw new OidcException("Invalid JWT format");
             }
