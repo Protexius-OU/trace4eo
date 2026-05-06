@@ -109,6 +109,24 @@ public class SigningInputValidator {
         }
     }
 
+    public void validateRange(int startIndex, int endIndex, int total) {
+        if (startIndex < 0) {
+            throw new IllegalArgumentException(String.format("--start-index must be non-negative: %d", startIndex));
+        }
+        if (startIndex >= total) {
+            throw new IllegalArgumentException(String.format(
+                "--start-index (%d) must be less than total file count (%d)", startIndex, total));
+        }
+        if (endIndex <= startIndex) {
+            throw new IllegalArgumentException(String.format(
+                "--end-index (%d) must be greater than --start-index (%d)", endIndex, startIndex));
+        }
+        if (endIndex > total) {
+            throw new IllegalArgumentException(String.format(
+                "--end-index (%d) must be at most total file count (%d)", endIndex, total));
+        }
+    }
+
     public void validateGlobPattern(String pattern) {
         try {
             FileSystems.getDefault().getPathMatcher("glob:" + pattern);

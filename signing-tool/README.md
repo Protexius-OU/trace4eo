@@ -114,6 +114,8 @@ Sign multiple files, creating one provenance record per file.
 | `--save-record`            | Save the provenance records                                                                                                                                              | true              |
 | `--create-record-ids-file` | Write a plain-text file with the IDs of all successfully signed provenance records, one UUID per line (written to `--output` directory, or current directory if omitted) | false             |
 | `--threads`                | Maximum number of files to sign concurrently                                                                                                                             | 4                 |
+| `--start-index`            | Start index (inclusive) into the alphabetically-sorted file list. Use with `--end-index` to process a slice of a large directory across multiple invocations.            | 0                 |
+| `--end-index`              | End index (exclusive) into the alphabetically-sorted file list.                                                                                                          | Total file count  |
 
 **Examples:**
 
@@ -149,6 +151,20 @@ Sign and register with a tracing system:
   --output /data/output \
   --register-url http://localhost:8080/api/provenance \
   --keycloak-url http://localhost:8180"
+```
+
+Process a large directory in chunks (Sigstore OIDC tokens expire after roughly 1000 signatures, so split runs of 10k+ files into smaller invocations that re-authenticate naturally between waves):
+
+```bash
+for start in 0 800 1600 2400; do
+  ./gradlew :signing-tool:bootRun --args="batch-sign \
+    --directory /data/images \
+    --pattern '*.jpg' \
+    --provenance-record-type satellite-imagery \
+    --data-id batch-2024-01 \
+    --output /data/output \
+    --start-index $start --end-index $((start + 800))"
+done
 ```
 
 Capture record IDs for use as predecessors in a follow-up record:
