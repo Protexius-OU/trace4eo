@@ -153,20 +153,6 @@ Sign and register with a tracing system:
   --keycloak-url http://localhost:8180"
 ```
 
-Process a large directory in chunks (Sigstore OIDC tokens expire after roughly 1000 signatures, so split runs of 10k+ files into smaller invocations that re-authenticate naturally between waves):
-
-```bash
-for start in 0 800 1600 2400; do
-  ./gradlew :signing-tool:bootRun --args="batch-sign \
-    --directory /data/images \
-    --pattern '*.jpg' \
-    --provenance-record-type satellite-imagery \
-    --data-id batch-2024-01 \
-    --output /data/output \
-    --start-index $start --end-index $((start + 800))"
-done
-```
-
 Capture record IDs for use as predecessors in a follow-up record:
 
 ```bash
