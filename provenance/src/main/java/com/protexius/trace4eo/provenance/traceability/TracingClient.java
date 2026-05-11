@@ -1,4 +1,4 @@
-package com.protexius.trace4eo.verification.traceability;
+package com.protexius.trace4eo.provenance.traceability;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -11,13 +11,15 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Optional;
 
-import static com.protexius.trace4eo.verification.traceability.TraceResponse.Product;
-import static com.protexius.trace4eo.verification.traceability.TraceResponse.ProductDto;
-import static com.protexius.trace4eo.verification.traceability.TraceResponse.Trace;
-import static com.protexius.trace4eo.verification.traceability.TraceResponse.TraceDto;
-import static com.protexius.trace4eo.verification.traceability.TraceResponse.TracingSignature;
+import static com.protexius.trace4eo.provenance.traceability.TraceResponse.Product;
+import static com.protexius.trace4eo.provenance.traceability.TraceResponse.ProductDto;
+import static com.protexius.trace4eo.provenance.traceability.TraceResponse.Trace;
+import static com.protexius.trace4eo.provenance.traceability.TraceResponse.TraceDto;
+import static com.protexius.trace4eo.provenance.traceability.TraceResponse.TracingSignature;
 
 public class TracingClient {
+    private static final String CREATE_EVENT = "CREATE";
+
     private final JsonMapper jsonMapper;
     private final HttpClient httpClient;
     private final URI apiBaseUrl;
@@ -31,8 +33,6 @@ public class TracingClient {
         this.httpClient = httpClient;
         this.apiBaseUrl = apiBaseUrl;
     }
-
-    private static final String CREATE_EVENT = "CREATE";
 
     public Optional<Trace> getProductCreateEventTrace(String productId) throws Exception {
         String productName = productId + ".SAFE.zip";
@@ -69,8 +69,8 @@ public class TracingClient {
         // sanity check
         if (!productName.equals(trace.product().name())) {
             throw new IllegalStateException(
-                    "Expected product name " + productName + " in signed message." +
-                    "Actual product name in signed message: " + trace.product().name()
+                    "Expected product name " + productName + " in signed message."
+                    + "Actual product name in signed message: " + trace.product().name()
             );
         }
         return Optional.of(trace);
@@ -91,9 +91,8 @@ public class TracingClient {
                 traceDto.id(),
                 product.event(),
                 traceDto.hashAlgorithm(),
-                new Product(product.name(), product.contents()),
+                new Product(product.name(), product.hash(), product.contents()),
                 signature
         );
     }
 }
-

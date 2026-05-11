@@ -26,7 +26,6 @@ dependencies {
     implementation(project(':provenance'))
     implementation(platform(SpringBootPlugin.BOM_COORDINATES))
     implementation(libs.bundles.spring.shell)
-    implementation("org.bouncycastle:bcprov-jdk18on:1.84")
 
     errorprone(libs.error.prone.core)
     rewrite(libs.rewrite.static.analysis)

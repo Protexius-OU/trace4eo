@@ -1,4 +1,4 @@
-package com.protexius.trace4eo.verification.traceability;
+package com.protexius.trace4eo.provenance.traceability;
 
 import java.nio.file.Path;
 import java.util.HexFormat;
@@ -7,19 +7,19 @@ import java.util.Optional;
 
 public record VerificationResult(Status status, Optional<TraceResponse.Trace> trace, FileInfo localFile) {
 
-    static VerificationResult traceNotFound(String imageId, Path path) {
+    public static VerificationResult traceNotFound(String imageId, Path path) {
         return new VerificationResult(
                 Status.TRACE_NOT_FOUND, Optional.empty(), new FileInfo(imageId, path, null)
         );
     }
 
-    static VerificationResult signatureError(TraceResponse.Trace trace, String imageId, Path path) {
+    public static VerificationResult signatureError(TraceResponse.Trace trace, String imageId, Path path) {
         return new VerificationResult(
                 Status.SIGNATURE_ERROR, Optional.of(trace), new FileInfo(imageId, path, null)
         );
     }
 
-    static VerificationResult hashMismatch(TraceResponse.Trace trace, String imageId, Path path, byte[] fileHash) {
+    public static VerificationResult hashMismatch(TraceResponse.Trace trace, String imageId, Path path, byte[] fileHash) {
         return new VerificationResult(
                 Status.HASH_MISMATCH, Optional.of(trace), new FileInfo(imageId, path, HexFormat.of().formatHex(fileHash))
         );
@@ -36,8 +36,8 @@ public record VerificationResult(Status status, Optional<TraceResponse.Trace> tr
         Objects.requireNonNull(localFile);
     }
 
-    record FileInfo(String imageId, Path path, String hashHex) {
-        FileInfo {
+    public record FileInfo(String imageId, Path path, String hashHex) {
+        public FileInfo {
             Objects.requireNonNull(imageId);
             Objects.requireNonNull(path);
         }

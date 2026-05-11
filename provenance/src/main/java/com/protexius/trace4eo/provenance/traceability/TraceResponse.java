@@ -1,4 +1,4 @@
-package com.protexius.trace4eo.verification.traceability;
+package com.protexius.trace4eo.provenance.traceability;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -10,6 +10,10 @@ import java.util.Objects;
 import java.util.Optional;
 
 public final class TraceResponse {
+
+    private TraceResponse() {
+    }
+
     record TraceDto(
             String id,
             String event,
@@ -29,15 +33,19 @@ public final class TraceResponse {
                     .filter(e -> e.path().getFileName().toString().equals(fileName))
                     .findFirst();
         }
+
+        public boolean matchesProductFile(String fileName) {
+            return fileName != null && fileName.equals(product.name());
+        }
     }
 
-    record TracingSignature(
+    public record TracingSignature(
             String signature,
             String algorithm,
             String certificate,
             String message
     ) {
-        TracingSignature {
+        public TracingSignature {
             Objects.requireNonNull(signature);
             Objects.requireNonNull(algorithm);
             Objects.requireNonNull(certificate);
@@ -52,13 +60,12 @@ public final class TraceResponse {
         }
     }
 
-    record ProductDto(String name, String event, List<ProductEntry> contents) {}
-    public record Product(String name, List<ProductEntry> contents) {}
+    record ProductDto(String name, String event, String hash, List<ProductEntry> contents) {}
+    public record Product(String name, String hash, List<ProductEntry> contents) {}
 
     public record ProductEntry(Path path, String hash) {
         public byte[] hashBytes() {
             return HexFormat.of().parseHex(hash);
         }
     }
-
 }

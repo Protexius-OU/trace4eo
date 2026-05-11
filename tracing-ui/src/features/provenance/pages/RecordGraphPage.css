@@ -27,3 +27,135 @@
   font-size: 0.8125rem;
   margin-bottom: 1.25rem;
 }
+
+.trace-verification {
+  padding: 1rem 1.25rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  border: 1px solid;
+  line-height: 1.5;
+}
+
+.trace-verification p {
+  margin: 0.5rem 0;
+}
+
+.trace-verification p:first-of-type {
+  margin-top: 0.25rem;
+}
+
+.trace-verification code {
+  font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, monospace;
+  font-size: 0.85em;
+  padding: 0.05em 0.3em;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.trace-verification a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.trace-verification-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.trace-verification-checks {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}
+
+.trace-verification-checks li {
+  margin-bottom: 0.4rem;
+}
+
+.trace-verification-meta {
+  font-size: 0.85em;
+  opacity: 0.85;
+  margin-top: 0.75rem !important;
+}
+
+.trace-verification-hint {
+  font-size: 0.9em;
+  opacity: 0.85;
+}
+
+.trace-verification-warning {
+  font-size: 0.9em;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid currentColor;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.trace-verification-progress {
+  background: #f5f5f5;
+  border-color: #bdbdbd;
+  color: #424242;
+  font-style: italic;
+}
+
+.trace-verification-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  font-size: 0.85em;
+}
+
+.trace-verification-table th,
+.trace-verification-table td {
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.trace-verification-table th {
+  font-weight: 600;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.trace-verification-row-ok td {
+  color: #1b5e20;
+}
+
+.trace-verification-row-hash_mismatch td {
+  color: #b53f04;
+}
+
+.trace-verification-row-file_not_in_trace td {
+  color: #757575;
+}
+
+.trace-verification-details {
+  margin-top: 0.75rem;
+  font-size: 0.9em;
+}
+
+.trace-verification-details summary {
+  cursor: pointer;
+  font-weight: 500;
+  padding: 0.25rem 0;
+}
+
+.trace-verification-details ul {
+  margin: 0.4rem 0;
+  padding-left: 1.25rem;
+}
+
+.trace-verification-details li {
+  margin-bottom: 0.4rem;
+}
+
+.trace-verification-ok {
+  background: #e8f5e9;
+  border-color: #66bb6a;
+  color: #1b5e20;
+}
+
+.trace-verification-error {
+  background: #fff3e0;
+  border-color: #ffa726;
+  color: #b53f04;
+}
