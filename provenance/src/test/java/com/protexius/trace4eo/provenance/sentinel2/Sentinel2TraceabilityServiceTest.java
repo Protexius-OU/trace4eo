@@ -165,8 +165,8 @@ class TraceabilityServiceTest {
 
         assertEquals(Sentinel2HashCheckResult.TraceStatus.OK, result.traceStatus());
         assertEquals(1, result.fileResults().size());
-        assertEquals(Sentinel2HashCheckResult.FileStatus.OK, result.fileResults().get(0).status());
-        assertEquals(HexFormat.of().formatHex(productBlake3), result.fileResults().get(0).expectedHash());
+        assertEquals(Sentinel2HashCheckResult.FileStatus.OK, result.fileResults().getFirst().status());
+        assertEquals(HexFormat.of().formatHex(productBlake3), result.fileResults().getFirst().expectedHash());
     }
 
     @Test
@@ -180,9 +180,9 @@ class TraceabilityServiceTest {
             List.of(new Sentinel2TraceabilityService.FileHashEntry(PRODUCT_NAME, "00".repeat(32))));
 
         assertEquals(Sentinel2HashCheckResult.TraceStatus.OK, result.traceStatus());
-        assertEquals(Sentinel2HashCheckResult.FileStatus.HASH_MISMATCH, result.fileResults().get(0).status());
-        assertEquals("00".repeat(32), result.fileResults().get(0).providedHash());
-        assertEquals(HexFormat.of().formatHex(productBlake3), result.fileResults().get(0).expectedHash());
+        assertEquals(Sentinel2HashCheckResult.FileStatus.HASH_MISMATCH, result.fileResults().getFirst().status());
+        assertEquals("00".repeat(32), result.fileResults().getFirst().providedHash());
+        assertEquals(HexFormat.of().formatHex(productBlake3), result.fileResults().getFirst().expectedHash());
     }
 
     @Test
@@ -199,7 +199,7 @@ class TraceabilityServiceTest {
         assertEquals(Sentinel2HashCheckResult.TraceStatus.OK, result.traceStatus());
         assertEquals(
             Sentinel2HashCheckResult.FileStatus.FILE_NOT_IN_TRACE,
-            result.fileResults().get(0).status());
+            result.fileResults().getFirst().status());
     }
 
     @Test
@@ -215,9 +215,9 @@ class TraceabilityServiceTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
     void verify_realCopernicusTrace_signatureVerifiesAndHashMismatches() throws Exception {
         HttpClient httpClient = mock(HttpClient.class);
-        @SuppressWarnings("unchecked")
         HttpResponse<InputStream> response = mock(HttpResponse.class);
         when(response.statusCode()).thenReturn(200);
         when(response.body()).thenReturn(Files.newInputStream(
