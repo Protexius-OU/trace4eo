@@ -2,8 +2,7 @@ package com.protexius.trace4eo.sentinel2;
 
 import com.protexius.trace4eo.provenance.ProvenanceService;
 import com.protexius.trace4eo.provenance.record.ProvenanceRecord;
-import com.protexius.trace4eo.provenance.sentinel2.Sentinel2DirectoryHashCheckResult;
-import com.protexius.trace4eo.provenance.sentinel2.Sentinel2FileHashCheckResult;
+import com.protexius.trace4eo.provenance.sentinel2.Sentinel2HashCheckResult;
 import com.protexius.trace4eo.provenance.sentinel2.Sentinel2TraceVerificationResult;
 import com.protexius.trace4eo.provenance.sentinel2.Sentinel2TraceabilityService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -47,31 +46,10 @@ public class Sentinel2ProvenanceController {
         return ResponseEntity.ok(Sentinel2VerificationResponse.from(result));
     }
 
-    @PostMapping("/{id}/verify-file")
-    public ResponseEntity<Sentinel2FileVerificationResponse> verifySentinel2File(
-        @PathVariable("id") UUID id,
-        @RequestBody Sentinel2FileVerificationRequest request
-    ) throws Exception {
-        if (request == null || request.filename() == null || request.hashHex() == null
-            || request.filename().isBlank() || request.hashHex().isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
-        Optional<ProvenanceRecord> record = provenanceService.get(id);
-        if (record.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-        if (!isSentinel2(record.get())) {
-            return ResponseEntity.badRequest().build();
-        }
-        Sentinel2FileHashCheckResult result = traceabilityService.verifyTraceWithFileHash(
-            record.get().metadata().dataId(), request.filename(), request.hashHex());
-        return ResponseEntity.ok(Sentinel2FileVerificationResponse.from(result));
-    }
-
     @PostMapping("/{id}/verify-files")
-    public ResponseEntity<Sentinel2DirectoryVerificationResponse> verifySentinel2Files(
+    public ResponseEntity<Sentinel2HashCheckResponse> verifySentinel2Files(
         @PathVariable("id") UUID id,
-        @RequestBody Sentinel2DirectoryVerificationRequest request
+        @RequestBody Sentinel2HashCheckRequest request
     ) throws Exception {
         if (request == null || request.files() == null || request.files().isEmpty()) {
             return ResponseEntity.badRequest().build();
@@ -86,13 +64,13 @@ public class Sentinel2ProvenanceController {
         List<Sentinel2TraceabilityService.FileHashEntry> entries = request.files().stream()
             .map(f -> new Sentinel2TraceabilityService.FileHashEntry(f.filename(), f.hashHex()))
             .toList();
-        Sentinel2DirectoryHashCheckResult result = traceabilityService.verifyTraceWithFileHashes(
+        Sentinel2HashCheckResult result = traceabilityService.verifyTraceWithFileHashes(
             record.get().metadata().dataId(), entries);
-        return ResponseEntity.ok(Sentinel2DirectoryVerificationResponse.from(result));
+        return ResponseEntity.ok(Sentinel2HashCheckResponse.from(result));
     }
 
     private static boolean isSentinel2(ProvenanceRecord record) {
         String dataType = record.metadata().dataType();
-        return dataType != null && "sentinel-2".equalsIgnoreCase(dataType);
+        return "sentinel-2".equalsIgnoreCase(dataType);
     }
 }

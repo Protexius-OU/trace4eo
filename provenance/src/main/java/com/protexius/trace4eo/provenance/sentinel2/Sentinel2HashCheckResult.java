@@ -10,32 +10,32 @@ import java.util.Optional;
  * looked up in the signed contents list (or matched against the top-level product hash) and gets
  * its own per-file status.
  */
-public record Sentinel2DirectoryHashCheckResult(
+public record Sentinel2HashCheckResult(
         TraceStatus traceStatus,
         String imageId,
         Optional<Sentinel2TraceResponse.Trace> trace,
         List<FileResult> fileResults
 ) {
 
-    public Sentinel2DirectoryHashCheckResult {
+    public Sentinel2HashCheckResult {
         Objects.requireNonNull(traceStatus);
         Objects.requireNonNull(imageId);
         Objects.requireNonNull(trace);
         Objects.requireNonNull(fileResults);
     }
 
-    public static Sentinel2DirectoryHashCheckResult traceNotFound(String imageId) {
-        return new Sentinel2DirectoryHashCheckResult(TraceStatus.TRACE_NOT_FOUND, imageId, Optional.empty(), List.of());
+    public static Sentinel2HashCheckResult traceNotFound(String imageId) {
+        return new Sentinel2HashCheckResult(TraceStatus.TRACE_NOT_FOUND, imageId, Optional.empty(), List.of());
     }
 
-    public static Sentinel2DirectoryHashCheckResult signatureError(Sentinel2TraceResponse.Trace trace, String imageId) {
-        return new Sentinel2DirectoryHashCheckResult(TraceStatus.SIGNATURE_ERROR, imageId, Optional.of(trace), List.of());
+    public static Sentinel2HashCheckResult signatureError(Sentinel2TraceResponse.Trace trace, String imageId) {
+        return new Sentinel2HashCheckResult(TraceStatus.SIGNATURE_ERROR, imageId, Optional.of(trace), List.of());
     }
 
-    public static Sentinel2DirectoryHashCheckResult ok(
+    public static Sentinel2HashCheckResult ok(
             Sentinel2TraceResponse.Trace trace, String imageId, List<FileResult> fileResults
     ) {
-        return new Sentinel2DirectoryHashCheckResult(TraceStatus.OK, imageId, Optional.of(trace), fileResults);
+        return new Sentinel2HashCheckResult(TraceStatus.OK, imageId, Optional.of(trace), fileResults);
     }
 
     public enum TraceStatus { OK, TRACE_NOT_FOUND, SIGNATURE_ERROR }

@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import './RecordGraphPage.css'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchGraph, fetchRecord, verifyRecord, verifyFileHashes, verifySentinel2Trace, verifySentinel2File, verifySentinel2Files } from '../api/provenanceApi'
-import type { VerificationResult, FileVerificationResponse, PredecessorFileResult, Sentinel2VerificationResponse, Sentinel2FileVerificationResponse, Sentinel2DirectoryVerificationResponse } from '../types/provenance'
+import { fetchGraph, fetchRecord, verifyRecord, verifyFileHashes, verifySentinel2Trace, verifySentinel2Files } from '../api/provenanceApi'
+import type { VerificationResult, FileVerificationResponse, PredecessorFileResult, Sentinel2VerificationResponse, Sentinel2HashCheckResponse, Sentinel2HashCheckFileStatus } from '../types/provenance'
 import { hashFile, hashFileBlake3Hex } from '../utils/hashFiles'
 import ProvenanceGraphViewer from '../components/ProvenanceGraphViewer'
 import IntegrityChain from '../components/IntegrityChain'
@@ -19,15 +19,11 @@ export default function RecordGraphPage() {
   const [isVerifyingTrace, setIsVerifyingTrace] = useState(false)
   const [traceVerificationResult, setTraceVerificationResult] = useState<Sentinel2VerificationResponse | null>(null)
   const [traceVerificationError, setTraceVerificationError] = useState<string | null>(null)
-  const [traceFileStatus, setTraceFileStatus] = useState<string | null>(null)
-  const [traceFileResult, setTraceFileResult] = useState<Sentinel2FileVerificationResponse | null>(null)
-  const [traceFileError, setTraceFileError] = useState<string | null>(null)
-  const [traceDirStatus, setTraceDirStatus] = useState<string | null>(null)
-  const [traceDirResult, setTraceDirResult] = useState<Sentinel2DirectoryVerificationResponse | null>(null)
-  const [traceDirError, setTraceDirError] = useState<string | null>(null)
+  const [traceCheckStatus, setTraceCheckStatus] = useState<string | null>(null)
+  const [traceCheckResult, setTraceCheckResult] = useState<Sentinel2HashCheckResponse | null>(null)
+  const [traceCheckError, setTraceCheckError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const traceFileInputRef = useRef<HTMLInputElement>(null)
-  const traceDirInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     setVerificationResult(null)
@@ -36,12 +32,9 @@ export default function RecordGraphPage() {
     setIsSearchingPredecessors(false)
     setTraceVerificationResult(null)
     setTraceVerificationError(null)
-    setTraceFileStatus(null)
-    setTraceFileResult(null)
-    setTraceFileError(null)
-    setTraceDirStatus(null)
-    setTraceDirResult(null)
-    setTraceDirError(null)
+    setTraceCheckStatus(null)
+    setTraceCheckResult(null)
+    setTraceCheckError(null)
   }, [id])
 
   const { data: graphData, isLoading: graphLoading, error: graphError } = useQuery({
@@ -93,48 +86,29 @@ export default function RecordGraphPage() {
   const isSentinel2Record = recordData?.metadata?.dataType?.toLowerCase() === 'sentinel-2'
 
   const handleVerifyTraceFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file || !id) return
-
-    setTraceFileResult(null)
-    setTraceFileError(null)
-    try {
-      setTraceFileStatus(`Hashing ${file.name} (${(file.size / 1_048_576).toFixed(1)} MB) with BLAKE3…`)
-      const hashHex = await hashFileBlake3Hex(file)
-      setTraceFileStatus('Sending hash to server for comparison…')
-      const result = await verifySentinel2File(id, file.name, hashHex)
-      setTraceFileResult(result)
-    } catch (err) {
-      setTraceFileError(err instanceof Error ? err.message : 'File verification failed')
-    } finally {
-      setTraceFileStatus(null)
-    }
-  }
-
-  const handleVerifyTraceDirectory = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
     e.target.value = ''
     if (!files.length || !id) return
 
-    setTraceDirResult(null)
-    setTraceDirError(null)
+    setTraceCheckResult(null)
+    setTraceCheckError(null)
     try {
       const entries: Array<{ filename: string; hashHex: string }> = []
       for (let i = 0; i < files.length; i++) {
         const f = files[i]!
         const sizeMb = (f.size / 1_048_576).toFixed(1)
-        setTraceDirStatus(`Hashing file ${i + 1} of ${files.length}: ${f.name} (${sizeMb} MB)`)
+        const prefix = files.length === 1 ? '' : `File ${i + 1} of ${files.length}: `
+        setTraceCheckStatus(`${prefix}Hashing ${f.name} (${sizeMb} MB)…`)
         const hashHex = await hashFileBlake3Hex(f)
         entries.push({ filename: f.name, hashHex })
       }
-      setTraceDirStatus(`Sending ${entries.length} hashes to server for comparison…`)
+      setTraceCheckStatus(`Sending ${entries.length === 1 ? 'hash' : `${entries.length} hashes`} to server for comparison…`)
       const result = await verifySentinel2Files(id, entries)
-      setTraceDirResult(result)
+      setTraceCheckResult(result)
     } catch (err) {
-      setTraceDirError(err instanceof Error ? err.message : 'Directory verification failed')
+      setTraceCheckError(err instanceof Error ? err.message : 'Verification failed')
     } finally {
-      setTraceDirStatus(null)
+      setTraceCheckStatus(null)
     }
   }
 
@@ -240,34 +214,18 @@ export default function RecordGraphPage() {
               </button>
               <button
                 onClick={() => traceFileInputRef.current?.click()}
-                disabled={!!traceFileStatus}
+                disabled={!!traceCheckStatus}
                 className="btn btn-secondary"
-                title="Pick the Sentinel-2 product file (e.g. the .SAFE.zip or any file inside it). The browser hashes it locally with BLAKE3 and compares to the Copernicus registry."
+                title="Pick one or more files from the Sentinel-2 product. Each is hashed locally and compared to the Copernicus registry."
               >
-                {traceFileStatus ? 'Working…' : 'Check File Against Copernicus'}
+                {traceCheckStatus ? 'Working…' : 'Check Against Copernicus'}
               </button>
               <input
                 ref={traceFileInputRef}
                 type="file"
+                multiple
                 style={{ display: 'none' }}
                 onChange={handleVerifyTraceFile}
-              />
-              <button
-                onClick={() => traceDirInputRef.current?.click()}
-                disabled={!!traceDirStatus}
-                className="btn btn-secondary"
-                title="Pick the extracted .SAFE folder. The browser hashes every file with BLAKE3 and compares each to the Copernicus registry. Files not in the registry are reported separately."
-              >
-                {traceDirStatus ? 'Working…' : 'Check Folder Against Copernicus'}
-              </button>
-              <input
-                ref={traceDirInputRef}
-                type="file"
-                /* @ts-expect-error -- webkitdirectory is non-standard but supported by all major browsers */
-                webkitdirectory=""
-                directory=""
-                style={{ display: 'none' }}
-                onChange={handleVerifyTraceDirectory}
               />
             </>
           )}
@@ -356,185 +314,155 @@ export default function RecordGraphPage() {
         </div>
       )}
 
-      {traceFileStatus && (
+      {traceCheckStatus && (
         <div className="trace-verification trace-verification-progress">
-          <p>{traceFileStatus}</p>
+          <p>{traceCheckStatus}</p>
         </div>
       )}
 
-      {(traceFileResult || traceFileError) && (
-        <div className={`trace-verification ${traceFileResult?.status === 'OK' ? 'trace-verification-ok' : 'trace-verification-error'}`}>
-          {traceFileError ? (
-            <>
-              <h3 className="trace-verification-title">Could not check the file against Copernicus</h3>
-              <p>The verification request did not complete: <code>{traceFileError}</code></p>
-            </>
-          ) : traceFileResult?.status === 'OK' ? (
-            <>
-              <h3 className="trace-verification-title">✓ This file is the official Sentinel-2 product</h3>
-              <p>
-                The BLAKE3 hash of <code>{traceFileResult.filename}</code> exactly matches what
-                Copernicus has signed for this product. Combined with the signature on the
-                Copernicus record (also verified), this proves the file you supplied is byte-for-byte
-                identical to what Copernicus published.
-              </p>
-              <p className="trace-verification-meta">
-                Hash matched: <code>{traceFileResult.providedHash}</code>
-                <br />
-                Registry reference: <code>{traceFileResult.traceId}</code>
-                {traceFileResult.signatureAlgorithm && (
-                  <> &middot; Signature: <code>{traceFileResult.signatureAlgorithm}</code></>
-                )}
-              </p>
-            </>
-          ) : traceFileResult?.status === 'HASH_MISMATCH' ? (
-            <>
-              <h3 className="trace-verification-title">✗ File does not match the official product</h3>
-              <p>
-                A file with the name <code>{traceFileResult.filename}</code> exists in Copernicus's
-                registered product, but its BLAKE3 hash differs from what you supplied. This means
-                the file you picked is <strong>not</strong> byte-for-byte identical to the official
-                Sentinel-2 product, even though the names match.
-              </p>
-              <p className="trace-verification-meta">
-                Your file's hash: <code>{traceFileResult.providedHash}</code>
-                <br />
-                Copernicus's signed hash: <code>{traceFileResult.expectedHash}</code>
-              </p>
-              <p className="trace-verification-hint">
-                Likely reasons: the file was modified after download, you picked a different version
-                of the same product, or the download is corrupted.
-              </p>
-            </>
-          ) : traceFileResult?.status === 'FILE_NOT_IN_TRACE' ? (
-            <>
-              <h3 className="trace-verification-title">File name not found in the registry</h3>
-              <p>
-                Copernicus has a record for <code>{traceFileResult.imageId}</code>, but no entry
-                inside it matches the file name <code>{traceFileResult.filename}</code>.
-              </p>
-              <p className="trace-verification-hint">
-                Make sure you picked a file from the official .SAFE.zip archive (or the .SAFE.zip
-                itself). Files from the GRANULE/IMG_DATA, GRANULE/QI_DATA, AUX_DATA, or top-level
-                directories all work — pick one whose basename appears in the official product.
-              </p>
-            </>
-          ) : traceFileResult?.status === 'TRACE_NOT_FOUND' ? (
-            <>
-              <h3 className="trace-verification-title">✗ No matching record in the Copernicus registry</h3>
-              <p>
-                The Copernicus Data Space Ecosystem has no Sentinel-2 product matching{' '}
-                <code>{traceFileResult.imageId}</code>, so the file cannot be checked against
-                anything.
-              </p>
-            </>
-          ) : (
-            <>
-              <h3 className="trace-verification-title">✗ Registry record found, but signature could not be verified</h3>
-              <p>
-                A Copernicus record exists for <code>{traceFileResult?.imageId}</code>, but its
-                digital signature failed verification, so the file hash comparison was not
-                performed.
-              </p>
-            </>
-          )}
-        </div>
-      )}
-
-      {traceDirStatus && (
-        <div className="trace-verification trace-verification-progress">
-          <p>{traceDirStatus}</p>
-        </div>
-      )}
-
-      {(traceDirResult || traceDirError) && (
-        <div className={`trace-verification ${
-          traceDirError ? 'trace-verification-error' :
-          traceDirResult?.traceStatus !== 'OK' ? 'trace-verification-error' :
-          (traceDirResult?.mismatchedFiles ?? 0) > 0 ? 'trace-verification-error' :
-          (traceDirResult?.matchedFiles ?? 0) === 0 ? 'trace-verification-error' :
-          'trace-verification-ok'
-        }`}>
-          {traceDirError ? (
-            <>
-              <h3 className="trace-verification-title">Could not check the folder against Copernicus</h3>
-              <p>The verification request did not complete: <code>{traceDirError}</code></p>
-            </>
-          ) : traceDirResult?.traceStatus === 'TRACE_NOT_FOUND' ? (
-            <>
-              <h3 className="trace-verification-title">✗ No matching record in the Copernicus registry</h3>
-              <p>
-                The Copernicus Data Space Ecosystem has no Sentinel-2 product matching{' '}
-                <code>{traceDirResult.imageId}</code>, so no file in this folder can be checked.
-              </p>
-            </>
-          ) : traceDirResult?.traceStatus === 'SIGNATURE_ERROR' ? (
-            <>
-              <h3 className="trace-verification-title">✗ Registry record found, but signature could not be verified</h3>
-              <p>
-                A Copernicus record exists for <code>{traceDirResult.imageId}</code>, but its
-                digital signature failed verification, so file hash comparisons were not performed.
-              </p>
-            </>
-          ) : traceDirResult ? (
-            <>
-              <h3 className="trace-verification-title">
-                {traceDirResult.mismatchedFiles === 0 && traceDirResult.matchedFiles > 0
-                  ? `✓ Folder matches the official Copernicus product (${traceDirResult.matchedFiles}/${traceDirResult.totalFiles} files matched)`
-                  : `✗ Folder does not fully match the official Copernicus product`}
-              </h3>
-              <p>
-                Of <strong>{traceDirResult.totalFiles}</strong> files you supplied:
-              </p>
-              <ul className="trace-verification-checks">
-                <li>
-                  <strong>{traceDirResult.matchedFiles}</strong> matched the official BLAKE3 hash in
-                  the Copernicus registry.
-                </li>
-                {traceDirResult.mismatchedFiles > 0 && (
+      {(traceCheckResult || traceCheckError) && (() => {
+        const isMulti = (traceCheckResult?.fileResults.length ?? 0) > 1
+        const fileResult = traceCheckResult?.fileResults[0]
+        const status: Sentinel2HashCheckFileStatus | undefined = fileResult?.status
+        const allMatched = traceCheckResult
+          ? traceCheckResult.matchedFiles === traceCheckResult.totalFiles
+          : false
+        return (
+          <div className={`trace-verification ${
+            traceCheckError ? 'trace-verification-error' :
+            traceCheckResult?.traceStatus !== 'OK' ? 'trace-verification-error' :
+            isMulti ? (allMatched ? 'trace-verification-ok' : 'trace-verification-error') :
+            status === 'OK' ? 'trace-verification-ok' :
+            'trace-verification-error'
+          }`}>
+            {traceCheckError ? (
+              <>
+                <h3 className="trace-verification-title">Could not check against Copernicus</h3>
+                <p>The verification request did not complete: <code>{traceCheckError}</code></p>
+              </>
+            ) : traceCheckResult?.traceStatus === 'TRACE_NOT_FOUND' ? (
+              <>
+                <h3 className="trace-verification-title">✗ No matching record in the Copernicus registry</h3>
+                <p>
+                  The Copernicus Data Space Ecosystem has no Sentinel-2 product matching{' '}
+                  <code>{traceCheckResult.imageId}</code>, so nothing can be checked.
+                </p>
+              </>
+            ) : traceCheckResult?.traceStatus === 'SIGNATURE_ERROR' ? (
+              <>
+                <h3 className="trace-verification-title">✗ Registry record found, but signature could not be verified</h3>
+                <p>
+                  A Copernicus record exists for <code>{traceCheckResult.imageId}</code>, but its
+                  digital signature failed verification, so file hash comparisons were not performed.
+                </p>
+              </>
+            ) : isMulti && traceCheckResult ? (
+              <>
+                <h3 className="trace-verification-title">
+                  {allMatched
+                    ? `✓ All ${traceCheckResult.totalFiles} files match the official Copernicus product`
+                    : `✗ Some files do not match the official Copernicus product`}
+                </h3>
+                <p>Of <strong>{traceCheckResult.totalFiles}</strong> files you supplied:</p>
+                <ul className="trace-verification-checks">
                   <li>
-                    <strong>{traceDirResult.mismatchedFiles}</strong> had the right name in the
-                    registry but the wrong content (hash mismatch — file was modified or
-                    corrupted).
+                    <strong>{traceCheckResult.matchedFiles}</strong> matched the official hash in
+                    the Copernicus registry.
                   </li>
-                )}
-                {traceDirResult.filesNotInTrace > 0 && (
-                  <li>
-                    <strong>{traceDirResult.filesNotInTrace}</strong> were not part of the official
-                    product. These could be files you added or files outside the .SAFE archive.
-                  </li>
-                )}
-              </ul>
-              <details className="trace-verification-details">
-                <summary>Per-file results ({traceDirResult.fileResults.length})</summary>
-                <table className="trace-verification-table">
-                  <thead>
-                    <tr><th>File</th><th>Status</th></tr>
-                  </thead>
-                  <tbody>
-                    {traceDirResult.fileResults.map(r => (
-                      <tr key={r.filename} className={`trace-verification-row-${r.status.toLowerCase()}`}>
-                        <td><code>{r.filename}</code></td>
-                        <td>
-                          {r.status === 'OK' ? '✓ matched' :
-                           r.status === 'HASH_MISMATCH' ? '✗ hash mismatch' :
-                           '○ not in registry'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </details>
-              <p className="trace-verification-meta">
-                Registry reference: <code>{traceDirResult.traceId}</code>
-                {traceDirResult.signatureAlgorithm && (
-                  <> &middot; Signature: <code>{traceDirResult.signatureAlgorithm}</code></>
-                )}
-              </p>
-            </>
-          ) : null}
-        </div>
-      )}
+                  {traceCheckResult.mismatchedFiles > 0 && (
+                    <li>
+                      <strong>{traceCheckResult.mismatchedFiles}</strong> had the right name in the
+                      registry but the wrong content (hash mismatch — file was modified or corrupted).
+                    </li>
+                  )}
+                  {traceCheckResult.filesNotInTrace > 0 && (
+                    <li>
+                      <strong>{traceCheckResult.filesNotInTrace}</strong> were not in Copernicus's
+                      signed file list. Copernicus doesn't sign every file in a product, and the
+                      exact set varies by product type — so this isn't automatically a tampering
+                      signal.
+                    </li>
+                  )}
+                </ul>
+                <details className="trace-verification-details">
+                  <summary>Per-file results ({traceCheckResult.fileResults.length})</summary>
+                  <table className="trace-verification-table">
+                    <thead><tr><th>File</th><th>Status</th></tr></thead>
+                    <tbody>
+                      {traceCheckResult.fileResults.map(r => (
+                        <tr key={r.filename} className={`trace-verification-row-${r.status.toLowerCase()}`}>
+                          <td><code>{r.filename}</code></td>
+                          <td>
+                            {r.status === 'OK' ? '✓ matched' :
+                             r.status === 'HASH_MISMATCH' ? '✗ hash mismatch' :
+                             '○ not in registry'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </details>
+                <p className="trace-verification-meta">
+                  Registry reference: <code>{traceCheckResult.traceId}</code>
+                  {traceCheckResult.signatureAlgorithm && (
+                    <> &middot; Signature: <code>{traceCheckResult.signatureAlgorithm}</code></>
+                  )}
+                </p>
+              </>
+            ) : status === 'OK' && fileResult ? (
+              <>
+                <h3 className="trace-verification-title">✓ This file is the official Sentinel-2 product</h3>
+                <p>
+                  The hash of <code>{fileResult.filename}</code> exactly matches what
+                  Copernicus has signed for this product. Combined with the signature on the
+                  Copernicus record (also verified), this proves the file you supplied is
+                  byte-for-byte identical to what Copernicus published.
+                </p>
+                <p className="trace-verification-meta">
+                  Hash matched: <code>{fileResult.providedHash}</code>
+                  <br />
+                  Registry reference: <code>{traceCheckResult?.traceId}</code>
+                  {traceCheckResult?.signatureAlgorithm && (
+                    <> &middot; Signature: <code>{traceCheckResult.signatureAlgorithm}</code></>
+                  )}
+                </p>
+              </>
+            ) : status === 'HASH_MISMATCH' && fileResult ? (
+              <>
+                <h3 className="trace-verification-title">✗ File does not match the official product</h3>
+                <p>
+                  A file named <code>{fileResult.filename}</code> exists in Copernicus's signed
+                  product, but its hash differs from what you supplied. This means the file
+                  you picked is <strong>not</strong> byte-for-byte identical to the official
+                  Sentinel-2 product, even though the names match.
+                </p>
+                <p className="trace-verification-meta">
+                  Your file's hash: <code>{fileResult.providedHash}</code>
+                  <br />
+                  Copernicus's signed hash: <code>{fileResult.expectedHash}</code>
+                </p>
+                <p className="trace-verification-hint">
+                  Likely reasons: the file was modified after download, you picked a different
+                  version of the same product, or the download is corrupted.
+                </p>
+              </>
+            ) : status === 'FILE_NOT_IN_TRACE' && fileResult ? (
+              <>
+                <h3 className="trace-verification-title">File not found in Copernicus's signed file list</h3>
+                <p>
+                  Copernicus has a record for <code>{traceCheckResult?.imageId}</code>, but no entry
+                  in its signed contents matches the file name <code>{fileResult.filename}</code>.
+                </p>
+                <p className="trace-verification-hint">
+                  Copernicus doesn't sign every file in a product, and the exact set varies by
+                  product type — so this isn't automatically a tampering signal. Try a different
+                  file from the product.
+                </p>
+              </>
+            ) : null}
+          </div>
+        )
+      })()}
 
       <p className="record-id">
         Record ID: <span className="uuid">{id}</span>

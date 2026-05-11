@@ -66,39 +66,6 @@ public class Sentinel2TraceabilityService {
         return Sentinel2TraceVerificationResult.ok(trace, imageId);
     }
 
-    /**
-     * Verify a precomputed BLAKE3 hash against the signed Copernicus trace for {@code imageId}.
-     * The {@code filename} is matched first against the trace's top-level product name
-     * (whole-product check, e.g. {@code S2A_..._SAFE.zip}); if that doesn't match, it falls back
-     * to a basename match against the per-file entries in the signed message.
-     */
-    public Sentinel2FileHashCheckResult verifyTraceWithFileHash(
-            String imageId, String filename, String providedHashHex
-    ) throws Exception {
-        Sentinel2TraceResponse.Trace trace = tracingClient.getProductCreateEventTrace(imageId)
-                .orElse(null);
-        if (trace == null) {
-            return Sentinel2FileHashCheckResult.traceNotFound(imageId, filename, providedHashHex);
-        }
-        if (!SUPPORTED_HASH_ALGORITHM.equals(trace.hashAlgorithm())) {
-            throw new RuntimeException("Unsupported hash algorithm: " + trace.hashAlgorithm());
-        }
-        if (!SUPPORTED_SIGNATURE_ALGORITHM.equals(trace.signature().algorithm())) {
-            throw new RuntimeException("Unsupported signature algorithm: " + trace.signature().algorithm());
-        }
-        if (!verifySignature(trace.signature())) {
-            return Sentinel2FileHashCheckResult.signatureError(trace, imageId, filename, providedHashHex);
-        }
-        String expectedHash = lookupExpectedHash(trace, filename);
-        if (expectedHash == null) {
-            return Sentinel2FileHashCheckResult.fileNotInTrace(trace, imageId, filename, providedHashHex);
-        }
-        if (!expectedHash.equalsIgnoreCase(providedHashHex)) {
-            return Sentinel2FileHashCheckResult.hashMismatch(trace, imageId, filename, providedHashHex, expectedHash);
-        }
-        return Sentinel2FileHashCheckResult.ok(trace, imageId, filename, providedHashHex, expectedHash);
-    }
-
     private static String lookupExpectedHash(Sentinel2TraceResponse.Trace trace, String filename) {
         if (trace.matchesProductFile(filename) && trace.product().hash() != null) {
             return trace.product().hash();
@@ -111,13 +78,13 @@ public class Sentinel2TraceabilityService {
      * trace and verifies its signature once, then classifies each input as OK / HASH_MISMATCH /
      * FILE_NOT_IN_TRACE.
      */
-    public Sentinel2DirectoryHashCheckResult verifyTraceWithFileHashes(
+    public Sentinel2HashCheckResult verifyTraceWithFileHashes(
             String imageId, List<FileHashEntry> entries
     ) throws Exception {
         Sentinel2TraceResponse.Trace trace = tracingClient.getProductCreateEventTrace(imageId)
                 .orElse(null);
         if (trace == null) {
-            return Sentinel2DirectoryHashCheckResult.traceNotFound(imageId);
+            return Sentinel2HashCheckResult.traceNotFound(imageId);
         }
         if (!SUPPORTED_HASH_ALGORITHM.equals(trace.hashAlgorithm())) {
             throw new RuntimeException("Unsupported hash algorithm: " + trace.hashAlgorithm());
@@ -126,32 +93,32 @@ public class Sentinel2TraceabilityService {
             throw new RuntimeException("Unsupported signature algorithm: " + trace.signature().algorithm());
         }
         if (!verifySignature(trace.signature())) {
-            return Sentinel2DirectoryHashCheckResult.signatureError(trace, imageId);
+            return Sentinel2HashCheckResult.signatureError(trace, imageId);
         }
-        List<Sentinel2DirectoryHashCheckResult.FileResult> fileResults = new ArrayList<>();
+        List<Sentinel2HashCheckResult.FileResult> fileResults = new ArrayList<>();
         for (FileHashEntry entry : entries) {
             String expectedHash = lookupExpectedHash(trace, entry.filename());
             if (expectedHash == null) {
-                fileResults.add(new Sentinel2DirectoryHashCheckResult.FileResult(
+                fileResults.add(new Sentinel2HashCheckResult.FileResult(
                     entry.filename(),
-                    Sentinel2DirectoryHashCheckResult.FileStatus.FILE_NOT_IN_TRACE,
+                    Sentinel2HashCheckResult.FileStatus.FILE_NOT_IN_TRACE,
                     entry.hashHex(),
                     null));
             } else if (expectedHash.equalsIgnoreCase(entry.hashHex())) {
-                fileResults.add(new Sentinel2DirectoryHashCheckResult.FileResult(
+                fileResults.add(new Sentinel2HashCheckResult.FileResult(
                     entry.filename(),
-                    Sentinel2DirectoryHashCheckResult.FileStatus.OK,
+                    Sentinel2HashCheckResult.FileStatus.OK,
                     entry.hashHex(),
                     expectedHash));
             } else {
-                fileResults.add(new Sentinel2DirectoryHashCheckResult.FileResult(
+                fileResults.add(new Sentinel2HashCheckResult.FileResult(
                     entry.filename(),
-                    Sentinel2DirectoryHashCheckResult.FileStatus.HASH_MISMATCH,
+                    Sentinel2HashCheckResult.FileStatus.HASH_MISMATCH,
                     entry.hashHex(),
                     expectedHash));
             }
         }
-        return Sentinel2DirectoryHashCheckResult.ok(trace, imageId, List.copyOf(fileResults));
+        return Sentinel2HashCheckResult.ok(trace, imageId, List.copyOf(fileResults));
     }
 
     public record FileHashEntry(String filename, String hashHex) {}

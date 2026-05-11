@@ -154,42 +154,52 @@ class TraceabilityServiceTest {
     }
 
     @Test
-    void verifyTraceWithFileHash_matchesEntry_returnsOk() throws Exception {
+    void verifyTraceWithFileHashes_matchesWholeProduct_returnsOk() throws Exception {
         Sentinel2TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.of(trace));
 
-        Sentinel2FileHashCheckResult result = service.verifyTraceWithFileHash(
-            IMAGE_ID, PRODUCT_NAME, HexFormat.of().formatHex(productBlake3));
+        Sentinel2HashCheckResult result = service.verifyTraceWithFileHashes(
+            IMAGE_ID,
+            List.of(new Sentinel2TraceabilityService.FileHashEntry(PRODUCT_NAME, HexFormat.of().formatHex(productBlake3))));
 
-        assertEquals(Sentinel2FileHashCheckResult.Status.OK, result.status());
-        assertEquals(HexFormat.of().formatHex(productBlake3), result.expectedHash());
+        assertEquals(Sentinel2HashCheckResult.TraceStatus.OK, result.traceStatus());
+        assertEquals(1, result.fileResults().size());
+        assertEquals(Sentinel2HashCheckResult.FileStatus.OK, result.fileResults().get(0).status());
+        assertEquals(HexFormat.of().formatHex(productBlake3), result.fileResults().get(0).expectedHash());
     }
 
     @Test
-    void verifyTraceWithFileHash_wrongHash_returnsHashMismatch() throws Exception {
+    void verifyTraceWithFileHashes_wrongHash_returnsHashMismatch() throws Exception {
         Sentinel2TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.of(trace));
 
-        Sentinel2FileHashCheckResult result = service.verifyTraceWithFileHash(
-            IMAGE_ID, PRODUCT_NAME, "00".repeat(32));
+        Sentinel2HashCheckResult result = service.verifyTraceWithFileHashes(
+            IMAGE_ID,
+            List.of(new Sentinel2TraceabilityService.FileHashEntry(PRODUCT_NAME, "00".repeat(32))));
 
-        assertEquals(Sentinel2FileHashCheckResult.Status.HASH_MISMATCH, result.status());
-        assertEquals("00".repeat(32), result.providedHash());
-        assertEquals(HexFormat.of().formatHex(productBlake3), result.expectedHash());
+        assertEquals(Sentinel2HashCheckResult.TraceStatus.OK, result.traceStatus());
+        assertEquals(Sentinel2HashCheckResult.FileStatus.HASH_MISMATCH, result.fileResults().get(0).status());
+        assertEquals("00".repeat(32), result.fileResults().get(0).providedHash());
+        assertEquals(HexFormat.of().formatHex(productBlake3), result.fileResults().get(0).expectedHash());
     }
 
     @Test
-    void verifyTraceWithFileHash_unknownFilename_returnsFileNotInTrace() throws Exception {
+    void verifyTraceWithFileHashes_unknownFilename_returnsFileNotInTrace() throws Exception {
         Sentinel2TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.of(trace));
 
-        Sentinel2FileHashCheckResult result = service.verifyTraceWithFileHash(
-            IMAGE_ID, "not-in-product.txt", HexFormat.of().formatHex(productBlake3));
+        Sentinel2HashCheckResult result = service.verifyTraceWithFileHashes(
+            IMAGE_ID,
+            List.of(new Sentinel2TraceabilityService.FileHashEntry(
+                "not-in-product.txt", HexFormat.of().formatHex(productBlake3))));
 
-        assertEquals(Sentinel2FileHashCheckResult.Status.FILE_NOT_IN_TRACE, result.status());
+        assertEquals(Sentinel2HashCheckResult.TraceStatus.OK, result.traceStatus());
+        assertEquals(
+            Sentinel2HashCheckResult.FileStatus.FILE_NOT_IN_TRACE,
+            result.fileResults().get(0).status());
     }
 
     @Test

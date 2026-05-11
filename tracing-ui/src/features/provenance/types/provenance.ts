@@ -153,36 +153,18 @@ export interface Sentinel2VerificationResponse {
   signatureAlgorithm: string | null
 }
 
-export type Sentinel2FileVerificationStatus =
-  | 'OK'
-  | 'TRACE_NOT_FOUND'
-  | 'SIGNATURE_ERROR'
-  | 'HASH_MISMATCH'
-  | 'FILE_NOT_IN_TRACE'
+export type Sentinel2HashCheckFileStatus = 'OK' | 'HASH_MISMATCH' | 'FILE_NOT_IN_TRACE'
+export type Sentinel2HashCheckTraceStatus = 'OK' | 'TRACE_NOT_FOUND' | 'SIGNATURE_ERROR'
 
-export interface Sentinel2FileVerificationResponse {
-  status: Sentinel2FileVerificationStatus
-  imageId: string
+export interface Sentinel2HashCheckFileResult {
   filename: string
-  providedHash: string
-  expectedHash: string | null
-  traceId: string | null
-  hashAlgorithm: string | null
-  signatureAlgorithm: string | null
-}
-
-export type Sentinel2DirectoryFileStatus = 'OK' | 'HASH_MISMATCH' | 'FILE_NOT_IN_TRACE'
-export type Sentinel2DirectoryTraceStatus = 'OK' | 'TRACE_NOT_FOUND' | 'SIGNATURE_ERROR'
-
-export interface Sentinel2DirectoryFileResult {
-  filename: string
-  status: Sentinel2DirectoryFileStatus
+  status: Sentinel2HashCheckFileStatus
   providedHash: string
   expectedHash: string | null
 }
 
-export interface Sentinel2DirectoryVerificationResponse {
-  traceStatus: Sentinel2DirectoryTraceStatus
+export interface Sentinel2HashCheckResponse {
+  traceStatus: Sentinel2HashCheckTraceStatus
   imageId: string
   traceId: string | null
   hashAlgorithm: string | null
@@ -191,5 +173,5 @@ export interface Sentinel2DirectoryVerificationResponse {
   matchedFiles: number
   mismatchedFiles: number
   filesNotInTrace: number
-  fileResults: Sentinel2DirectoryFileResult[]
+  fileResults: Sentinel2HashCheckFileResult[]
 }

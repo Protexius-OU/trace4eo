@@ -1,5 +1,5 @@
 import { authFetch } from '../../../core/auth/authFetch'
-import type { ProvenanceRecord, ProvenanceGraph, PagedResponse, RecordFilters, FilterOptions, VerificationResult, FileVerificationResponse, Sentinel2VerificationResponse, Sentinel2FileVerificationResponse, Sentinel2DirectoryVerificationResponse } from '../types/provenance'
+import type { ProvenanceRecord, ProvenanceGraph, PagedResponse, RecordFilters, FilterOptions, VerificationResult, FileVerificationResponse, Sentinel2VerificationResponse, Sentinel2HashCheckResponse } from '../types/provenance'
 
 const API_BASE = '/api/provenance'
 
@@ -108,33 +108,17 @@ export async function verifySentinel2Trace(id: string): Promise<Sentinel2Verific
   return response.json()
 }
 
-export async function verifySentinel2File(
-  id: string,
-  filename: string,
-  hashHex: string,
-): Promise<Sentinel2FileVerificationResponse> {
-  const response = await authFetch(`${API_BASE}/sentinel-2/${id}/verify-file`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filename, hashHex }),
-  })
-  if (!response.ok) {
-    throw new Error(`File verification failed: ${response.statusText}`)
-  }
-  return response.json()
-}
-
 export async function verifySentinel2Files(
   id: string,
   files: Array<{ filename: string; hashHex: string }>,
-): Promise<Sentinel2DirectoryVerificationResponse> {
+): Promise<Sentinel2HashCheckResponse> {
   const response = await authFetch(`${API_BASE}/sentinel-2/${id}/verify-files`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ files }),
   })
   if (!response.ok) {
-    throw new Error(`Directory verification failed: ${response.statusText}`)
+    throw new Error(`Sentinel-2 verification failed: ${response.statusText}`)
   }
   return response.json()
 }
