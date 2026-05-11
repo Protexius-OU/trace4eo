@@ -1,0 +1,51 @@
+package com.protexius.trace4eo.provenance.sentinel2;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+public record Sentinel2HashCheckResult(
+        TraceStatus traceStatus,
+        String imageId,
+        Optional<Sentinel2TraceResponse.Trace> trace,
+        List<FileResult> fileResults
+) {
+
+    public Sentinel2HashCheckResult {
+        Objects.requireNonNull(traceStatus);
+        Objects.requireNonNull(imageId);
+        Objects.requireNonNull(trace);
+        Objects.requireNonNull(fileResults);
+    }
+
+    public static Sentinel2HashCheckResult traceNotFound(String imageId) {
+        return new Sentinel2HashCheckResult(TraceStatus.TRACE_NOT_FOUND, imageId, Optional.empty(), List.of());
+    }
+
+    public static Sentinel2HashCheckResult signatureError(Sentinel2TraceResponse.Trace trace, String imageId) {
+        return new Sentinel2HashCheckResult(TraceStatus.SIGNATURE_ERROR, imageId, Optional.of(trace), List.of());
+    }
+
+    public static Sentinel2HashCheckResult ok(
+            Sentinel2TraceResponse.Trace trace, String imageId, List<FileResult> fileResults
+    ) {
+        return new Sentinel2HashCheckResult(TraceStatus.OK, imageId, Optional.of(trace), fileResults);
+    }
+
+    public enum TraceStatus { OK, TRACE_NOT_FOUND, SIGNATURE_ERROR }
+
+    public record FileResult(
+            String filename,
+            FileStatus status,
+            String providedHash,
+            String expectedHash
+    ) {
+        public FileResult {
+            Objects.requireNonNull(filename);
+            Objects.requireNonNull(status);
+            Objects.requireNonNull(providedHash);
+        }
+    }
+
+    public enum FileStatus { OK, HASH_MISMATCH, FILE_NOT_IN_TRACE }
+}

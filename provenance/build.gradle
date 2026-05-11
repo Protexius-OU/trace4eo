@@ -22,9 +22,13 @@ dependencies {
     api(libs.jackson.databind)
     api(libs.sigstore.java)
     implementation("org.slf4j:slf4j-api:2.0.17")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.84")
 
     errorprone(libs.error.prone.core)
     rewrite(libs.rewrite.static.analysis)
+
+    testImplementation("org.mockito:mockito-core:5.23.0")
+    testImplementation("org.bouncycastle:bcpkix-jdk18on:1.84")
 }
 
 java {
