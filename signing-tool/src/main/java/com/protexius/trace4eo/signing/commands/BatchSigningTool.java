@@ -19,6 +19,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -79,11 +80,18 @@ public class BatchSigningTool {
             defaultValue = "true") boolean saveZip,
         @Option(longName = "threads",
             description = "Maximum concurrent signing threads (default: 4)",
-            defaultValue = "4") int threads
+            defaultValue = "4") int threads,
+        @Option(longName = "start-index",
+            description = "Start index (inclusive) into the alphabetically-sorted file list",
+            defaultValue = "0") int startIndex,
+        @Option(longName = "end-index",
+            description = "End index (exclusive) into the alphabetically-sorted file list; defaults to total file count")
+        Integer endIndex
     ) throws IOException, InterruptedException {
         HashAlgorithm algorithm = validator.validateHashAlgorithm(hashAlgorithm);
         List<Path> resolvedFiles = validateAndResolveFiles(files, directory, pattern, provenanceRecordType,
             dataId, outputDir, registerUrl, keycloakUrl, saveZip);
+        resolvedFiles = applyRange(resolvedFiles, startIndex, endIndex);
         String oidcToken = resolveOidcToken();
         String accessToken = null;
         if (registerUrl != null && !registerUrl.isBlank()) {
@@ -126,6 +134,19 @@ public class BatchSigningTool {
             throw new IllegalArgumentException("No files found matching the given --files or --directory/--pattern");
         }
         return resolvedFiles;
+    }
+
+    private List<Path> applyRange(List<Path> resolvedFiles, int startIndex, Integer endIndex) {
+        if (startIndex == 0 && endIndex == null) {
+            return resolvedFiles;
+        }
+        List<Path> sorted = new ArrayList<>(resolvedFiles);
+        sorted.sort(Comparator.comparing(p -> p.getFileName().toString()));
+        int total = sorted.size();
+        int effectiveEnd = endIndex != null ? endIndex : total;
+        validator.validateRange(startIndex, effectiveEnd, total);
+        log.info("Signing range [{}, {}) of {} sorted file(s)", startIndex, effectiveEnd, total);
+        return List.copyOf(sorted.subList(startIndex, effectiveEnd));
     }
 
     private String resolveOidcToken() {
@@ -234,11 +255,17 @@ public class BatchSigningTool {
 
     private List<Path> resolveFiles(List<Path> files, Path directory, String pattern) throws IOException {
         List<Path> result = new ArrayList<>();
-        if (files != null && !files.isEmpty()) result.addAll(files);
-        if (directory == null) return result;
+        if (files != null && !files.isEmpty()) {
+            result.addAll(files);
+        }
+        if (directory == null) {
+            return result;
+        }
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory, pattern)) {
             for (Path path : stream) {
-                if (Files.isRegularFile(path)) result.add(path);
+                if (Files.isRegularFile(path)) {
+                    result.add(path);
+                }
             }
         }
         return result;

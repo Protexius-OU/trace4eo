@@ -114,6 +114,8 @@ Sign multiple files, creating one provenance record per file.
 | `--save-record`            | Save the provenance records                                                                                                                                              | true              |
 | `--create-record-ids-file` | Write a plain-text file with the IDs of all successfully signed provenance records, one UUID per line (written to `--output` directory, or current directory if omitted) | false             |
 | `--threads`                | Maximum number of files to sign concurrently                                                                                                                             | 4                 |
+| `--start-index`            | Start index (inclusive) into the alphabetically-sorted file list. Use with `--end-index` to process a slice of a large directory across multiple invocations.            | 0                 |
+| `--end-index`              | End index (exclusive) into the alphabetically-sorted file list.                                                                                                          | Total file count  |
 
 **Examples:**
 
