@@ -1,4 +1,4 @@
-package com.protexius.trace4eo.provenance.traceability;
+package com.protexius.trace4eo.provenance.sentinel2;
 
 import java.util.List;
 import java.util.Objects;
@@ -13,7 +13,7 @@ import java.util.Optional;
 public record Sentinel2DirectoryHashCheckResult(
         TraceStatus traceStatus,
         String imageId,
-        Optional<TraceResponse.Trace> trace,
+        Optional<Sentinel2TraceResponse.Trace> trace,
         List<FileResult> fileResults
 ) {
 
@@ -28,12 +28,12 @@ public record Sentinel2DirectoryHashCheckResult(
         return new Sentinel2DirectoryHashCheckResult(TraceStatus.TRACE_NOT_FOUND, imageId, Optional.empty(), List.of());
     }
 
-    public static Sentinel2DirectoryHashCheckResult signatureError(TraceResponse.Trace trace, String imageId) {
+    public static Sentinel2DirectoryHashCheckResult signatureError(Sentinel2TraceResponse.Trace trace, String imageId) {
         return new Sentinel2DirectoryHashCheckResult(TraceStatus.SIGNATURE_ERROR, imageId, Optional.of(trace), List.of());
     }
 
     public static Sentinel2DirectoryHashCheckResult ok(
-            TraceResponse.Trace trace, String imageId, List<FileResult> fileResults
+            Sentinel2TraceResponse.Trace trace, String imageId, List<FileResult> fileResults
     ) {
         return new Sentinel2DirectoryHashCheckResult(TraceStatus.OK, imageId, Optional.of(trace), fileResults);
     }

@@ -1,6 +1,7 @@
 package com.protexius.trace4eo.sentinel2;
 
-import com.protexius.trace4eo.provenance.traceability.Sentinel2DirectoryHashCheckResult;
+import com.protexius.trace4eo.provenance.sentinel2.Sentinel2DirectoryHashCheckResult;
+import com.protexius.trace4eo.provenance.sentinel2.Sentinel2TraceResponse;
 
 import java.util.List;
 
@@ -27,8 +28,8 @@ public record Sentinel2DirectoryVerificationResponse(
         return new Sentinel2DirectoryVerificationResponse(
             result.traceStatus().name(),
             result.imageId(),
-            result.trace().map(t -> t.id()).orElse(null),
-            result.trace().map(t -> t.hashAlgorithm()).orElse(null),
+            result.trace().map(Sentinel2TraceResponse.Trace::id).orElse(null),
+            result.trace().map(Sentinel2TraceResponse.Trace::hashAlgorithm).orElse(null),
             result.trace().map(t -> t.signature().algorithm()).orElse(null),
             result.fileResults().size(),
             matched,

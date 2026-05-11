@@ -1,6 +1,6 @@
 package com.protexius.trace4eo.sentinel2;
 
-import com.protexius.trace4eo.provenance.traceability.TraceVerificationResult;
+import com.protexius.trace4eo.provenance.sentinel2.Sentinel2TraceVerificationResult;
 
 public record Sentinel2VerificationResponse(
         String status,
@@ -10,7 +10,7 @@ public record Sentinel2VerificationResponse(
         String signatureAlgorithm
 ) {
 
-    public static Sentinel2VerificationResponse from(TraceVerificationResult result) {
+    public static Sentinel2VerificationResponse from(Sentinel2TraceVerificationResult result) {
         return new Sentinel2VerificationResponse(
                 result.status().name(),
                 result.imageId(),

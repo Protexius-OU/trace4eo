@@ -1,7 +1,7 @@
 package com.protexius.trace4eo.sentinel2;
 
-import com.protexius.trace4eo.provenance.traceability.Sentinel2FileHashCheckResult;
-import com.protexius.trace4eo.provenance.traceability.TraceResponse;
+import com.protexius.trace4eo.provenance.sentinel2.Sentinel2FileHashCheckResult;
+import com.protexius.trace4eo.provenance.sentinel2.Sentinel2TraceResponse;
 
 public record Sentinel2FileVerificationResponse(
         String status,
@@ -21,8 +21,8 @@ public record Sentinel2FileVerificationResponse(
                 result.filename(),
                 result.providedHash(),
                 result.expectedHash(),
-                result.trace().map(TraceResponse.Trace::id).orElse(null),
-                result.trace().map(TraceResponse.Trace::hashAlgorithm).orElse(null),
+                result.trace().map(Sentinel2TraceResponse.Trace::id).orElse(null),
+                result.trace().map(Sentinel2TraceResponse.Trace::hashAlgorithm).orElse(null),
                 result.trace().map(t -> t.signature().algorithm()).orElse(null)
         );
     }

@@ -1,4 +1,4 @@
-package com.protexius.trace4eo.provenance.traceability;
+package com.protexius.trace4eo.provenance.sentinel2;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -11,24 +11,24 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.Optional;
 
-import static com.protexius.trace4eo.provenance.traceability.TraceResponse.Product;
-import static com.protexius.trace4eo.provenance.traceability.TraceResponse.ProductDto;
-import static com.protexius.trace4eo.provenance.traceability.TraceResponse.Trace;
-import static com.protexius.trace4eo.provenance.traceability.TraceResponse.TraceDto;
-import static com.protexius.trace4eo.provenance.traceability.TraceResponse.TracingSignature;
+import static com.protexius.trace4eo.provenance.sentinel2.Sentinel2TraceResponse.Product;
+import static com.protexius.trace4eo.provenance.sentinel2.Sentinel2TraceResponse.ProductDto;
+import static com.protexius.trace4eo.provenance.sentinel2.Sentinel2TraceResponse.Trace;
+import static com.protexius.trace4eo.provenance.sentinel2.Sentinel2TraceResponse.TraceDto;
+import static com.protexius.trace4eo.provenance.sentinel2.Sentinel2TraceResponse.TracingSignature;
 
-public class TracingClient {
+public class Sentinel2TracingClient {
     private static final String CREATE_EVENT = "CREATE";
 
     private final JsonMapper jsonMapper;
     private final HttpClient httpClient;
     private final URI apiBaseUrl;
 
-    public TracingClient(JsonMapper jsonMapper, HttpClient httpClient) {
+    public Sentinel2TracingClient(JsonMapper jsonMapper, HttpClient httpClient) {
         this(jsonMapper, httpClient, URI.create("https://trace.dataspace.copernicus.eu"));
     }
 
-    public TracingClient(JsonMapper jsonMapper, HttpClient httpClient, URI apiBaseUrl) {
+    public Sentinel2TracingClient(JsonMapper jsonMapper, HttpClient httpClient, URI apiBaseUrl) {
         this.jsonMapper = jsonMapper;
         this.httpClient = httpClient;
         this.apiBaseUrl = apiBaseUrl;

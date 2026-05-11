@@ -1,4 +1,4 @@
-package com.protexius.trace4eo.provenance.traceability;
+package com.protexius.trace4eo.provenance.sentinel2;
 
 import com.protexius.trace4eo.provenance.ProvenanceJsonMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,13 +32,13 @@ class TracingClientTest {
     private final JsonMapper jsonMapper = new ProvenanceJsonMapper();
     private HttpClient httpClient;
     private HttpResponse<InputStream> httpResponse;
-    private TracingClient tracingClient;
+    private Sentinel2TracingClient tracingClient;
 
     @BeforeEach
     void setUp() {
         httpClient = mock(HttpClient.class);
         httpResponse = mock(HttpResponse.class);
-        tracingClient = new TracingClient(jsonMapper, httpClient);
+        tracingClient = new Sentinel2TracingClient(jsonMapper, httpClient);
     }
 
     @Test
@@ -51,7 +51,7 @@ class TracingClientTest {
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenReturn(httpResponse);
 
-        TraceResponse.Trace trace = tracingClient.getProductCreateEventTrace(productId).orElseThrow();
+        Sentinel2TraceResponse.Trace trace = tracingClient.getProductCreateEventTrace(productId).orElseThrow();
 
         assertEquals("7374c9be-84c5-4ea4-8b2b-b1e9b1a539d7", trace.id());
         assertEquals("CREATE", trace.event());

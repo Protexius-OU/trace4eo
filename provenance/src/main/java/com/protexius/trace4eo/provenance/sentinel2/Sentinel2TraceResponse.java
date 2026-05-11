@@ -1,4 +1,4 @@
-package com.protexius.trace4eo.provenance.traceability;
+package com.protexius.trace4eo.provenance.sentinel2;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -9,9 +9,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public final class TraceResponse {
+public final class Sentinel2TraceResponse {
 
-    private TraceResponse() {
+    private Sentinel2TraceResponse() {
     }
 
     record TraceDto(

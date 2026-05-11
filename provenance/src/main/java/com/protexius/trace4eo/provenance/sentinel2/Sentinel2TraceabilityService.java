@@ -1,4 +1,4 @@
-package com.protexius.trace4eo.provenance.traceability;
+package com.protexius.trace4eo.provenance.sentinel2;
 
 import org.bouncycastle.jcajce.provider.digest.Blake3.Blake3_256;
 
@@ -15,14 +15,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class TraceabilityService {
+public class Sentinel2TraceabilityService {
 
     private static final String SUPPORTED_HASH_ALGORITHM = "BLAKE3";
     private static final String SUPPORTED_SIGNATURE_ALGORITHM = "RSA-SHA256";
 
-    private final TracingClient tracingClient;
+    private final Sentinel2TracingClient tracingClient;
 
-    public TraceabilityService(TracingClient tracingClient) {
+    public Sentinel2TraceabilityService(Sentinel2TracingClient tracingClient) {
         this.tracingClient = tracingClient;
     }
 
@@ -30,15 +30,15 @@ public class TraceabilityService {
      * Full verification: fetches the trace for {@code imageId}, verifies its signature, and checks
      * that the BLAKE3 hash of {@code filePath} matches the matching entry in the signed message.
      */
-    public VerificationResult verify(String imageId, Path filePath) throws Exception {
+    public Sentinel2VerificationResult verify(String imageId, Path filePath) throws Exception {
         if (!Files.isRegularFile(filePath)) {
             throw new RuntimeException("File not found: " + filePath);
         }
 
-        TraceResponse.Trace trace = tracingClient.getProductCreateEventTrace(imageId)
+        Sentinel2TraceResponse.Trace trace = tracingClient.getProductCreateEventTrace(imageId)
                 .orElse(null);
         if (trace == null) {
-            return VerificationResult.traceNotFound(imageId, filePath);
+            return Sentinel2VerificationResult.traceNotFound(imageId, filePath);
         }
         return new VerificationContext(imageId, filePath, trace).verify();
     }
@@ -48,11 +48,11 @@ public class TraceabilityService {
      * Does not require a local file. Use when the product file isn't available (e.g. server-side
      * verification of an uploaded provenance record).
      */
-    public TraceVerificationResult verifyTrace(String imageId) throws Exception {
-        TraceResponse.Trace trace = tracingClient.getProductCreateEventTrace(imageId)
+    public Sentinel2TraceVerificationResult verifyTrace(String imageId) throws Exception {
+        Sentinel2TraceResponse.Trace trace = tracingClient.getProductCreateEventTrace(imageId)
                 .orElse(null);
         if (trace == null) {
-            return TraceVerificationResult.traceNotFound(imageId);
+            return Sentinel2TraceVerificationResult.traceNotFound(imageId);
         }
         if (!SUPPORTED_HASH_ALGORITHM.equals(trace.hashAlgorithm())) {
             throw new RuntimeException("Unsupported hash algorithm: " + trace.hashAlgorithm());
@@ -61,9 +61,9 @@ public class TraceabilityService {
             throw new RuntimeException("Unsupported signature algorithm: " + trace.signature().algorithm());
         }
         if (!verifySignature(trace.signature())) {
-            return TraceVerificationResult.signatureError(trace, imageId);
+            return Sentinel2TraceVerificationResult.signatureError(trace, imageId);
         }
-        return TraceVerificationResult.ok(trace, imageId);
+        return Sentinel2TraceVerificationResult.ok(trace, imageId);
     }
 
     /**
@@ -75,7 +75,7 @@ public class TraceabilityService {
     public Sentinel2FileHashCheckResult verifyTraceWithFileHash(
             String imageId, String filename, String providedHashHex
     ) throws Exception {
-        TraceResponse.Trace trace = tracingClient.getProductCreateEventTrace(imageId)
+        Sentinel2TraceResponse.Trace trace = tracingClient.getProductCreateEventTrace(imageId)
                 .orElse(null);
         if (trace == null) {
             return Sentinel2FileHashCheckResult.traceNotFound(imageId, filename, providedHashHex);
@@ -99,11 +99,11 @@ public class TraceabilityService {
         return Sentinel2FileHashCheckResult.ok(trace, imageId, filename, providedHashHex, expectedHash);
     }
 
-    private static String lookupExpectedHash(TraceResponse.Trace trace, String filename) {
+    private static String lookupExpectedHash(Sentinel2TraceResponse.Trace trace, String filename) {
         if (trace.matchesProductFile(filename) && trace.product().hash() != null) {
             return trace.product().hash();
         }
-        return trace.getEntry(filename).map(TraceResponse.ProductEntry::hash).orElse(null);
+        return trace.getEntry(filename).map(Sentinel2TraceResponse.ProductEntry::hash).orElse(null);
     }
 
     /**
@@ -114,7 +114,7 @@ public class TraceabilityService {
     public Sentinel2DirectoryHashCheckResult verifyTraceWithFileHashes(
             String imageId, List<FileHashEntry> entries
     ) throws Exception {
-        TraceResponse.Trace trace = tracingClient.getProductCreateEventTrace(imageId)
+        Sentinel2TraceResponse.Trace trace = tracingClient.getProductCreateEventTrace(imageId)
                 .orElse(null);
         if (trace == null) {
             return Sentinel2DirectoryHashCheckResult.traceNotFound(imageId);
@@ -156,7 +156,7 @@ public class TraceabilityService {
 
     public record FileHashEntry(String filename, String hashHex) {}
 
-    static boolean verifySignature(TraceResponse.TracingSignature signature) throws Exception {
+    static boolean verifySignature(Sentinel2TraceResponse.TracingSignature signature) throws Exception {
         X509Certificate cert = (X509Certificate) CertificateFactory.getInstance("X.509")
                 .generateCertificate(new ByteArrayInputStream(signature.certificateBytes()));
         // TODO - verify certificate using root certificate: https://ca.cloudferro.com/certs/ca.crt
@@ -171,8 +171,8 @@ public class TraceabilityService {
         return verifier.verify(signature.signatureBytes());
     }
 
-    record VerificationContext(String imageId, Path file, TraceResponse.Trace trace) {
-        VerificationResult verify() {
+    record VerificationContext(String imageId, Path file, Sentinel2TraceResponse.Trace trace) {
+        Sentinel2VerificationResult verify() {
             if (!SUPPORTED_HASH_ALGORITHM.equals(trace.hashAlgorithm())) {
                 throw new RuntimeException("Unsupported hash algorithm: " + trace.hashAlgorithm());
             }
@@ -181,13 +181,13 @@ public class TraceabilityService {
             }
             try {
                 if (!verifySignature(trace.signature())) {
-                    return VerificationResult.signatureError(trace, imageId, file);
+                    return Sentinel2VerificationResult.signatureError(trace, imageId, file);
                 }
                 HashComparison hashComparison = verifyFileHash();
                 if (!hashComparison.match()) {
-                    return VerificationResult.hashMismatch(trace, imageId, file, hashComparison.actual());
+                    return Sentinel2VerificationResult.hashMismatch(trace, imageId, file, hashComparison.actual());
                 }
-                return VerificationResult.ok(trace, imageId, file);
+                return Sentinel2VerificationResult.ok(trace, imageId, file);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -195,8 +195,8 @@ public class TraceabilityService {
 
         HashComparison verifyFileHash() throws IOException {
             String fileName = file.getFileName().toString();
-            TraceResponse.ProductEntry entry = trace.getEntry(fileName)
-                    // TODO - consider separate VerificationResult.Status for this case
+            Sentinel2TraceResponse.ProductEntry entry = trace.getEntry(fileName)
+                    // TODO - consider separate Sentinel2VerificationResult.Status for this case
                     .orElseThrow(() -> new IllegalStateException("File entry not found in trace. fileName=" + fileName));
             byte[] expectedHash = entry.hashBytes();
             byte[] actualHash = computeBlake3(file);

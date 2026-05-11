@@ -1,4 +1,4 @@
-package com.protexius.trace4eo.provenance.traceability;
+package com.protexius.trace4eo.provenance.sentinel2;
 
 import java.util.Objects;
 import java.util.Optional;
@@ -14,7 +14,7 @@ public record Sentinel2FileHashCheckResult(
         String filename,
         String providedHash,
         String expectedHash,
-        Optional<TraceResponse.Trace> trace
+        Optional<Sentinel2TraceResponse.Trace> trace
 ) {
 
     public Sentinel2FileHashCheckResult {
@@ -26,7 +26,7 @@ public record Sentinel2FileHashCheckResult(
     }
 
     public static Sentinel2FileHashCheckResult ok(
-            TraceResponse.Trace trace, String imageId, String filename,
+            Sentinel2TraceResponse.Trace trace, String imageId, String filename,
             String providedHash, String expectedHash
     ) {
         return new Sentinel2FileHashCheckResult(
@@ -34,7 +34,7 @@ public record Sentinel2FileHashCheckResult(
     }
 
     public static Sentinel2FileHashCheckResult hashMismatch(
-            TraceResponse.Trace trace, String imageId, String filename,
+            Sentinel2TraceResponse.Trace trace, String imageId, String filename,
             String providedHash, String expectedHash
     ) {
         return new Sentinel2FileHashCheckResult(
@@ -42,7 +42,7 @@ public record Sentinel2FileHashCheckResult(
     }
 
     public static Sentinel2FileHashCheckResult fileNotInTrace(
-            TraceResponse.Trace trace, String imageId, String filename, String providedHash
+            Sentinel2TraceResponse.Trace trace, String imageId, String filename, String providedHash
     ) {
         return new Sentinel2FileHashCheckResult(
                 Status.FILE_NOT_IN_TRACE, imageId, filename, providedHash, null, Optional.of(trace));
@@ -56,7 +56,7 @@ public record Sentinel2FileHashCheckResult(
     }
 
     public static Sentinel2FileHashCheckResult signatureError(
-            TraceResponse.Trace trace, String imageId, String filename, String providedHash
+            Sentinel2TraceResponse.Trace trace, String imageId, String filename, String providedHash
     ) {
         return new Sentinel2FileHashCheckResult(
                 Status.SIGNATURE_ERROR, imageId, filename, providedHash, null, Optional.of(trace));

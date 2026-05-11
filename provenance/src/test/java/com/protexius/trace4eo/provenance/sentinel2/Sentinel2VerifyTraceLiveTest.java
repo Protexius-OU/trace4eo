@@ -1,4 +1,4 @@
-package com.protexius.trace4eo.provenance.traceability;
+package com.protexius.trace4eo.provenance.sentinel2;
 
 import com.protexius.trace4eo.provenance.ProvenanceJsonMapper;
 import org.junit.jupiter.api.Test;
@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <pre>{@code
  *   CDSE_E2E=1 ./gradlew :provenance:test \
- *       --tests com.protexius.trace4eo.provenance.traceability.Sentinel2VerifyTraceLiveTest \
+ *       --tests com.protexius.trace4eo.provenance.sentinel2.Sentinel2VerifyTraceLiveTest \
  *       --rerun
  * }</pre>
  */
@@ -24,19 +24,19 @@ class Sentinel2VerifyTraceLiveTest {
 
     @Test
     void verifyTrace_realKnownProduct_returnsOk() throws Exception {
-        TracingClient tracingClient = new TracingClient(
+        Sentinel2TracingClient tracingClient = new Sentinel2TracingClient(
             new ProvenanceJsonMapper(),
             HttpClient.newHttpClient()
         );
-        TraceabilityService service = new TraceabilityService(tracingClient);
+        Sentinel2TraceabilityService service = new Sentinel2TraceabilityService(tracingClient);
 
         // A known Sentinel-2 product whose CREATE trace was already published by CDSE. Replace
         // with any real product name to test that one instead.
         String imageId = "S2A_MSIL1C_20230420T100021_N0509_R122_T33UVP_20230420T120027";
 
-        TraceVerificationResult result = service.verifyTrace(imageId);
+        Sentinel2TraceVerificationResult result = service.verifyTrace(imageId);
 
-        assertEquals(TraceVerificationResult.Status.OK, result.status());
+        assertEquals(Sentinel2TraceVerificationResult.Status.OK, result.status());
         assertTrue(result.trace().isPresent());
         assertEquals("BLAKE3", result.trace().get().hashAlgorithm());
         assertEquals("RSA-SHA256", result.trace().get().signature().algorithm());

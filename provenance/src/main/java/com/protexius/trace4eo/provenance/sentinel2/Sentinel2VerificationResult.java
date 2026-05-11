@@ -1,37 +1,39 @@
-package com.protexius.trace4eo.provenance.traceability;
+package com.protexius.trace4eo.provenance.sentinel2;
 
 import java.nio.file.Path;
 import java.util.HexFormat;
 import java.util.Objects;
 import java.util.Optional;
 
-public record VerificationResult(Status status, Optional<TraceResponse.Trace> trace, FileInfo localFile) {
+public record Sentinel2VerificationResult(Status status, Optional<Sentinel2TraceResponse.Trace> trace, FileInfo localFile) {
 
-    public static VerificationResult traceNotFound(String imageId, Path path) {
-        return new VerificationResult(
+    public static Sentinel2VerificationResult traceNotFound(String imageId, Path path) {
+        return new Sentinel2VerificationResult(
                 Status.TRACE_NOT_FOUND, Optional.empty(), new FileInfo(imageId, path, null)
         );
     }
 
-    public static VerificationResult signatureError(TraceResponse.Trace trace, String imageId, Path path) {
-        return new VerificationResult(
+    public static Sentinel2VerificationResult signatureError(Sentinel2TraceResponse.Trace trace, String imageId, Path path) {
+        return new Sentinel2VerificationResult(
                 Status.SIGNATURE_ERROR, Optional.of(trace), new FileInfo(imageId, path, null)
         );
     }
 
-    public static VerificationResult hashMismatch(TraceResponse.Trace trace, String imageId, Path path, byte[] fileHash) {
-        return new VerificationResult(
+    public static Sentinel2VerificationResult hashMismatch(
+        Sentinel2TraceResponse.Trace trace, String imageId, Path path, byte[] fileHash
+    ) {
+        return new Sentinel2VerificationResult(
                 Status.HASH_MISMATCH, Optional.of(trace), new FileInfo(imageId, path, HexFormat.of().formatHex(fileHash))
         );
     }
 
-    public static VerificationResult ok(TraceResponse.Trace trace, String imageId, Path path) {
-        return new VerificationResult(
+    public static Sentinel2VerificationResult ok(Sentinel2TraceResponse.Trace trace, String imageId, Path path) {
+        return new Sentinel2VerificationResult(
                 Status.OK, Optional.of(trace), new FileInfo(imageId, path, null)
         );
     }
 
-    public VerificationResult {
+    public Sentinel2VerificationResult {
         Objects.requireNonNull(status);
         Objects.requireNonNull(localFile);
     }

@@ -2,10 +2,10 @@ package com.protexius.trace4eo.sentinel2;
 
 import com.protexius.trace4eo.provenance.ProvenanceService;
 import com.protexius.trace4eo.provenance.record.ProvenanceRecord;
-import com.protexius.trace4eo.provenance.traceability.Sentinel2DirectoryHashCheckResult;
-import com.protexius.trace4eo.provenance.traceability.Sentinel2FileHashCheckResult;
-import com.protexius.trace4eo.provenance.traceability.TraceVerificationResult;
-import com.protexius.trace4eo.provenance.traceability.TraceabilityService;
+import com.protexius.trace4eo.provenance.sentinel2.Sentinel2DirectoryHashCheckResult;
+import com.protexius.trace4eo.provenance.sentinel2.Sentinel2FileHashCheckResult;
+import com.protexius.trace4eo.provenance.sentinel2.Sentinel2TraceVerificationResult;
+import com.protexius.trace4eo.provenance.sentinel2.Sentinel2TraceabilityService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,11 +24,11 @@ import java.util.UUID;
 public class Sentinel2ProvenanceController {
 
     private final ProvenanceService provenanceService;
-    private final TraceabilityService traceabilityService;
+    private final Sentinel2TraceabilityService traceabilityService;
 
     public Sentinel2ProvenanceController(
         ProvenanceService provenanceService,
-        TraceabilityService traceabilityService
+        Sentinel2TraceabilityService traceabilityService
     ) {
         this.provenanceService = provenanceService;
         this.traceabilityService = traceabilityService;
@@ -43,7 +43,7 @@ public class Sentinel2ProvenanceController {
         if (!isSentinel2(record.get())) {
             return ResponseEntity.badRequest().build();
         }
-        TraceVerificationResult result = traceabilityService.verifyTrace(record.get().metadata().dataId());
+        Sentinel2TraceVerificationResult result = traceabilityService.verifyTrace(record.get().metadata().dataId());
         return ResponseEntity.ok(Sentinel2VerificationResponse.from(result));
     }
 
@@ -83,8 +83,8 @@ public class Sentinel2ProvenanceController {
         if (!isSentinel2(record.get())) {
             return ResponseEntity.badRequest().build();
         }
-        List<TraceabilityService.FileHashEntry> entries = request.files().stream()
-            .map(f -> new TraceabilityService.FileHashEntry(f.filename(), f.hashHex()))
+        List<Sentinel2TraceabilityService.FileHashEntry> entries = request.files().stream()
+            .map(f -> new Sentinel2TraceabilityService.FileHashEntry(f.filename(), f.hashHex()))
             .toList();
         Sentinel2DirectoryHashCheckResult result = traceabilityService.verifyTraceWithFileHashes(
             record.get().metadata().dataId(), entries);

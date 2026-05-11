@@ -1,4 +1,4 @@
-package com.protexius.trace4eo.sentinel2;
+package com.protexius.trace4eo.verification.sentinel2;
 
 import com.protexius.trace4eo.provenance.ProvenanceJsonMapper;
 import com.protexius.trace4eo.provenance.sentinel2.Sentinel2TraceabilityService;
@@ -17,7 +17,9 @@ public class Sentinel2VerificationConfiguration {
     }
 
     @Bean
-    public Sentinel2TracingClient sentinel2TracingClient(HttpClient sentinel2TraceHttpClient, ProvenanceJsonMapper provenanceJsonMapper) {
+    public Sentinel2TracingClient sentinel2TracingClient(
+        HttpClient sentinel2TraceHttpClient, ProvenanceJsonMapper provenanceJsonMapper
+    ) {
         return new Sentinel2TracingClient(provenanceJsonMapper, sentinel2TraceHttpClient);
     }
 

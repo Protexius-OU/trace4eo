@@ -1,4 +1,4 @@
-package com.protexius.trace4eo.provenance.traceability;
+package com.protexius.trace4eo.provenance.sentinel2;
 
 import com.protexius.trace4eo.provenance.ProvenanceJsonMapper;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
@@ -48,8 +48,8 @@ class TraceabilityServiceTest {
     private static final String PRODUCT_NAME = IMAGE_ID + ".SAFE.zip";
 
     private final JsonMapper jsonMapper = new ProvenanceJsonMapper();
-    private TracingClient tracingClient;
-    private TraceabilityService service;
+    private Sentinel2TracingClient tracingClient;
+    private Sentinel2TraceabilityService service;
 
     @TempDir
     private Path tempDir;
@@ -59,8 +59,8 @@ class TraceabilityServiceTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        tracingClient = mock(TracingClient.class);
-        service = new TraceabilityService(tracingClient);
+        tracingClient = mock(Sentinel2TracingClient.class);
+        service = new Sentinel2TraceabilityService(tracingClient);
 
         productFile = tempDir.resolve(PRODUCT_NAME);
         Files.writeString(productFile, "synthetic sentinel-2 product payload");
@@ -70,13 +70,13 @@ class TraceabilityServiceTest {
 
     @Test
     void verify_validTrace_returnsOk() throws Exception {
-        TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
+        Sentinel2TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.of(trace));
 
-        VerificationResult result = service.verify(IMAGE_ID, productFile);
+        Sentinel2VerificationResult result = service.verify(IMAGE_ID, productFile);
 
-        assertEquals(VerificationResult.Status.OK, result.status());
+        assertEquals(Sentinel2VerificationResult.Status.OK, result.status());
         assertTrue(result.trace().isPresent());
         assertEquals(IMAGE_ID, result.localFile().imageId());
         assertEquals(productFile, result.localFile().path());
@@ -84,32 +84,32 @@ class TraceabilityServiceTest {
 
     @Test
     void verify_fileContentTampered_returnsHashMismatch() throws Exception {
-        TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
+        Sentinel2TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.of(trace));
         // Mutate file contents *after* the trace was signed.
         Files.writeString(productFile, "tampered payload");
 
-        VerificationResult result = service.verify(IMAGE_ID, productFile);
+        Sentinel2VerificationResult result = service.verify(IMAGE_ID, productFile);
 
-        assertEquals(VerificationResult.Status.HASH_MISMATCH, result.status());
+        assertEquals(Sentinel2VerificationResult.Status.HASH_MISMATCH, result.status());
         assertTrue(result.localFile().hashHex() != null && !result.localFile().hashHex().isEmpty());
     }
 
     @Test
     void verify_corruptedSignature_returnsSignatureError() throws Exception {
-        TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", true);
+        Sentinel2TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", true);
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.of(trace));
 
-        VerificationResult result = service.verify(IMAGE_ID, productFile);
+        Sentinel2VerificationResult result = service.verify(IMAGE_ID, productFile);
 
-        assertEquals(VerificationResult.Status.SIGNATURE_ERROR, result.status());
+        assertEquals(Sentinel2VerificationResult.Status.SIGNATURE_ERROR, result.status());
     }
 
     @Test
     void verify_unsupportedHashAlgorithm_throws() throws Exception {
-        TraceResponse.Trace trace = newTrace(productBlake3, "SHA256", "RSA-SHA256", false);
+        Sentinel2TraceResponse.Trace trace = newTrace(productBlake3, "SHA256", "RSA-SHA256", false);
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.of(trace));
 
@@ -120,7 +120,7 @@ class TraceabilityServiceTest {
 
     @Test
     void verify_unsupportedSignatureAlgorithm_throws() throws Exception {
-        TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "ECDSA-SHA256", false);
+        Sentinel2TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "ECDSA-SHA256", false);
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.of(trace));
 
@@ -131,13 +131,13 @@ class TraceabilityServiceTest {
 
     @Test
     void verifyTrace_validSignature_returnsOk() throws Exception {
-        TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
+        Sentinel2TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.of(trace));
 
-        TraceVerificationResult result = service.verifyTrace(IMAGE_ID);
+        Sentinel2TraceVerificationResult result = service.verifyTrace(IMAGE_ID);
 
-        assertEquals(TraceVerificationResult.Status.OK, result.status());
+        assertEquals(Sentinel2TraceVerificationResult.Status.OK, result.status());
         assertTrue(result.trace().isPresent());
         assertEquals(IMAGE_ID, result.imageId());
     }
@@ -147,15 +147,15 @@ class TraceabilityServiceTest {
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.empty());
 
-        TraceVerificationResult result = service.verifyTrace(IMAGE_ID);
+        Sentinel2TraceVerificationResult result = service.verifyTrace(IMAGE_ID);
 
-        assertEquals(TraceVerificationResult.Status.TRACE_NOT_FOUND, result.status());
+        assertEquals(Sentinel2TraceVerificationResult.Status.TRACE_NOT_FOUND, result.status());
         assertTrue(result.trace().isEmpty());
     }
 
     @Test
     void verifyTraceWithFileHash_matchesEntry_returnsOk() throws Exception {
-        TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
+        Sentinel2TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.of(trace));
 
@@ -168,7 +168,7 @@ class TraceabilityServiceTest {
 
     @Test
     void verifyTraceWithFileHash_wrongHash_returnsHashMismatch() throws Exception {
-        TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
+        Sentinel2TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.of(trace));
 
@@ -182,7 +182,7 @@ class TraceabilityServiceTest {
 
     @Test
     void verifyTraceWithFileHash_unknownFilename_returnsFileNotInTrace() throws Exception {
-        TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
+        Sentinel2TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", false);
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.of(trace));
 
@@ -194,13 +194,13 @@ class TraceabilityServiceTest {
 
     @Test
     void verifyTrace_corruptedSignature_returnsSignatureError() throws Exception {
-        TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", true);
+        Sentinel2TraceResponse.Trace trace = newTrace(productBlake3, "BLAKE3", "RSA-SHA256", true);
         when(tracingClient.getProductCreateEventTrace(eq(IMAGE_ID)))
             .thenReturn(Optional.of(trace));
 
-        TraceVerificationResult result = service.verifyTrace(IMAGE_ID);
+        Sentinel2TraceVerificationResult result = service.verifyTrace(IMAGE_ID);
 
-        assertEquals(TraceVerificationResult.Status.SIGNATURE_ERROR, result.status());
+        assertEquals(Sentinel2TraceVerificationResult.Status.SIGNATURE_ERROR, result.status());
         assertTrue(result.trace().isPresent());
     }
 
@@ -222,7 +222,8 @@ class TraceabilityServiceTest {
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
             .thenReturn(response);
 
-        TraceabilityService realService = new TraceabilityService(new TracingClient(jsonMapper, httpClient));
+        Sentinel2TraceabilityService realService = new Sentinel2TraceabilityService(
+            new Sentinel2TracingClient(jsonMapper, httpClient));
 
         // manifest.safe matches an entry in the real signed message, so the hash-comparison path
         // runs (rather than throwing "File entry not found"); the synthetic content guarantees a
@@ -231,9 +232,9 @@ class TraceabilityServiceTest {
         Files.writeString(manifestSafe, "synthetic content (not the real Sentinel-2 product)");
 
         String imageId = "S2A_MSIL1C_20230420T100021_N0509_R122_T33UVP_20230420T120027";
-        VerificationResult result = realService.verify(imageId, manifestSafe);
+        Sentinel2VerificationResult result = realService.verify(imageId, manifestSafe);
 
-        assertEquals(VerificationResult.Status.HASH_MISMATCH, result.status());
+        assertEquals(Sentinel2VerificationResult.Status.HASH_MISMATCH, result.status());
         assertTrue(result.trace().isPresent());
         assertEquals("BLAKE3", result.trace().get().hashAlgorithm());
         assertEquals("RSA-SHA256", result.trace().get().signature().algorithm());
@@ -244,7 +245,7 @@ class TraceabilityServiceTest {
      * {@code corruptSignature} is true the signature bytes are flipped so verification fails while
      * the message and certificate stay otherwise valid.
      */
-    private TraceResponse.Trace newTrace(
+    private Sentinel2TraceResponse.Trace newTrace(
         byte[] hashBytes, String hashAlgorithm, String signatureAlgorithm, boolean corruptSignature
     ) throws Exception {
         String message = jsonMapper.writeValueAsString(Map.of(
@@ -259,18 +260,18 @@ class TraceabilityServiceTest {
         if (corruptSignature) {
             signatureBytes[0] ^= (byte) 0xFF;
         }
-        TraceResponse.TracingSignature signature = new TraceResponse.TracingSignature(
+        Sentinel2TraceResponse.TracingSignature signature = new Sentinel2TraceResponse.TracingSignature(
             Base64.getEncoder().encodeToString(signatureBytes),
             signatureAlgorithm,
             Base64.getEncoder().encodeToString(identity.certificateBytes()),
             message
         );
-        return new TraceResponse.Trace(
+        return new Sentinel2TraceResponse.Trace(
             "trace-id",
             "CREATE",
             hashAlgorithm,
-            new TraceResponse.Product(PRODUCT_NAME, HexFormat.of().formatHex(hashBytes), List.of(
-                new TraceResponse.ProductEntry(Path.of(PRODUCT_NAME), HexFormat.of().formatHex(hashBytes))
+            new Sentinel2TraceResponse.Product(PRODUCT_NAME, HexFormat.of().formatHex(hashBytes), List.of(
+                new Sentinel2TraceResponse.ProductEntry(Path.of(PRODUCT_NAME), HexFormat.of().formatHex(hashBytes))
             )),
             signature
         );
