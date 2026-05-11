@@ -26,10 +26,6 @@ public class Sentinel2TraceabilityService {
         this.tracingClient = tracingClient;
     }
 
-    /**
-     * Full verification: fetches the trace for {@code imageId}, verifies its signature, and checks
-     * that the BLAKE3 hash of {@code filePath} matches the matching entry in the signed message.
-     */
     public Sentinel2VerificationResult verify(String imageId, Path filePath) throws Exception {
         if (!Files.isRegularFile(filePath)) {
             throw new RuntimeException("File not found: " + filePath);
@@ -43,11 +39,6 @@ public class Sentinel2TraceabilityService {
         return new VerificationContext(imageId, filePath, trace).verify();
     }
 
-    /**
-     * Trace-only verification: fetches the trace for {@code imageId} and verifies its signature.
-     * Does not require a local file. Use when the product file isn't available (e.g. server-side
-     * verification of an uploaded provenance record).
-     */
     public Sentinel2TraceVerificationResult verifyTrace(String imageId) throws Exception {
         Sentinel2TraceResponse.Trace trace = tracingClient.getProductCreateEventTrace(imageId)
                 .orElse(null);
@@ -73,11 +64,6 @@ public class Sentinel2TraceabilityService {
         return trace.getEntry(filename).map(Sentinel2TraceResponse.ProductEntry::hash).orElse(null);
     }
 
-    /**
-     * Verify many precomputed BLAKE3 file hashes against a single Copernicus trace. Fetches the
-     * trace and verifies its signature once, then classifies each input as OK / HASH_MISMATCH /
-     * FILE_NOT_IN_TRACE.
-     */
     public Sentinel2HashCheckResult verifyTraceWithFileHashes(
             String imageId, List<FileHashEntry> entries
     ) throws Exception {

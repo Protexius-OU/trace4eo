@@ -4,12 +4,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * Aggregated result of comparing many precomputed BLAKE3 file hashes against a single Copernicus
- * traceability record. The trace is fetched and its signature verified once; each input file is
- * looked up in the signed contents list (or matched against the top-level product hash) and gets
- * its own per-file status.
- */
 public record Sentinel2HashCheckResult(
         TraceStatus traceStatus,
         String imageId,

@@ -214,13 +214,6 @@ class TraceabilityServiceTest {
         assertTrue(result.trace().isPresent());
     }
 
-    /**
-     * Real-world end-to-end check: parses an actual response from the Copernicus Traceability API
-     * (saved as a fixture) and runs RSA-SHA256 verification against the real CDSE certificate.
-     * The on-disk file we present is synthetic, so the BLAKE3 hash check is expected to fail —
-     * the value of this test is that signature verification reaches that step at all, proving the
-     * signature path works against unmodified, real CDSE bytes.
-     */
     @Test
     void verify_realCopernicusTrace_signatureVerifiesAndHashMismatches() throws Exception {
         HttpClient httpClient = mock(HttpClient.class);
@@ -293,7 +286,6 @@ class TraceabilityServiceTest {
         return digest.digest();
     }
 
-    /** Holds a self-signed RSA certificate + private key for synthesising trace signatures. */
     private record TestSigningIdentity(KeyPair keyPair, X509Certificate certificate) {
 
         static TestSigningIdentity generate() throws Exception {
