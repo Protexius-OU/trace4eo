@@ -56,8 +56,8 @@ export interface GraphEdge {
 }
 
 export interface GroupNode {
-  id: string            // "group::{parentNodeId}"
-  parentNodeId: string
+  id: string            // "group::{sortedParentNodeIds.join(',')}::{dataType}"
+  parentNodeId: string  // one representative parent; multiple parents may share a merged group
   hiddenNodeIds: string[]
   dataType: string
   depth: number

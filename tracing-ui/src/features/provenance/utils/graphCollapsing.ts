@@ -25,13 +25,15 @@ export function buildDisplayGraph(
     }
   }
 
-  const hiddenNodeIds = new Set<string>()
-  const groupNodes: GroupNode[] = []
-  const groupEdges: GraphEdge[] = []
-  const removedEdges = new Set<string>()
+  type Candidate = {
+    childId: string
+    childDepth: number
+    dataType: string
+    sortedIds: string[]
+  }
+  const candidates: Candidate[] = []
 
   for (const [childId, predIds] of predecessorMap) {
-    // Group predecessors by dataType
     const byType = new Map<string, string[]>()
     for (const predId of predIds) {
       const dataType = nodeMap.get(predId)?.dataType ?? ''
@@ -48,25 +50,70 @@ export function buildDisplayGraph(
 
     for (const [dataType, typeIds] of byType) {
       if (typeIds.length <= COLLAPSE_THRESHOLD) continue
+      candidates.push({
+        childId,
+        childDepth,
+        dataType,
+        sortedIds: [...typeIds].sort(),
+      })
+    }
+  }
 
-      const groupId = `group::${childId}::${dataType}`
-      if (expandedGroups.has(groupId)) continue
+  // Merge candidates with identical predecessor sets so multiple parents share one collapsed node.
+  type Merged = {
+    dataType: string
+    hiddenIds: string[]
+    childIds: string[]
+    maxParentDepth: number
+  }
+  const byContent = new Map<string, Merged>()
+  for (const c of candidates) {
+    const key = `${c.dataType}::${c.sortedIds.join(',')}`
+    const existing = byContent.get(key)
+    if (existing) {
+      existing.childIds.push(c.childId)
+      existing.maxParentDepth = Math.max(existing.maxParentDepth, c.childDepth)
+    } else {
+      byContent.set(key, {
+        dataType: c.dataType,
+        hiddenIds: c.sortedIds,
+        childIds: [c.childId],
+        maxParentDepth: c.childDepth,
+      })
+    }
+  }
 
-      for (const predId of typeIds) {
-        hiddenNodeIds.add(predId)
+  const hiddenNodeIds = new Set<string>()
+  const groupNodes: GroupNode[] = []
+  const groupEdges: GraphEdge[] = []
+  const removedEdges = new Set<string>()
+
+  for (const merged of byContent.values()) {
+    const sortedChildIds = [...merged.childIds].sort()
+    const groupId = `group::${sortedChildIds.join(',')}::${merged.dataType}`
+
+    if (expandedGroups.has(groupId)) continue
+
+    for (const predId of merged.hiddenIds) {
+      hiddenNodeIds.add(predId)
+    }
+    for (const childId of merged.childIds) {
+      for (const predId of merged.hiddenIds) {
         removedEdges.add(`${childId}->${predId}`)
       }
+    }
 
-      groupNodes.push({
-        id: groupId,
-        parentNodeId: childId,
-        hiddenNodeIds: typeIds,
-        dataType,
-        depth: childDepth + 1,
-        count: typeIds.length,
-        isGroup: true,
-      })
+    groupNodes.push({
+      id: groupId,
+      parentNodeId: sortedChildIds[0]!,
+      hiddenNodeIds: merged.hiddenIds,
+      dataType: merged.dataType,
+      depth: merged.maxParentDepth + 1,
+      count: merged.hiddenIds.length,
+      isGroup: true,
+    })
 
+    for (const childId of merged.childIds) {
       groupEdges.push({ sourceId: childId, targetId: groupId })
     }
   }
