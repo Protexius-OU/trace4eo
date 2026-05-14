@@ -135,7 +135,7 @@ class ProvenanceVerificationServiceTest {
 
     @Test
     void verifyWithFileHashesReportsAllMismatches() throws IOException {
-        Metadata metadata = new Metadata("data-id", "container-type", List.of());
+        Metadata metadata = new Metadata("data-id", "container-type", List.of(), null);
         FilesInfo filesInfo = new FilesInfoBuilder(HashAlgorithm.SHA256)
             .addFile(Path.of(TestUtils.TEST_FILE_1))
             .addFile(Path.of(TestUtils.TEST_FILE_2))

@@ -315,14 +315,22 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
               <span className="ic-field-label">Data Type</span>
               <span className="ic-field-value">{metadata.dataType}</span>
             </div>
-            <div className="ic-field">
-              <span className="ic-field-label">Predecessors</span>
-              <span className="ic-field-value">
-                {metadata.predecessors.length === 0
-                  ? 'None.'
-                  : `${metadata.predecessors.length} predecessor(s)`}
-              </span>
-            </div>
+            {metadata.predecessors.length > 0 && (
+              <div className="ic-field">
+                <span className="ic-field-label">Predecessors</span>
+                <span className="ic-field-value">
+                  {`${metadata.predecessors.length} predecessor(s)`}
+                </span>
+              </div>
+            )}
+            {metadata.attributes && Object.entries(metadata.attributes)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([key, value]) => (
+                <div className="ic-field" key={`attr-${key}`}>
+                  <span className="ic-field-label">{key}</span>
+                  <span className="ic-field-value">{value}</span>
+                </div>
+              ))}
           </div>
         </div>
 

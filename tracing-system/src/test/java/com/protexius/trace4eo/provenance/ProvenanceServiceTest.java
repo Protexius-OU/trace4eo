@@ -214,7 +214,7 @@ class ProvenanceServiceTest {
     @Test
     void saveWithNullIdThrows() {
         ProvenanceRecord record = new ProvenanceRecordImpl(null,
-            new Metadata("data-id", "test-type", Collections.emptyList()),
+            new Metadata("data-id", "test-type", Collections.emptyList(), null),
             new FilesInfo(null, null), new Manifest("1", null, null),
             new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256), null);
 
@@ -237,7 +237,7 @@ class ProvenanceServiceTest {
     @Test
     void saveWithNullDataIdThrows() {
         ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
-            new Metadata(null, "test-type", Collections.emptyList()),
+            new Metadata(null, "test-type", Collections.emptyList(), null),
             new FilesInfo(null, null), new Manifest("1", null, null),
             new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256), null);
 
@@ -249,7 +249,7 @@ class ProvenanceServiceTest {
     @Test
     void saveWithBlankDataTypeThrows() {
         ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
-            new Metadata("data-id", "  ", Collections.emptyList()),
+            new Metadata("data-id", "  ", Collections.emptyList(), null),
             new FilesInfo(null, null), new Manifest("1", null, null),
             new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256), null);
 
@@ -261,7 +261,7 @@ class ProvenanceServiceTest {
     @Test
     void saveWithNullSignatureThrows() {
         ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
-            new Metadata("data-id", "test-type", Collections.emptyList()),
+            new Metadata("data-id", "test-type", Collections.emptyList(), null),
             new FilesInfo(null, null), new Manifest("1", null, null), null, null);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
@@ -272,7 +272,7 @@ class ProvenanceServiceTest {
     @Test
     void saveWithNullManifestThrows() {
         ProvenanceRecord record = new ProvenanceRecordImpl(UUID.randomUUID(),
-            new Metadata("data-id", "test-type", Collections.emptyList()),
+            new Metadata("data-id", "test-type", Collections.emptyList(), null),
             new FilesInfo(null, null), null,
             new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256), null);
 
@@ -296,7 +296,7 @@ class ProvenanceServiceTest {
     @Test
     void saveWithNullPredecessorsSkipsValidation() {
         UUID id = UUID.randomUUID();
-        Metadata metadata = new Metadata("data-id", "test-type", null);
+        Metadata metadata = new Metadata("data-id", "test-type", null, null);
         Manifest manifest = new Manifest("1", null, null);
         FilesInfo filesInfo = new FilesInfo(null, null);
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1, 2, 3}, Instant.now(), HashAlgorithm.SHA256);
@@ -358,7 +358,7 @@ class ProvenanceServiceTest {
     }
 
     private ProvenanceRecord createTestRecordWithPredecessors(UUID id, List<Predecessor> predecessors) {
-        Metadata metadata = new Metadata("data-id", "test-type", predecessors);
+        Metadata metadata = new Metadata("data-id", "test-type", predecessors, null);
         Manifest manifest = new Manifest("1", null, null);
         FilesInfo filesInfo = new FilesInfo(null, null);
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1, 2, 3}, Instant.now(), HashAlgorithm.SHA256);
@@ -370,7 +370,7 @@ class ProvenanceServiceTest {
     }
 
     private ProvenanceRecord createTestRecordWithSignature(UUID id, Instant signingTime, byte[] signatureBytes) {
-        Metadata metadata = new Metadata("data-id", "test-type", Collections.emptyList());
+        Metadata metadata = new Metadata("data-id", "test-type", Collections.emptyList(), null);
         Manifest manifest = new Manifest("1", null, null);
         FilesInfo filesInfo = new FilesInfo(null, null);
         ProvenanceSignature signature = new ProvenanceSignature(signatureBytes, signingTime, HashAlgorithm.SHA256);
@@ -454,7 +454,7 @@ class ProvenanceServiceTest {
 
     @Test
     void verifyFileHashesWithEmptyFilesCollectionReturnsNotInRecord() {
-        Metadata metadata = new Metadata("data-id", "test-type", Collections.emptyList());
+        Metadata metadata = new Metadata("data-id", "test-type", Collections.emptyList(), null);
         Manifest manifest = new Manifest("1", null, null);
         FilesInfo filesInfo = new FilesInfo(null, null);
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256);
@@ -468,7 +468,7 @@ class ProvenanceServiceTest {
     }
 
     private ProvenanceRecord createTestRecordWithFiles(UUID id, FileHashInfo... files) {
-        Metadata metadata = new Metadata("data-id", "test-type", Collections.emptyList());
+        Metadata metadata = new Metadata("data-id", "test-type", Collections.emptyList(), null);
         Manifest manifest = new Manifest("1", null, null);
         FilesInfo filesInfo = new FilesInfo(new LinkedHashSet<>(List.of(files)), null);
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1}, Instant.now(), HashAlgorithm.SHA256);
@@ -476,7 +476,7 @@ class ProvenanceServiceTest {
     }
 
     private ProvenanceRecord createTestRecordWithNullFilesInfo(UUID id, Instant signingTime) {
-        Metadata metadata = new Metadata("data-id", "test-type", Collections.emptyList());
+        Metadata metadata = new Metadata("data-id", "test-type", Collections.emptyList(), null);
         Manifest manifest = new Manifest("1", null, null);
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1}, signingTime, HashAlgorithm.SHA256);
         return new ProvenanceRecordImpl(id, metadata, null, manifest, signature, null);

@@ -97,6 +97,24 @@ public class SigningInputValidator {
         }
     }
 
+    public void validateMetadataFile(Path metadataFile) {
+        if (metadataFile == null) {
+            return;
+        }
+        if (!Files.exists(metadataFile)) {
+            throw new IllegalArgumentException(
+                String.format("--metadata-file does not exist: %s", metadataFile));
+        }
+        if (!Files.isRegularFile(metadataFile)) {
+            throw new IllegalArgumentException(
+                String.format("--metadata-file is not a regular file: %s", metadataFile));
+        }
+        if (!Files.isReadable(metadataFile)) {
+            throw new IllegalArgumentException(
+                String.format("--metadata-file is not readable: %s", metadataFile));
+        }
+    }
+
     public void validateInputDirectory(Path directory) {
         if (!Files.exists(directory)) {
             throw new IllegalArgumentException(String.format("--directory does not exist: %s", directory));

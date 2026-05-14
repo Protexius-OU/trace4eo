@@ -6,6 +6,7 @@ export interface Metadata {
   dataId: string
   dataType: string
   predecessors: Predecessor[]
+  attributes?: Record<string, string> | null
 }
 
 export interface ProvenanceSignature {

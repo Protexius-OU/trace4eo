@@ -36,7 +36,7 @@ public final class TestUtils {
     }
 
     public static ProvenanceRecord createProvenanceRecord(String filePath, HashAlgorithm algorithm) throws IOException {
-        Metadata metadata = new Metadata("data-id", "container-type", List.of());
+        Metadata metadata = new Metadata("data-id", "container-type", List.of(), null);
         FilesInfo filesInfo = new FilesInfoBuilder(algorithm)
             .addFile(Path.of(filePath))
             .build();

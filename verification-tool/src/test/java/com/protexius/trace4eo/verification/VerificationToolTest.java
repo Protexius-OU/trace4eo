@@ -189,7 +189,7 @@ class VerificationToolTest {
 
     @Test
     void verifyProvenanceRecordWithNonDefaultAlgorithm(@TempDir Path tempDir) throws IOException {
-        Metadata metadata = new Metadata("data-id", "container-type", List.of());
+        Metadata metadata = new Metadata("data-id", "container-type", List.of(), null);
         FilesInfo filesInfo = new FilesInfoBuilder(HashAlgorithm.SHA512)
             .addFile(Path.of(TEST_FILE))
             .build();

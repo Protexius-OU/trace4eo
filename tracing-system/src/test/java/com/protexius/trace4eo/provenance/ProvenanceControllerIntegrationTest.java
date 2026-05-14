@@ -313,7 +313,7 @@ class ProvenanceControllerIntegrationTest {
         FileHashInfo dummyHash = new FileHashInfo(HashAlgorithm.SHA256, new byte[32]);
         FilesInfo filesInfo = new FilesInfo(new LinkedHashSet<>(List.of(fileHashInfo)), null);
         Manifest manifest = new Manifest(dummyHash, dummyHash);
-        Metadata metadata = new Metadata("data-" + id, "test-type", Collections.emptyList());
+        Metadata metadata = new Metadata("data-" + id, "test-type", Collections.emptyList(), null);
         Instant signingTime = Instant.parse("2024-01-15T10:30:00Z");
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1, 2, 3}, signingTime, HashAlgorithm.SHA256);
         ProvenanceRecord record = new ProvenanceRecordImpl(id, metadata, filesInfo, manifest, signature, null);
@@ -348,7 +348,7 @@ class ProvenanceControllerIntegrationTest {
     }
 
     private ProvenanceRecord createTestRecord(UUID id, String dataId, String dataType, String signerIdentity, List<Predecessor> predecessors) {
-        Metadata metadata = new Metadata(dataId, dataType, predecessors);
+        Metadata metadata = new Metadata(dataId, dataType, predecessors, null);
         Manifest manifest = new Manifest("1", null, null);
         Instant signingTime = Instant.parse("2024-01-15T10:30:00Z");
         SignatureDetails details = signerIdentity != null
