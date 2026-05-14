@@ -257,7 +257,7 @@ class RegisterRecordsToolTest {
         Path inputFile = outputDir.resolve(dataId + ".txt");
         Files.writeString(inputFile, "content-" + dataId);
         UnsignedRecord unsigned = recordSigningService.build(
-            new ArrayList<>(List.of(inputFile)), dataId, "test", predecessors, HashAlgorithm.SHA256);
+            new ArrayList<>(List.of(inputFile)), dataId, "test", predecessors, null, HashAlgorithm.SHA256);
         ProvenanceRecord record = recordSigningService.sign(unsigned, "oidc-token");
         outputWriter.saveRecord(record, outputDir);
         return record;

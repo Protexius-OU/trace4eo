@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -41,19 +42,22 @@ public class BatchSigningTool {
     private final OutputWriter outputWriter;
     private final RecordRegistrationClient registrationClient;
     private final OidcTokenResolver oidcTokenResolver;
+    private final MetadataInputResolver metadataInputResolver;
 
     public BatchSigningTool(
         SigningInputValidator validator,
         RecordSigningService recordSigningService,
         OutputWriter outputWriter,
         RecordRegistrationClient registrationClient,
-        OidcTokenResolver oidcTokenResolver
+        OidcTokenResolver oidcTokenResolver,
+        MetadataInputResolver metadataInputResolver
     ) {
         this.validator = validator;
         this.recordSigningService = recordSigningService;
         this.outputWriter = outputWriter;
         this.registrationClient = registrationClient;
         this.oidcTokenResolver = oidcTokenResolver;
+        this.metadataInputResolver = metadataInputResolver;
     }
 
     @Command(name = "batch-sign", description = "Sign multiple files, creating one provenance record per file")
@@ -86,12 +90,19 @@ public class BatchSigningTool {
             defaultValue = "0") int startIndex,
         @Option(longName = "end-index",
             description = "End index (exclusive) into the alphabetically-sorted file list; defaults to total file count")
-        Integer endIndex
+        Integer endIndex,
+        @Option(longName = "metadata",
+            description = "Custom metadata entries as key=value pairs (comma-separated); applied to every record")
+        List<String> metadata,
+        @Option(longName = "metadata-file",
+            description = "Path to a Java .properties file of custom metadata key=value pairs; applied to every record")
+        Path metadataFile
     ) throws IOException, InterruptedException {
         HashAlgorithm algorithm = validator.validateHashAlgorithm(hashAlgorithm);
         List<Path> resolvedFiles = validateAndResolveFiles(files, directory, pattern, provenanceRecordType,
-            dataId, outputDir, registerUrl, keycloakUrl, saveZip);
+            dataId, outputDir, registerUrl, keycloakUrl, metadataFile, saveZip);
         resolvedFiles = applyRange(resolvedFiles, startIndex, endIndex);
+        Map<String, String> attributes = metadataInputResolver.resolve(metadata, metadataFile);
         String oidcToken = resolveOidcToken();
         String accessToken = null;
         if (registerUrl != null && !registerUrl.isBlank()) {
@@ -100,7 +111,7 @@ public class BatchSigningTool {
             registrationClient.checkUploaderAccess(registerUrl, accessToken);
         }
         List<ProvenanceRecord> records = signFilesIndividually(resolvedFiles, dataId, provenanceRecordType, algorithm,
-            oidcToken, Math.max(1, threads));
+            attributes, oidcToken, Math.max(1, threads));
         List<UUID> recordIds = records.stream().map(ProvenanceRecord::id).toList();
         if (!records.isEmpty()) {
             if (saveZip) {
@@ -118,7 +129,7 @@ public class BatchSigningTool {
 
     private List<Path> validateAndResolveFiles(
         List<String> files, Path directory, String pattern, String provenanceRecordType,
-        String dataId, Path outputDir, String registerUrl, String keycloakUrl, boolean saveZip
+        String dataId, Path outputDir, String registerUrl, String keycloakUrl, Path metadataFile, boolean saveZip
     ) throws IOException {
         List<Path> filePaths = files != null ? files.stream().map(Path::of).toList() : List.of();
         validateInput(filePaths, provenanceRecordType, dataId, directory);
@@ -128,6 +139,7 @@ public class BatchSigningTool {
         }
         validator.validateGlobPattern(pattern);
         validator.validateRegistrationConfig(registerUrl, keycloakUrl);
+        validator.validateMetadataFile(metadataFile);
 
         List<Path> resolvedFiles = resolveFiles(filePaths, directory, pattern);
         if (resolvedFiles.isEmpty()) {
@@ -180,7 +192,7 @@ public class BatchSigningTool {
 
     private List<ProvenanceRecord> signFilesIndividually(
         List<Path> files, String dataId, String provenanceRecordType,
-        HashAlgorithm algorithm, String oidcToken, int threads
+        HashAlgorithm algorithm, Map<String, String> attributes, String oidcToken, int threads
     ) throws InterruptedException {
         int total = files.size();
         int poolSize = Math.min(threads, total);
@@ -193,7 +205,7 @@ public class BatchSigningTool {
 
         AtomicInteger completedCount = new AtomicInteger(0);
         List<Future<Optional<ProvenanceRecord>>> futures = submitSigningTasks(
-            files, dataId, provenanceRecordType, algorithm, signerPool, completedCount, total);
+            files, dataId, provenanceRecordType, algorithm, attributes, signerPool, completedCount, total);
 
         List<ProvenanceRecord> records = collectResults(futures);
         log.info("Successfully signed {}/{} provenance records", records.size(), total);
@@ -203,7 +215,7 @@ public class BatchSigningTool {
     @SuppressWarnings("FutureReturnValueIgnored")
     private List<Future<Optional<ProvenanceRecord>>> submitSigningTasks(
         List<Path> files, String dataId, String provenanceRecordType,
-        HashAlgorithm algorithm, BlockingQueue<KeylessSigner> signerPool,
+        HashAlgorithm algorithm, Map<String, String> attributes, BlockingQueue<KeylessSigner> signerPool,
         AtomicInteger completedCount, int total
     ) {
         try (var progressScheduler = Executors.newSingleThreadScheduledExecutor();
@@ -213,21 +225,21 @@ public class BatchSigningTool {
                 10, 10, TimeUnit.SECONDS);
             return files.stream()
                 .map(file -> executor.submit(
-                    () -> signFile(file, dataId, provenanceRecordType, algorithm, signerPool, completedCount)))
+                    () -> signFile(file, dataId, provenanceRecordType, algorithm, attributes, signerPool, completedCount)))
                 .toList();
         }
     }
 
     private Optional<ProvenanceRecord> signFile(
         Path file, String dataId, String provenanceRecordType,
-        HashAlgorithm algorithm, BlockingQueue<KeylessSigner> signerPool,
+        HashAlgorithm algorithm, Map<String, String> attributes, BlockingQueue<KeylessSigner> signerPool,
         AtomicInteger completedCount
     ) throws InterruptedException {
         KeylessSigner signer = signerPool.take();
         try {
             String fileDataId = "%s/%s".formatted(dataId, file.getFileName());
             UnsignedRecord unsigned = recordSigningService.build(
-                List.of(file), fileDataId, provenanceRecordType, List.of(), algorithm);
+                List.of(file), fileDataId, provenanceRecordType, List.of(), attributes, algorithm);
             return Optional.of(recordSigningService.sign(unsigned, signer));
         } catch (Exception e) {
             log.warn("Failed to create provenance record for file: {}", file, e);

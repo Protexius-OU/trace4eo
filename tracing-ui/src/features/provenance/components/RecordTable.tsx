@@ -264,9 +264,31 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
               </td>
             </tr>
           ) : (
-            records.map((record) => (
+            records.map((record) => {
+              const attributeCount = record.metadata.attributes
+                ? Object.keys(record.metadata.attributes).length
+                : 0
+              return (
               <tr key={record.id}>
-                <td>{record.metadata.dataId}</td>
+                <td>
+                  {record.metadata.dataId}
+                  {attributeCount > 0 && (
+                    <Tooltip text={`${attributeCount} custom attribute(s)`}>
+                      <span
+                        style={{
+                          marginLeft: '0.375rem',
+                          fontSize: '0.6875rem',
+                          color: '#4338ca',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '0.25rem',
+                          padding: '0 0.25rem',
+                        }}
+                      >
+                        +{attributeCount}
+                      </span>
+                    </Tooltip>
+                  )}
+                </td>
                 <td>
                   <span className="badge badge-type">{record.metadata.dataType}</span>
                 </td>
@@ -304,7 +326,8 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
                   </div>
                 </td>
               </tr>
-            ))
+              )
+            })
           )}
         </tbody>
       </table>

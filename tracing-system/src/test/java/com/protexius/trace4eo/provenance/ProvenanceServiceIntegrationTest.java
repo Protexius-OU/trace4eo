@@ -102,7 +102,7 @@ class ProvenanceServiceIntegrationTest {
     }
 
     private ProvenanceRecord createTestRecord(UUID id, String dataId, String dataType) {
-        Metadata metadata = new Metadata(dataId, dataType, Collections.emptyList());
+        Metadata metadata = new Metadata(dataId, dataType, Collections.emptyList(), null);
         Manifest manifest = new Manifest("1", null, null);
         Instant signingTime = Instant.parse("2024-01-15T10:30:00Z");
         ProvenanceSignature signature = new ProvenanceSignature(
@@ -114,7 +114,7 @@ class ProvenanceServiceIntegrationTest {
     }
 
     private ProvenanceRecord createTestRecord(UUID id, Instant signingTime, HashAlgorithm hashAlgorithm) {
-        Metadata metadata = new Metadata("data-id", "data-type", Collections.emptyList());
+        Metadata metadata = new Metadata("data-id", "data-type", Collections.emptyList(), null);
         Manifest manifest = new Manifest("1", null, null);
         ProvenanceSignature signature = new ProvenanceSignature(
             new byte[]{1, 2, 3},

@@ -206,13 +206,13 @@ class ProvenanceGraphServiceTest {
 
     private ProvenanceRecord createRecordWithSigningTime(UUID id, String dataType, String dataId,
                                                           List<Predecessor> predecessors, Instant signingTime) {
-        Metadata metadata = new Metadata(dataId, dataType, predecessors);
+        Metadata metadata = new Metadata(dataId, dataType, predecessors, null);
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1, 2, 3}, signingTime, HashAlgorithm.SHA256);
         return new ProvenanceRecordImpl(id, metadata, null, null, signature, null);
     }
 
     private ProvenanceRecord createRecordWithNullPredecessors(UUID id, String dataType) {
-        Metadata metadata = new Metadata("data-" + id, dataType, null);
+        Metadata metadata = new Metadata("data-" + id, dataType, null, null);
         ProvenanceSignature signature = new ProvenanceSignature(new byte[]{1, 2, 3}, Instant.now(), HashAlgorithm.SHA256);
         return new ProvenanceRecordImpl(id, metadata, null, null, signature, null);
     }

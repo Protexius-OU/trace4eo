@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -33,19 +34,22 @@ public class SigningTool {
     private final OutputWriter outputWriter;
     private final RecordRegistrationClient registrationClient;
     private final OidcTokenResolver oidcTokenResolver;
+    private final MetadataInputResolver metadataInputResolver;
 
     public SigningTool(
         SigningInputValidator validator,
         RecordSigningService recordSigningService,
         OutputWriter outputWriter,
         RecordRegistrationClient registrationClient,
-        OidcTokenResolver oidcTokenResolver
+        OidcTokenResolver oidcTokenResolver,
+        MetadataInputResolver metadataInputResolver
     ) {
         this.validator = validator;
         this.recordSigningService = recordSigningService;
         this.outputWriter = outputWriter;
         this.registrationClient = registrationClient;
         this.oidcTokenResolver = oidcTokenResolver;
+        this.metadataInputResolver = metadataInputResolver;
     }
 
     @Command(name = "get-oidc-token",
@@ -84,17 +88,23 @@ public class SigningTool {
             defaultValue = "*") String pattern,
         @Option(longName = "save-record",
             description = "Save the provenance record",
-            defaultValue = "true") boolean saveZip
+            defaultValue = "true") boolean saveZip,
+        @Option(longName = "metadata",
+            description = "Custom metadata entries as key=value pairs (comma-separated)") List<String> metadata,
+        @Option(longName = "metadata-file",
+            description = "Path to a Java .properties file of custom metadata key=value pairs") Path metadataFile
     ) throws IOException {
         HashAlgorithm algorithm = validator.validateHashAlgorithm(hashAlgorithm);
         List<Path> paths = validateAndResolveInput(files, provenanceRecordType, dataId, outputDir,
-            registerUrl, keycloakUrl, predecessorsFile, directory, pattern, saveZip);
+            registerUrl, keycloakUrl, predecessorsFile, metadataFile, directory, pattern, saveZip);
         List<Predecessor> parsedPredecessors = resolvePredecessors(predecessors, predecessorsFile);
+        Map<String, String> attributes = metadataInputResolver.resolve(metadata, metadataFile);
         String accessToken = exchangeToken(registerUrl, keycloakUrl, realm);
         if (!parsedPredecessors.isEmpty()) {
             registrationClient.validatePredecessorsExist(parsedPredecessors, registerUrl, accessToken);
         }
-        UnsignedRecord unsigned = buildRecord(paths, dataId, provenanceRecordType, parsedPredecessors, algorithm);
+        UnsignedRecord unsigned = buildRecord(paths, dataId, provenanceRecordType, parsedPredecessors,
+            attributes, algorithm);
         ProvenanceRecord record = sign(unsigned);
         if (saveZip) {
             outputWriter.saveRecord(record, outputDir);
@@ -105,8 +115,8 @@ public class SigningTool {
 
     private List<Path> validateAndResolveInput(
         List<String> files, String provenanceRecordType, String dataId, Path outputDir,
-        String registerUrl, String keycloakUrl, Path predecessorsFile, Path directory, String pattern,
-        boolean saveZip
+        String registerUrl, String keycloakUrl, Path predecessorsFile, Path metadataFile,
+        Path directory, String pattern, boolean saveZip
     ) throws IOException {
         validateRequiredFields(files, directory, provenanceRecordType, dataId);
         if (directory != null) {
@@ -123,6 +133,7 @@ public class SigningTool {
         }
         validator.validateRegistrationConfig(registerUrl, keycloakUrl);
         validator.validatePredecessorsFile(predecessorsFile);
+        validator.validateMetadataFile(metadataFile);
         return paths;
     }
 
@@ -180,10 +191,10 @@ public class SigningTool {
 
     private UnsignedRecord buildRecord(
         List<Path> paths, String dataId, String provenanceRecordType,
-        List<Predecessor> predecessors, HashAlgorithm algorithm
+        List<Predecessor> predecessors, Map<String, String> attributes, HashAlgorithm algorithm
     ) throws IOException {
         log.info("Creating provenance record for {} file(s)...", paths.size());
-        return recordSigningService.build(paths, dataId, provenanceRecordType, predecessors, algorithm);
+        return recordSigningService.build(paths, dataId, provenanceRecordType, predecessors, attributes, algorithm);
     }
 
     private ProvenanceRecord sign(UnsignedRecord unsigned) throws IOException {

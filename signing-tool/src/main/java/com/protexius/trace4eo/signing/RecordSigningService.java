@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class RecordSigningService {
@@ -33,9 +34,9 @@ public class RecordSigningService {
 
     public UnsignedRecord build(
         List<Path> files, String dataId, String provenanceRecordType,
-        List<Predecessor> predecessors, HashAlgorithm algorithm
+        List<Predecessor> predecessors, Map<String, String> attributes, HashAlgorithm algorithm
     ) throws IOException {
-        Metadata metadata = new Metadata(dataId, provenanceRecordType, predecessors);
+        Metadata metadata = new Metadata(dataId, provenanceRecordType, predecessors, attributes);
         FilesInfo filesInfo = new FilesInfoBuilder(algorithm).addFiles(files).build();
         Manifest manifest = new ManifestBuilder(algorithm, provenanceJsonMapper)
             .withFilesInfo(filesInfo)
