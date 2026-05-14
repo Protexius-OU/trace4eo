@@ -127,29 +127,26 @@ interface DataIdFilterProps {
 
 function DataIdFilter({ value, onChange }: DataIdFilterProps) {
   const [localValue, setLocalValue] = useState(value)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
     setLocalValue(value)
   }, [value])
 
-  const handleChange = (newValue: string) => {
-    setLocalValue(newValue)
-    clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => onChange(newValue), 300)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      onChange(localValue)
+    }
   }
-
-  useEffect(() => {
-    return () => clearTimeout(timerRef.current)
-  }, [])
 
   return (
     <div className="filter-dropdown">
       <input
         type="text"
-        placeholder="Search Data ID..."
+        placeholder="Search Data ID (press Enter)..."
         value={localValue}
-        onChange={e => handleChange(e.target.value)}
+        onChange={e => setLocalValue(e.target.value)}
+        onKeyDown={handleKeyDown}
         className="filter-text-input"
       />
     </div>
@@ -252,43 +249,20 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
               />
             </th>
             <th>Uploaded By</th>
-            <th>Direct Predecessors</th>
             <th style={{ width: '1%', whiteSpace: 'nowrap' }}>Actions</th>
           </tr>
         </thead>
         <tbody>
           {records.length === 0 ? (
             <tr>
-              <td colSpan={6} style={{ textAlign: 'center', color: '#666' }}>
+              <td colSpan={5} style={{ textAlign: 'center', color: '#666' }}>
                 No records match the current filters
               </td>
             </tr>
           ) : (
-            records.map((record) => {
-              const attributeCount = record.metadata.attributes
-                ? Object.keys(record.metadata.attributes).length
-                : 0
-              return (
+            records.map((record) => (
               <tr key={record.id}>
-                <td>
-                  {record.metadata.dataId}
-                  {attributeCount > 0 && (
-                    <Tooltip text={`${attributeCount} custom attribute(s)`}>
-                      <span
-                        style={{
-                          marginLeft: '0.375rem',
-                          fontSize: '0.6875rem',
-                          color: '#4338ca',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '0.25rem',
-                          padding: '0 0.25rem',
-                        }}
-                      >
-                        +{attributeCount}
-                      </span>
-                    </Tooltip>
-                  )}
-                </td>
+                <td>{record.metadata.dataId}</td>
                 <td>
                   <span className="badge badge-type">{record.metadata.dataType}</span>
                 </td>
@@ -302,7 +276,6 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
                     {getSignerDomain(record.uploaderIdentity ?? null)}
                   </Tooltip>
                 </td>
-                <td>{record.metadata.predecessors?.length ?? 0}</td>
                 <td>
                   <div style={{ display: 'flex', gap: '0.5rem', whiteSpace: 'nowrap' }}>
                     <Link to={`/records/${record.id}/graph`} className="btn btn-primary">
@@ -326,8 +299,7 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
                   </div>
                 </td>
               </tr>
-              )
-            })
+            ))
           )}
         </tbody>
       </table>
