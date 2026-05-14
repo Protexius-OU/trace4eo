@@ -143,7 +143,8 @@ function DataIdFilter({ value, onChange }: DataIdFilterProps) {
     <div className="filter-dropdown">
       <input
         type="text"
-        placeholder="Search Data ID (press Enter)..."
+        placeholder="Search Data ID..."
+        title="Press Enter to search"
         value={localValue}
         onChange={e => setLocalValue(e.target.value)}
         onKeyDown={handleKeyDown}
