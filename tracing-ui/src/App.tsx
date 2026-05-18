@@ -1,18 +1,13 @@
-import { useEffect, useCallback } from 'react'
 import { Routes, Route, Link } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import './App.css'
-import { setUserGetter } from './core/auth/authFetch'
+import { setCurrentUser } from './core/auth/authFetch'
 import { RecordListPage, RecordGraphPage } from './features/provenance'
 
 export default function App() {
   const auth = useAuth()
 
-  const getUserFromAuth = useCallback(() => auth.user ?? null, [auth.user])
-
-  useEffect(() => {
-    setUserGetter(getUserFromAuth)
-  }, [getUserFromAuth])
+  setCurrentUser(auth.user ?? null)
 
   if (auth.isLoading) {
     return <div className="app"><main className="main"><p>Loading...</p></main></div>
