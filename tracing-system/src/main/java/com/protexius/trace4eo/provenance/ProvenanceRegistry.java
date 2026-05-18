@@ -16,6 +16,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -118,13 +119,7 @@ public class ProvenanceRegistry {
             .optional();
     }
 
-    public List<ProvenanceRecord> findAll(
-        int page,
-        int size,
-        List<String> dataTypes,
-        String dataId,
-        List<String> signerIdentities
-    ) {
+    public List<ProvenanceRecord> findAll(int page, int size, RecordFilterCriteria criteria) {
         StringBuilder sql = new StringBuilder("""
             select
                 pr.id,
@@ -138,7 +133,7 @@ public class ProvenanceRegistry {
             where 1=1
             """);
 
-        appendFilters(sql, dataTypes, dataId, signerIdentities);
+        appendFilters(sql, criteria);
         sql.append(" order by pr.created_at desc");
         sql.append(" limit :limit offset :offset");
 
@@ -146,20 +141,20 @@ public class ProvenanceRegistry {
             .param("limit", size)
             .param("offset", page * size);
 
-        query = bindFilterParams(query, dataTypes, dataId, signerIdentities);
+        query = bindFilterParams(query, criteria);
         return query.query(this::mapRow).list();
     }
 
-    public long count(List<String> dataTypes, String dataId, List<String> signerIdentities) {
+    public long count(RecordFilterCriteria criteria) {
         StringBuilder sql = new StringBuilder("""
             select count(*) from provenance_record pr
             inner join signature s on pr.id = s.id
             where 1=1
             """);
 
-        appendFilters(sql, dataTypes, dataId, signerIdentities);
+        appendFilters(sql, criteria);
         var query = jdbcClient.sql(sql.toString());
-        query = bindFilterParams(query, dataTypes, dataId, signerIdentities);
+        query = bindFilterParams(query, criteria);
         return query.query(Long.class).single();
     }
 
@@ -185,37 +180,47 @@ public class ProvenanceRegistry {
             .list();
     }
 
-    private void appendFilters(
-        StringBuilder sql,
-        List<String> dataTypes,
-        String dataId,
-        List<String> signerIdentities
-    ) {
-        if (dataTypes != null && !dataTypes.isEmpty()) {
+    private void appendFilters(StringBuilder sql, RecordFilterCriteria criteria) {
+        if (criteria.dataTypes() != null && !criteria.dataTypes().isEmpty()) {
             sql.append(" and pr.metadata->>'dataType' in (:dataTypes)");
         }
-        if (dataId != null && !dataId.isBlank()) {
+        if (criteria.dataId() != null && !criteria.dataId().isBlank()) {
             sql.append(" and pr.metadata->>'dataId' ilike :dataId");
         }
-        if (signerIdentities != null && !signerIdentities.isEmpty()) {
+        if (criteria.signerIdentities() != null && !criteria.signerIdentities().isEmpty()) {
             sql.append(" and s.signer_identity in (:signerIdentities)");
+        }
+        AttributeFilter attributes = criteria.attributes();
+        if (attributes != null && !attributes.isEmpty()) {
+            int size = attributes.keyToValues().size();
+            for (int i = 0; i < size; i++) {
+                sql.append(" and pr.metadata->'attributes'->>:attrKey_").append(i)
+                    .append(" in (:attrValues_").append(i).append(")");
+            }
         }
     }
 
     private JdbcClient.StatementSpec bindFilterParams(
         JdbcClient.StatementSpec query,
-        List<String> dataTypes,
-        String dataId,
-        List<String> signerIdentities
+        RecordFilterCriteria criteria
     ) {
-        if (dataTypes != null && !dataTypes.isEmpty()) {
-            query = query.param("dataTypes", dataTypes);
+        if (criteria.dataTypes() != null && !criteria.dataTypes().isEmpty()) {
+            query = query.param("dataTypes", criteria.dataTypes());
         }
-        if (dataId != null && !dataId.isBlank()) {
-            query = query.param("dataId", "%" + dataId + "%");
+        if (criteria.dataId() != null && !criteria.dataId().isBlank()) {
+            query = query.param("dataId", "%" + criteria.dataId() + "%");
         }
-        if (signerIdentities != null && !signerIdentities.isEmpty()) {
-            query = query.param("signerIdentities", signerIdentities);
+        if (criteria.signerIdentities() != null && !criteria.signerIdentities().isEmpty()) {
+            query = query.param("signerIdentities", criteria.signerIdentities());
+        }
+        AttributeFilter attributes = criteria.attributes();
+        if (attributes != null && !attributes.isEmpty()) {
+            int index = 0;
+            for (Map.Entry<String, List<String>> entry : attributes.keyToValues().entrySet()) {
+                query = query.param("attrKey_" + index, entry.getKey());
+                query = query.param("attrValues_" + index, entry.getValue());
+                index++;
+            }
         }
         return query;
     }

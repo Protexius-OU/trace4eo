@@ -137,15 +137,15 @@ class ProvenanceServiceTest {
 
     @Test
     void findAllReturnsPagedResponse() {
-        List<String> dataTypes = List.of("type-a");
-        String dataId = "satellite";
-        List<String> signerIdentities = List.of("user@example.com");
+        RecordFilterCriteria criteria = RecordFilterCriteria.of(
+            List.of("type-a"), "satellite", List.of("user@example.com"), List.of("location=oslo")
+        );
         List<ProvenanceRecord> records = List.of(createTestRecord(UUID.randomUUID()));
 
-        when(provenanceRegistry.findAll(0, 20, dataTypes, dataId, signerIdentities)).thenReturn(records);
-        when(provenanceRegistry.count(dataTypes, dataId, signerIdentities)).thenReturn(45L);
+        when(provenanceRegistry.findAll(0, 20, criteria)).thenReturn(records);
+        when(provenanceRegistry.count(criteria)).thenReturn(45L);
 
-        PagedResponse<ProvenanceRecord> result = provenanceService.findAll(0, 20, dataTypes, dataId, signerIdentities);
+        PagedResponse<ProvenanceRecord> result = provenanceService.findAll(0, 20, criteria);
 
         assertEquals(records, result.content());
         assertEquals(45L, result.totalElements());
@@ -156,10 +156,11 @@ class ProvenanceServiceTest {
 
     @Test
     void findAllReturnsEmptyPage() {
-        when(provenanceRegistry.findAll(0, 20, null, null, null)).thenReturn(List.of());
-        when(provenanceRegistry.count(null, null, null)).thenReturn(0L);
+        RecordFilterCriteria criteria = RecordFilterCriteria.none();
+        when(provenanceRegistry.findAll(0, 20, criteria)).thenReturn(List.of());
+        when(provenanceRegistry.count(criteria)).thenReturn(0L);
 
-        PagedResponse<ProvenanceRecord> result = provenanceService.findAll(0, 20, null, null, null);
+        PagedResponse<ProvenanceRecord> result = provenanceService.findAll(0, 20, criteria);
 
         assertTrue(result.content().isEmpty());
         assertEquals(0, result.totalElements());

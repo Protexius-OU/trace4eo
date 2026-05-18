@@ -1,5 +1,6 @@
 package com.protexius.trace4eo.provenance;
 
+import com.protexius.trace4eo.provenance.record.Metadata;
 import com.protexius.trace4eo.provenance.record.ProvenanceRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,10 +36,12 @@ class ProvenanceRegistryTest {
     private JdbcClient jdbcClient;
 
     private ProvenanceRegistry provenanceRegistry;
+    private ProvenanceJsonMapper jsonMapper;
 
     @BeforeEach
     void setUp() {
-        provenanceRegistry = new ProvenanceRegistry(jdbcClient, new ProvenanceJsonMapper());
+        jsonMapper = new ProvenanceJsonMapper();
+        provenanceRegistry = new ProvenanceRegistry(jdbcClient, jsonMapper);
     }
 
     @Test
@@ -332,7 +336,7 @@ class ProvenanceRegistryTest {
         createRecordWithTypeAndSigner("type-a", "user@example.com");
 
         List<ProvenanceRecord> results = provenanceRegistry.findAll(
-            0, 20, List.of("type-a"), null, null
+            0, 20, criteria(List.of("type-a"), null, null, null)
         );
 
         assertEquals(2, results.size());
@@ -346,7 +350,7 @@ class ProvenanceRegistryTest {
         createRecordWithTypeAndSigner("type-c", "user@example.com");
 
         List<ProvenanceRecord> results = provenanceRegistry.findAll(
-            0, 20, List.of("type-a", "type-b"), null, null
+            0, 20, criteria(List.of("type-a", "type-b"), null, null, null)
         );
 
         assertEquals(2, results.size());
@@ -359,7 +363,7 @@ class ProvenanceRegistryTest {
         createRecordWithTypeAndSigner("type-a", "user1@example.com");
 
         List<ProvenanceRecord> results = provenanceRegistry.findAll(
-            0, 20, null, null, List.of("user1@example.com")
+            0, 20, criteria(null, null, List.of("user1@example.com"), null)
         );
 
         assertEquals(2, results.size());
@@ -388,7 +392,7 @@ class ProvenanceRegistryTest {
             null, now, null);
 
         List<ProvenanceRecord> results = provenanceRegistry.findAll(
-            0, 20, null, "satellite", null
+            0, 20, criteria(null, "satellite", null, null)
         );
 
         assertEquals(1, results.size());
@@ -401,9 +405,75 @@ class ProvenanceRegistryTest {
         createRecordWithTypeAndSigner("type-b", "user2@example.com");
         createRecordWithTypeAndSigner("type-a", "user2@example.com");
 
-        assertEquals(2, provenanceRegistry.count(List.of("type-a"), null, null));
-        assertEquals(2, provenanceRegistry.count(null, null, List.of("user2@example.com")));
-        assertEquals(1, provenanceRegistry.count(List.of("type-a"), null, List.of("user1@example.com")));
+        assertEquals(2, provenanceRegistry.count(criteria(List.of("type-a"), null, null, null)));
+        assertEquals(2, provenanceRegistry.count(criteria(null, null, List.of("user2@example.com"), null)));
+        assertEquals(1, provenanceRegistry.count(
+            criteria(List.of("type-a"), null, List.of("user1@example.com"), null)));
+    }
+
+    @Test
+    void findAllWithSingleAttributeFilter() {
+        createRecordWithAttributes("type-a", Map.of("location", "oslo"));
+        createRecordWithAttributes("type-a", Map.of("location", "bergen"));
+        createRecordWithAttributes("type-a", null);
+
+        List<ProvenanceRecord> results = provenanceRegistry.findAll(
+            0, 20, criteria(null, null, null, List.of("location=oslo"))
+        );
+
+        assertEquals(1, results.size());
+        assertEquals("oslo", results.get(0).metadata().attributes().get("location"));
+    }
+
+    @Test
+    void findAllWithMultipleValuesSameKeyAttributeFilter() {
+        createRecordWithAttributes("type-a", Map.of("location", "oslo"));
+        createRecordWithAttributes("type-a", Map.of("location", "bergen"));
+        createRecordWithAttributes("type-a", Map.of("location", "tromso"));
+
+        List<ProvenanceRecord> results = provenanceRegistry.findAll(
+            0, 20, criteria(null, null, null, List.of("location=oslo", "location=bergen"))
+        );
+
+        assertEquals(2, results.size());
+    }
+
+    @Test
+    void findAllWithMultipleKeysAttributeFilterReturnsIntersection() {
+        createRecordWithAttributes("type-a", Map.of("location", "oslo", "env", "prod"));
+        createRecordWithAttributes("type-a", Map.of("location", "oslo", "env", "dev"));
+        createRecordWithAttributes("type-a", Map.of("location", "bergen", "env", "prod"));
+
+        List<ProvenanceRecord> results = provenanceRegistry.findAll(
+            0, 20, criteria(null, null, null, List.of("location=oslo", "env=prod"))
+        );
+
+        assertEquals(1, results.size());
+        assertEquals("oslo", results.get(0).metadata().attributes().get("location"));
+        assertEquals("prod", results.get(0).metadata().attributes().get("env"));
+    }
+
+    @Test
+    void countWithAttributeFilter() {
+        createRecordWithAttributes("type-a", Map.of("location", "oslo"));
+        createRecordWithAttributes("type-a", Map.of("location", "oslo"));
+        createRecordWithAttributes("type-a", Map.of("location", "bergen"));
+
+        assertEquals(2, provenanceRegistry.count(
+            criteria(null, null, null, List.of("location=oslo"))));
+    }
+
+    @Test
+    void attributeFilterExcludesRecordsWithoutAttributesObject() {
+        createRecordWithAttributes("type-a", null);
+        createRecordWithAttributes("type-a", Map.of());
+        createRecordWithAttributes("type-a", Map.of("location", "oslo"));
+
+        List<ProvenanceRecord> results = provenanceRegistry.findAll(
+            0, 20, criteria(null, null, null, List.of("location=oslo"))
+        );
+
+        assertEquals(1, results.size());
     }
 
     @Test
@@ -486,5 +556,30 @@ class ProvenanceRegistryTest {
     private byte[] createSignatureBytes() {
         return """
             {"bytes":"AQID","signingTime":"2024-01-15T10:30:00Z","hashAlgorithm":"SHA256"}""".getBytes();
+    }
+
+    private RecordFilterCriteria criteria(
+        List<String> dataTypes,
+        String dataId,
+        List<String> signerIdentities,
+        List<String> attributeTokens
+    ) {
+        return RecordFilterCriteria.of(dataTypes, dataId, signerIdentities, attributeTokens);
+    }
+
+    private void createRecordWithAttributes(String dataType, Map<String, String> attributes) {
+        UUID id = UUID.randomUUID();
+        Instant now = Instant.now();
+        Metadata metadata = new Metadata("data-" + id, dataType, List.of(), attributes);
+        provenanceRegistry.addSignature(id, now, createSignatureBytes(), "user@example.com");
+        provenanceRegistry.addProvenanceRecord(
+            id,
+            """
+            {"version":"1"}""",
+            jsonMapper.writeValueAsString(metadata),
+            null,
+            now,
+            null
+        );
     }
 }

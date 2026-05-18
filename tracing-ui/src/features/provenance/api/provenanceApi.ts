@@ -29,6 +29,13 @@ export async function fetchRecords(
   if (filters.signerIdentities) {
     filters.signerIdentities.forEach(s => params.append('signerIdentity', s))
   }
+  if (filters.attributes) {
+    filters.attributes
+      .trim()
+      .split(/\s+/)
+      .filter(t => t.includes('='))
+      .forEach(t => params.append('attribute', t))
+  }
 
   const response = await authFetch(`${API_BASE}?${params}`)
   if (!response.ok) {

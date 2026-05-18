@@ -27,6 +27,7 @@ import java.util.Base64;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -198,6 +199,38 @@ class ProvenanceControllerIntegrationTest {
     }
 
     @Test
+    void listRecordsWithInvalidAttributeFilterReturns400() {
+        ResponseEntity<String> response = restTemplate.getForEntity(
+            "/api/provenance?attribute=broken",
+            String.class
+        );
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().contains("broken"));
+    }
+
+    @Test
+    void listRecordsWithAttributeFilter() {
+        String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+        String dataType = "attr-type-" + uniqueSuffix;
+        String location = "loc-" + uniqueSuffix;
+        createAndSaveRecordWithAttributes(dataType, null, Map.of("location", location));
+        createAndSaveRecordWithAttributes(dataType, null, Map.of("location", "other-" + uniqueSuffix));
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+            "/api/provenance?dataType={t}&attribute=location={l}",
+            String.class,
+            dataType, location
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().contains("\"totalElements\":1"), response.getBody());
+        assertTrue(response.getBody().contains(location));
+    }
+
+    @Test
     void listRecordsWithSignerIdentityFilter() {
         String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
         String signer1 = "signer1-" + uniqueSuffix + "@example.com";
@@ -343,12 +376,33 @@ class ProvenanceControllerIntegrationTest {
 
     private void createAndSaveRecord(String dataType, String signerIdentity) {
         UUID id = UUID.randomUUID();
-        ProvenanceRecord record = createTestRecord(id, "data-" + id, dataType, signerIdentity, Collections.emptyList());
+        ProvenanceRecord record = createTestRecord(id, "data-" + id, dataType, signerIdentity, Collections.emptyList(), null);
+        restTemplate.postForEntity("/api/provenance", record, Void.class);
+    }
+
+    private void createAndSaveRecordWithAttributes(
+        String dataType, String signerIdentity, Map<String, String> attributes
+    ) {
+        UUID id = UUID.randomUUID();
+        ProvenanceRecord record = createTestRecord(
+            id, "data-" + id, dataType, signerIdentity, Collections.emptyList(), attributes
+        );
         restTemplate.postForEntity("/api/provenance", record, Void.class);
     }
 
     private ProvenanceRecord createTestRecord(UUID id, String dataId, String dataType, String signerIdentity, List<Predecessor> predecessors) {
-        Metadata metadata = new Metadata(dataId, dataType, predecessors, null);
+        return createTestRecord(id, dataId, dataType, signerIdentity, predecessors, null);
+    }
+
+    private ProvenanceRecord createTestRecord(
+        UUID id,
+        String dataId,
+        String dataType,
+        String signerIdentity,
+        List<Predecessor> predecessors,
+        Map<String, String> attributes
+    ) {
+        Metadata metadata = new Metadata(dataId, dataType, predecessors, attributes);
         Manifest manifest = new Manifest("1", null, null);
         Instant signingTime = Instant.parse("2024-01-15T10:30:00Z");
         SignatureDetails details = signerIdentity != null

@@ -183,6 +183,29 @@ td .btn-primary {
   border-color: #1565c0;
 }
 
+.filter-text-input.has-error,
+.filter-text-input.has-error:focus {
+  border-color: #c33;
+}
+
+.filter-error-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #c33;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  color: #c33;
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  z-index: 50;
+}
+
 .filter-text-input::placeholder {
   color: #888;
   text-transform: uppercase;
@@ -202,6 +225,40 @@ td .btn-primary {
 .badge-type {
   background: #eef2ff;
   color: #4338ca;
+}
+
+.badge-attribute {
+  background: #f3f4f6;
+  color: #374151;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+}
+
+.attribute-list {
+  --attribute-list-max-width: 300px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  max-width: var(--attribute-list-max-width);
+}
+
+.attribute-empty {
+  color: #bbb;
+}
+
+.filter-with-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.uploader-via {
+  font-size: 0.7rem;
+  color: #999;
+  margin-top: 2px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
 }
 
 /* Tooltip */
