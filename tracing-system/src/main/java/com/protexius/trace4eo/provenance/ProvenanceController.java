@@ -52,9 +52,11 @@ public class ProvenanceController {
         @RequestParam(value = "size", defaultValue = "20") int size,
         @RequestParam(value = "dataType", required = false) List<String> dataTypes,
         @RequestParam(value = "dataId", required = false) String dataId,
-        @RequestParam(value = "signerIdentity", required = false) List<String> signerIdentities
+        @RequestParam(value = "signerIdentity", required = false) List<String> signerIdentities,
+        @RequestParam(value = "attribute", required = false) List<String> attributes
     ) {
-        return provenanceService.findAll(page, size, dataTypes, dataId, signerIdentities);
+        RecordFilterCriteria criteria = RecordFilterCriteria.of(dataTypes, dataId, signerIdentities, attributes);
+        return provenanceService.findAll(page, size, criteria);
     }
 
     @GetMapping("/check-access")

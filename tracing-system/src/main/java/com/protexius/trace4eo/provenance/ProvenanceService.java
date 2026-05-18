@@ -129,15 +129,9 @@ public class ProvenanceService {
         return provenanceRegistry.findMissing(ids);
     }
 
-    public PagedResponse<ProvenanceRecord> findAll(
-        int page,
-        int size,
-        List<String> dataTypes,
-        String dataId,
-        List<String> signerIdentities
-    ) {
-        var records = provenanceRegistry.findAll(page, size, dataTypes, dataId, signerIdentities);
-        var total = provenanceRegistry.count(dataTypes, dataId, signerIdentities);
+    public PagedResponse<ProvenanceRecord> findAll(int page, int size, RecordFilterCriteria criteria) {
+        var records = provenanceRegistry.findAll(page, size, criteria);
+        var total = provenanceRegistry.count(criteria);
         return PagedResponse.of(records, total, page, size);
     }
 

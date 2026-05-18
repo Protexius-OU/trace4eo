@@ -92,6 +92,7 @@ export interface RecordFilters {
   dataTypes?: string[]
   dataId?: string
   signerIdentities?: string[]
+  attributes?: string
 }
 
 export interface FilterOptions {

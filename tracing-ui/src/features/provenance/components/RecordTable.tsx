@@ -154,6 +154,77 @@ function DataIdFilter({ value, onChange }: DataIdFilterProps) {
   )
 }
 
+interface AttributesFilterProps {
+  value: string
+  onChange: (value: string) => void
+}
+
+function AttributeBadges({ attributes }: { attributes: Record<string, string> | null }) {
+  if (!attributes || Object.keys(attributes).length === 0) {
+    return <span className="attribute-empty">—</span>
+  }
+  const entries = Object.entries(attributes).sort(([a], [b]) => a.localeCompare(b))
+  return (
+    <div className="attribute-list">
+      {entries.map(([key, value]) => (
+        <span key={key} className="badge badge-attribute" title={`${key}=${value}`}>
+          {key}={value}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function validateAttributesInput(input: string): string | null {
+  const trimmed = input.trim()
+  if (!trimmed) return null
+  for (const token of trimmed.split(/\s+/)) {
+    const eq = token.indexOf('=')
+    if (eq <= 0) return `Invalid token "${token}": expected key=value`
+    if (eq === token.length - 1) return `Invalid token "${token}": value is empty`
+  }
+  return null
+}
+
+function AttributesFilter({ value, onChange }: AttributesFilterProps) {
+  const [localValue, setLocalValue] = useState(value)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setLocalValue(value)
+    setError(null)
+  }, [value])
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      const err = validateAttributesInput(localValue)
+      if (err) {
+        setError(err)
+        return
+      }
+      setError(null)
+      onChange(localValue)
+    }
+  }
+
+  return (
+    <div className="filter-dropdown">
+      <input
+        type="text"
+        placeholder="e.g. location=oslo env=prod"
+        title="key=value pairs separated by spaces. Same key = OR, different keys = AND. Press Enter to search."
+        value={localValue}
+        onChange={e => { setLocalValue(e.target.value); if (error) setError(null) }}
+        onKeyDown={handleKeyDown}
+        className={`filter-text-input${error ? ' has-error' : ''}`}
+        aria-invalid={error ? 'true' : 'false'}
+      />
+      {error && <div role="alert" className="filter-error-popover">{error}</div>}
+    </div>
+  )
+}
+
 function useCheckboxFilter(
   filterKey: 'dataTypes' | 'signerIdentities',
   allValues: string[],
@@ -206,6 +277,10 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
     onFilterChange({ ...filters, dataId: value || undefined })
   }, [filters, onFilterChange])
 
+  const handleAttributesChange = useCallback((value: string) => {
+    onFilterChange({ ...filters, attributes: value.trim() || undefined })
+  }, [filters, onFilterChange])
+
   const handleDownload = async (id: string) => {
     setDownloadingId(id)
     try {
@@ -249,7 +324,15 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
                 onClearAll={signerFilter.clearAll}
               />
             </th>
-            <th>Uploaded By</th>
+            <th>
+              <div className="filter-with-label">
+                <span>Attributes</span>
+                <AttributesFilter
+                  value={filters.attributes ?? ''}
+                  onChange={handleAttributesChange}
+                />
+              </div>
+            </th>
             <th style={{ width: '1%', whiteSpace: 'nowrap' }}>Actions</th>
           </tr>
         </thead>
@@ -271,11 +354,16 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
                   <Tooltip text={getSignerEmail(record)}>
                     {getRecordSignerDomain(record)}
                   </Tooltip>
+                  {record.uploaderIdentity && record.uploaderIdentity !== getSignerEmail(record) && (
+                    <div className="uploader-via">
+                      <Tooltip text={record.uploaderIdentity}>
+                        via {getSignerDomain(record.uploaderIdentity)}
+                      </Tooltip>
+                    </div>
+                  )}
                 </td>
                 <td>
-                  <Tooltip text={record.uploaderIdentity ?? null}>
-                    {getSignerDomain(record.uploaderIdentity ?? null)}
-                  </Tooltip>
+                  <AttributeBadges attributes={record.metadata.attributes ?? null} />
                 </td>
                 <td>
                   <div style={{ display: 'flex', gap: '0.5rem', whiteSpace: 'nowrap' }}>
