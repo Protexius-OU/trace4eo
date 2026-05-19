@@ -221,18 +221,25 @@ function AttributesFilter({ value, onChange }: AttributesFilterProps) {
       setError(`Invalid token "${token}": expected key=value`)
       return
     }
-    if (eq === token.length - 1) {
+    const key = token.slice(0, eq)
+    const values = token.slice(eq + 1).split(',').map(v => v.trim()).filter(v => v.length > 0)
+    if (values.length === 0) {
       setError(`Invalid token "${token}": value is empty`)
       return
     }
-    const key = token.slice(0, eq)
-    const val = token.slice(eq + 1)
-    if (chips.some(c => c.key === key && c.value === val)) {
-      // exact duplicate; silently drop
+    const seen = new Set(chips.filter(c => c.key === key).map(c => c.value))
+    const additions: AttributeChip[] = []
+    for (const value of values) {
+      if (seen.has(value)) continue
+      seen.add(value)
+      additions.push({ key, value })
+    }
+    if (additions.length === 0) {
       setInputValue('')
+      setError(null)
       return
     }
-    onChange(serializeChips([...chips, { key, value: val }]))
+    onChange(serializeChips([...chips, ...additions]))
     setInputValue('')
     setError(null)
   }

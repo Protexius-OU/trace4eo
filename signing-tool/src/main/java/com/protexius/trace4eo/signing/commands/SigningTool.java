@@ -90,15 +90,13 @@ public class SigningTool {
             description = "Save the provenance record",
             defaultValue = "true") boolean saveZip,
         @Option(longName = "metadata",
-            description = "Custom metadata entries as key=value pairs (comma-separated)") List<String> metadata,
-        @Option(longName = "metadata-file",
-            description = "Path to a Java .properties file of custom metadata key=value pairs") Path metadataFile
+            description = "Custom metadata entries as key=value pairs (comma-separated)") List<String> metadata
     ) throws IOException {
         HashAlgorithm algorithm = validator.validateHashAlgorithm(hashAlgorithm);
         List<Path> paths = validateAndResolveInput(files, provenanceRecordType, dataId, outputDir,
-            registerUrl, keycloakUrl, predecessorsFile, metadataFile, directory, pattern, saveZip);
+            registerUrl, keycloakUrl, predecessorsFile, directory, pattern, saveZip);
         List<Predecessor> parsedPredecessors = resolvePredecessors(predecessors, predecessorsFile);
-        Map<String, String> attributes = metadataInputResolver.resolve(metadata, metadataFile);
+        Map<String, String> attributes = metadataInputResolver.resolve(metadata);
         String accessToken = exchangeToken(registerUrl, keycloakUrl, realm);
         if (!parsedPredecessors.isEmpty()) {
             registrationClient.validatePredecessorsExist(parsedPredecessors, registerUrl, accessToken);
@@ -115,7 +113,7 @@ public class SigningTool {
 
     private List<Path> validateAndResolveInput(
         List<String> files, String provenanceRecordType, String dataId, Path outputDir,
-        String registerUrl, String keycloakUrl, Path predecessorsFile, Path metadataFile,
+        String registerUrl, String keycloakUrl, Path predecessorsFile,
         Path directory, String pattern, boolean saveZip
     ) throws IOException {
         validateRequiredFields(files, directory, provenanceRecordType, dataId);
@@ -133,7 +131,6 @@ public class SigningTool {
         }
         validator.validateRegistrationConfig(registerUrl, keycloakUrl);
         validator.validatePredecessorsFile(predecessorsFile);
-        validator.validateMetadataFile(metadataFile);
         return paths;
     }
 
