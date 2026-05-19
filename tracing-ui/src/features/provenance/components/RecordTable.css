@@ -1,8 +1,24 @@
-/* Table styles */
+/* === Clear-filters link === */
+.clear-filters {
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.clear-filters:hover {
+  color: var(--color-accent-hover);
+}
+
+/* === Table === */
 .table-container {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  /* allow filter dropdowns to escape the rounded corners */
   overflow: visible;
   min-height: 350px;
 }
@@ -13,59 +29,103 @@ table {
 }
 
 th, td {
-  padding: 0.75rem 1rem;
+  padding: var(--space-3) var(--space-4);
   text-align: left;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 0.875rem;
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--text-lg);
+}
+
+td:first-child {
+  overflow-wrap: anywhere;
+}
+
+/* Layout helpers (replacing inline styles) */
+.th-actions {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.td-empty {
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.cell-actions {
+  display: flex;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.dropdown-arrow {
+  margin-left: 4px;
+}
+
+.tooltip-trigger {
+  cursor: help;
+}
+
+/* Keyboard focus indicator */
+.clear-filters:focus-visible,
+.filter-dropdown-toggle:focus-visible,
+.filter-dropdown-actions button:focus-visible,
+.badge-remove:focus-visible,
+td .btn-icon:focus-visible,
+td .btn-primary:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.filter-dropdown-item:focus-within {
+  background: var(--color-surface-hover);
 }
 
 th {
-  background: #fafbfc;
+  background: var(--color-surface-subtle);
   font-weight: 600;
-  font-size: 0.75rem;
-  color: #888;
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 th:first-child {
-  border-top-left-radius: 12px;
+  border-top-left-radius: var(--radius-xl);
 }
 
 th:last-child {
-  border-top-right-radius: 12px;
+  border-top-right-radius: var(--radius-xl);
 }
 
 tbody tr {
-  transition: background 0.1s;
+  transition: background var(--transition-fast);
 }
 
 tbody tr:hover {
-  background: #fafbfc;
+  background: var(--color-surface-subtle);
 }
 
 tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* Table action buttons */
+/* === Table action buttons === */
 td .btn-icon {
-  color: #888;
-  padding: 0.375rem;
-  border-radius: 6px;
+  color: var(--color-text-subtle);
+  padding: var(--space-1-5);
+  border-radius: var(--radius-md);
 }
 
 td .btn-icon:hover {
-  color: #1a1a2e;
-  background: #f0f2f5;
+  color: var(--color-brand);
+  background: var(--color-surface-hover);
 }
 
 td .btn-primary {
-  font-size: 0.75rem;
-  padding: 0.375rem 0.75rem;
+  font-size: var(--text-sm);
+  padding: var(--space-1-5) var(--space-3);
 }
 
-/* Table header filter dropdown */
+/* === Header filter dropdown === */
 .filter-dropdown {
   position: relative;
   display: inline-block;
@@ -76,32 +136,33 @@ td .btn-primary {
   border: none;
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.75rem;
-  color: #888;
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 0;
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
 }
 
 .filter-dropdown-toggle:hover {
-  color: #1a1a2e;
+  color: var(--color-brand);
 }
 
 .filter-dropdown-toggle.filter-active {
-  color: #1565c0;
+  color: var(--color-accent);
 }
 
 .filter-dropdown-menu {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  z-index: 100;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-popover);
+  z-index: var(--z-dropdown);
   min-width: 200px;
   max-height: 300px;
   display: flex;
@@ -110,23 +171,23 @@ td .btn-primary {
 
 .filter-dropdown-actions {
   display: flex;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  border-bottom: 1px solid #f0f0f0;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .filter-dropdown-actions button {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  background: white;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background var(--transition-fast);
 }
 
 .filter-dropdown-actions button:hover:not(:disabled) {
-  background: #f0f2f5;
+  background: var(--color-surface-hover);
 }
 
 .filter-dropdown-actions button:disabled {
@@ -136,22 +197,22 @@ td .btn-primary {
 
 .filter-dropdown-items {
   overflow-y: auto;
-  padding: 0.375rem;
+  padding: var(--space-1-5);
 }
 
 .filter-dropdown-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.375rem 0.5rem;
+  gap: var(--space-2);
+  padding: var(--space-1-5) var(--space-2);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-weight: normal;
-  color: #333;
+  color: var(--color-text);
 }
 
 .filter-dropdown-item:hover {
-  background: #f0f2f5;
+  background: var(--color-surface-hover);
 }
 
 .filter-dropdown-item input[type="checkbox"] {
@@ -160,117 +221,190 @@ td .btn-primary {
 }
 
 .filter-dropdown-item span {
-  font-size: 0.8125rem;
+  font-size: var(--text-md);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Data ID text filter input */
+/* === Data ID text filter === */
 .filter-text-input {
   background: transparent;
-  border: 1px solid #e5e7eb;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-  color: #333;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-text);
   width: 160px;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color var(--transition-base);
 }
 
 .filter-text-input:focus {
-  border-color: #1565c0;
+  border-color: var(--color-accent);
 }
 
 .filter-text-input.has-error,
 .filter-text-input.has-error:focus {
-  border-color: #c33;
+  border-color: var(--color-danger);
 }
 
 .filter-error-popover {
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  background: #fff;
-  border: 1px solid #c33;
-  border-radius: 4px;
-  padding: 0.25rem 0.5rem;
-  color: #c33;
-  font-size: 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
   font-weight: 400;
   letter-spacing: 0;
   text-transform: none;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-  z-index: 50;
+  box-shadow: var(--shadow-md);
+  z-index: var(--z-popover);
 }
 
 .filter-text-input::placeholder {
-  color: #888;
+  color: var(--color-text-subtle);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-weight: 600;
 }
 
-/* Record type badge */
+/* === Badges === */
 .badge {
   display: inline-block;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
+  padding: 0.2rem var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .badge-type {
-  background: #eef2ff;
-  color: #4338ca;
+  background: var(--color-badge-type-bg);
+  color: var(--color-badge-type-fg);
 }
 
 .badge-attribute {
-  background: #f3f4f6;
-  color: #374151;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.7rem;
+  display: inline-flex;
+  align-items: stretch;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.4;
+}
+
+.badge-attribute-key {
+  padding: 0.25rem 0.4rem;
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+}
+
+.badge-attribute-value {
+  padding: 0.25rem 0.4rem;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 500;
 }
 
 .attribute-list {
-  --attribute-list-max-width: 300px;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
-  max-width: var(--attribute-list-max-width);
+  gap: var(--space-1);
+  max-width: 300px;
 }
 
 .attribute-empty {
-  color: #bbb;
+  color: var(--color-text-faint);
 }
 
-.filter-with-label {
+/* === Attributes filter chip input === */
+.attribute-chip-input {
+  position: relative;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-1);
+  padding: 0.2rem 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  min-width: 200px;
+  cursor: text;
+  transition: border-color var(--transition-base);
+}
+
+.attribute-chip-input:focus-within {
+  border-color: var(--color-accent);
+}
+
+.attribute-chip-input.has-error {
+  border-color: var(--color-danger);
+}
+
+.attribute-chip-input input {
+  flex: 1;
+  min-width: 100px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  padding: 0.1rem 0.2rem;
+}
+
+.attribute-chip-input input::placeholder {
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  font-size: var(--text-xs);
+}
+
+.badge-attribute-chip .badge-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  padding: 0 var(--space-1);
+  background: var(--color-surface);
+  border: none;
+  border-left: 1px solid var(--color-border);
+  color: var(--color-text-subtle);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.badge-attribute-chip .badge-remove:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
 }
 
 .uploader-via {
-  font-size: 0.7rem;
-  color: #999;
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
   margin-top: 2px;
-  text-transform: none;
-  letter-spacing: 0;
-  font-weight: 400;
 }
 
-/* Tooltip */
+/* === Tooltip === */
 .tooltip {
   position: fixed;
-  background: #1a1a2e;
-  color: white;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  z-index: 1000;
+  background: var(--color-brand);
+  color: var(--color-text-inverse);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  z-index: var(--z-tooltip);
   max-width: 300px;
   word-break: break-all;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
 }

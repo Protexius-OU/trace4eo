@@ -5,6 +5,8 @@ import type { ProvenanceRecord, FilterOptions, RecordFilters } from '../types/pr
 import { downloadZip } from '../api/provenanceApi'
 import { getSignerDomain } from '../utils/signerIdentity'
 
+const COLUMN_COUNT = 5
+
 interface Props {
   records: ProvenanceRecord[]
   filterOptions: FilterOptions
@@ -40,7 +42,7 @@ function Tooltip({ text, children }: TooltipProps) {
         ref={ref}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={() => setShow(false)}
-        style={{ cursor: 'help' }}
+        className="tooltip-trigger"
       >
         {children}
       </span>
@@ -82,7 +84,8 @@ function FilterDropdown({ label, values, displayValues, selected, onToggle, onSe
 
   const allSelected = selected.size === values.length
   const noneSelected = selected.size === 0
-  const filterActive = !allSelected && !noneSelected
+  const filterActive = !allSelected
+  const toggleLabel = allSelected ? label : `${label} (${selected.size}/${values.length})`
 
   return (
     <div className="filter-dropdown" ref={dropdownRef}>
@@ -90,9 +93,11 @@ function FilterDropdown({ label, values, displayValues, selected, onToggle, onSe
         type="button"
         className={`filter-dropdown-toggle ${filterActive ? 'filter-active' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
       >
-        {label}
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" style={{ marginLeft: '4px' }}>
+        {toggleLabel}
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" className="dropdown-arrow">
           <path d="M2 4l4 4 4-4H2z"/>
         </svg>
       </button>
@@ -159,6 +164,15 @@ interface AttributesFilterProps {
   onChange: (value: string) => void
 }
 
+function AttributeBadge({ entryKey, value }: { entryKey: string; value: string }) {
+  return (
+    <span className="badge badge-attribute" title={`${entryKey}=${value}`}>
+      <span className="badge-attribute-key">{entryKey}</span>
+      <span className="badge-attribute-value">{value}</span>
+    </span>
+  )
+}
+
 function AttributeBadges({ attributes }: { attributes: Record<string, string> | null }) {
   if (!attributes || Object.keys(attributes).length === 0) {
     return <span className="attribute-empty">—</span>
@@ -167,57 +181,103 @@ function AttributeBadges({ attributes }: { attributes: Record<string, string> | 
   return (
     <div className="attribute-list">
       {entries.map(([key, value]) => (
-        <span key={key} className="badge badge-attribute" title={`${key}=${value}`}>
-          {key}={value}
-        </span>
+        <AttributeBadge key={key} entryKey={key} value={value} />
       ))}
     </div>
   )
 }
 
-function validateAttributesInput(input: string): string | null {
-  const trimmed = input.trim()
-  if (!trimmed) return null
-  for (const token of trimmed.split(/\s+/)) {
+type AttributeChip = { key: string; value: string }
+
+function parseChips(filterValue: string): AttributeChip[] {
+  const trimmed = filterValue.trim()
+  if (!trimmed) return []
+  return trimmed.split(/\s+/).map(token => {
     const eq = token.indexOf('=')
-    if (eq <= 0) return `Invalid token "${token}": expected key=value`
-    if (eq === token.length - 1) return `Invalid token "${token}": value is empty`
-  }
-  return null
+    return { key: token.slice(0, eq), value: token.slice(eq + 1) }
+  })
+}
+
+function serializeChips(chips: AttributeChip[]): string {
+  return chips.map(c => `${c.key}=${c.value}`).join(' ')
 }
 
 function AttributesFilter({ value, onChange }: AttributesFilterProps) {
-  const [localValue, setLocalValue] = useState(value)
+  const [inputValue, setInputValue] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const chips = parseChips(value)
 
   useEffect(() => {
-    setLocalValue(value)
     setError(null)
   }, [value])
+
+  const commitInput = () => {
+    const token = inputValue.trim()
+    if (!token) return
+    const eq = token.indexOf('=')
+    if (eq <= 0) {
+      setError(`Invalid token "${token}": expected key=value`)
+      return
+    }
+    if (eq === token.length - 1) {
+      setError(`Invalid token "${token}": value is empty`)
+      return
+    }
+    const key = token.slice(0, eq)
+    const val = token.slice(eq + 1)
+    if (chips.some(c => c.key === key && c.value === val)) {
+      // exact duplicate; silently drop
+      setInputValue('')
+      return
+    }
+    onChange(serializeChips([...chips, { key, value: val }]))
+    setInputValue('')
+    setError(null)
+  }
+
+  const removeChip = (idx: number) => {
+    onChange(serializeChips(chips.filter((_, i) => i !== idx)))
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      const err = validateAttributesInput(localValue)
-      if (err) {
-        setError(err)
-        return
-      }
-      setError(null)
-      onChange(localValue)
+      commitInput()
+    } else if (e.key === 'Backspace' && inputValue === '' && chips.length > 0) {
+      e.preventDefault()
+      removeChip(chips.length - 1)
     }
   }
 
   return (
-    <div className="filter-dropdown">
+    <div
+      className={`attribute-chip-input${error ? ' has-error' : ''}`}
+      onClick={() => inputRef.current?.focus()}
+    >
+      {chips.map((chip, i) => (
+        <span key={`${chip.key}=${chip.value}-${i}`} className="badge badge-attribute badge-attribute-chip">
+          <span className="badge-attribute-key">{chip.key}</span>
+          <span className="badge-attribute-value">{chip.value}</span>
+          <button
+            type="button"
+            className="badge-remove"
+            onClick={(e) => { e.stopPropagation(); removeChip(i) }}
+            aria-label={`Remove ${chip.key}=${chip.value}`}
+          >
+            ×
+          </button>
+        </span>
+      ))}
       <input
+        ref={inputRef}
         type="text"
-        placeholder="e.g. location=oslo env=prod"
-        title="key=value pairs separated by spaces. Same key = OR, different keys = AND. Press Enter to search."
-        value={localValue}
-        onChange={e => { setLocalValue(e.target.value); if (error) setError(null) }}
+        placeholder={chips.length === 0 ? 'Filter attributes…' : ''}
+        title="Type key=value and press Enter. Same key = OR, different keys = AND. Backspace removes last chip."
+        value={inputValue}
+        onChange={e => { setInputValue(e.target.value); if (error) setError(null) }}
         onKeyDown={handleKeyDown}
-        className={`filter-text-input${error ? ' has-error' : ''}`}
         aria-invalid={error ? 'true' : 'false'}
       />
       {error && <div role="alert" className="filter-error-popover">{error}</div>}
@@ -292,6 +352,14 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
     }
   }
 
+  const hasActiveFilter =
+    !!filters.dataId ||
+    filters.dataTypes !== undefined ||
+    filters.signerIdentities !== undefined ||
+    !!filters.attributes
+
+  const clearFilters = () => onFilterChange({})
+
   return (
     <div className="table-container">
       <table>
@@ -325,22 +393,27 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
               />
             </th>
             <th>
-              <div className="filter-with-label">
-                <span>Attributes</span>
-                <AttributesFilter
-                  value={filters.attributes ?? ''}
-                  onChange={handleAttributesChange}
-                />
-              </div>
+              <AttributesFilter
+                value={filters.attributes ?? ''}
+                onChange={handleAttributesChange}
+              />
             </th>
-            <th style={{ width: '1%', whiteSpace: 'nowrap' }}>Actions</th>
+            <th className="th-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
           {records.length === 0 ? (
             <tr>
-              <td colSpan={5} style={{ textAlign: 'center', color: '#666' }}>
+              <td colSpan={COLUMN_COUNT} className="td-empty">
                 No records match the current filters
+                {hasActiveFilter && (
+                  <>
+                    {' · '}
+                    <button type="button" className="clear-filters" onClick={clearFilters}>
+                      Clear filters
+                    </button>
+                  </>
+                )}
               </td>
             </tr>
           ) : (
@@ -366,7 +439,7 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
                   <AttributeBadges attributes={record.metadata.attributes ?? null} />
                 </td>
                 <td>
-                  <div style={{ display: 'flex', gap: '0.5rem', whiteSpace: 'nowrap' }}>
+                  <div className="cell-actions">
                     <Link to={`/records/${record.id}/graph`} className="btn btn-primary">
                       View Details
                     </Link>
