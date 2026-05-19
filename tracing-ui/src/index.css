@@ -1,3 +1,75 @@
+:root {
+  /* Surfaces */
+  --color-surface: #ffffff;
+  --color-surface-subtle: #fafbfc;
+  --color-surface-muted: #f3f4f6;
+  --color-surface-hover: #f0f2f5;
+
+  /* Text */
+  --color-text: #333;
+  --color-text-muted: #6b7280;
+  --color-text-subtle: #888;
+  --color-text-faint: #bbb;
+  --color-text-inverse: #ffffff;
+
+  /* Borders */
+  --color-border: #e5e7eb;
+  --color-border-subtle: #f0f0f0;
+
+  /* Accent (links, focus) */
+  --color-accent: #1565c0;
+  --color-accent-hover: #0d47a1;
+
+  /* Type badge (indigo) */
+  --color-badge-type-bg: #eef2ff;
+  --color-badge-type-fg: #4338ca;
+
+  /* Brand */
+  --color-brand: #1a1a2e;
+  --color-brand-hover: #2a2a4e;
+
+  /* Status */
+  --color-danger: #c33;
+  --color-danger-bg: #fef2f2;
+
+  /* Spacing (4px base) */
+  --space-1: 0.25rem;
+  --space-1-5: 0.375rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+
+  /* Font sizes */
+  --text-xs: 0.7rem;
+  --text-sm: 0.75rem;
+  --text-md: 0.8125rem;
+  --text-lg: 0.875rem;
+
+  /* Font families */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --shadow-popover: 0 4px 16px rgba(0, 0, 0, 0.12);
+
+  /* Transitions */
+  --transition-fast: 0.1s;
+  --transition-base: 0.15s;
+
+  /* Z-indexes */
+  --z-popover: 50;
+  --z-dropdown: 100;
+  --z-tooltip: 1000;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
