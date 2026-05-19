@@ -93,16 +93,13 @@ public class BatchSigningTool {
         Integer endIndex,
         @Option(longName = "metadata",
             description = "Custom metadata entries as key=value pairs (comma-separated); applied to every record")
-        List<String> metadata,
-        @Option(longName = "metadata-file",
-            description = "Path to a Java .properties file of custom metadata key=value pairs; applied to every record")
-        Path metadataFile
+        List<String> metadata
     ) throws IOException, InterruptedException {
         HashAlgorithm algorithm = validator.validateHashAlgorithm(hashAlgorithm);
         List<Path> resolvedFiles = validateAndResolveFiles(files, directory, pattern, provenanceRecordType,
-            dataId, outputDir, registerUrl, keycloakUrl, metadataFile, saveZip);
+            dataId, outputDir, registerUrl, keycloakUrl, saveZip);
         resolvedFiles = applyRange(resolvedFiles, startIndex, endIndex);
-        Map<String, String> attributes = metadataInputResolver.resolve(metadata, metadataFile);
+        Map<String, String> attributes = metadataInputResolver.resolve(metadata);
         String oidcToken = resolveOidcToken();
         String accessToken = null;
         if (registerUrl != null && !registerUrl.isBlank()) {
@@ -129,7 +126,7 @@ public class BatchSigningTool {
 
     private List<Path> validateAndResolveFiles(
         List<String> files, Path directory, String pattern, String provenanceRecordType,
-        String dataId, Path outputDir, String registerUrl, String keycloakUrl, Path metadataFile, boolean saveZip
+        String dataId, Path outputDir, String registerUrl, String keycloakUrl, boolean saveZip
     ) throws IOException {
         List<Path> filePaths = files != null ? files.stream().map(Path::of).toList() : List.of();
         validateInput(filePaths, provenanceRecordType, dataId, directory);
@@ -139,7 +136,6 @@ public class BatchSigningTool {
         }
         validator.validateGlobPattern(pattern);
         validator.validateRegistrationConfig(registerUrl, keycloakUrl);
-        validator.validateMetadataFile(metadataFile);
 
         List<Path> resolvedFiles = resolveFiles(filePaths, directory, pattern);
         if (resolvedFiles.isEmpty()) {

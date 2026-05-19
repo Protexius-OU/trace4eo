@@ -51,8 +51,7 @@ Create a provenance record containing multiple files with metadata.
 | `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set)                                                                                                                                                       | None              |
 | `--realm`                  | Keycloak realm                                                                                                                                                                                                    | trace4eo          |
 | `--save-record`            | Save the provenance record                                                                                                                                                                                        | true              |
-| `--metadata`               | Custom metadata as `key=value` pairs, comma-separated (e.g. `env=prod,owner=alice`). The first `=` in each entry separates key from value, so values may contain `=`; values may not contain `,` — use `--metadata-file` for those. | None              |
-| `--metadata-file`          | Path to a `.properties` file of custom metadata key/value pairs. Merged with `--metadata`; a key may only appear in one source.                                                                              | None              |
+| `--metadata`               | Custom metadata as `key=value` pairs, comma-separated (e.g. `env=prod,owner=alice`). The first `=` in each entry separates key from value, so values may contain `=` but not `,`.                                  | None              |
 
 **Examples:**
 
@@ -71,16 +70,6 @@ Attach custom metadata inline:
   --provenance-record-type sentinel2-processing \
   --data-id S2A_MSIL1C_20240101 \
   --metadata env=prod,operator=alice,ticket=PROV-123"
-```
-
-Or load custom metadata from a `.properties` file (use this when values contain commas):
-
-```bash
-./gradlew :signing-tool:bootRun --args="create-provenance-record \
-  --files image.tif \
-  --provenance-record-type sentinel2-processing \
-  --data-id S2A_MSIL1C_20240101 \
-  --metadata-file ./run-context.properties"
 ```
 
 Include all TIF files from a directory in a single record:
@@ -138,8 +127,7 @@ Sign multiple files, creating one provenance record per file.
 | `--threads`                | Maximum number of files to sign concurrently                                                                                                                             | 3                 |
 | `--start-index`            | Start index (inclusive) into the alphabetically-sorted file list. Use with `--end-index` to process a slice of a large directory across multiple invocations.            | 0                 |
 | `--end-index`              | End index (exclusive) into the alphabetically-sorted file list.                                                                                                          | Total file count  |
-| `--metadata`               | Custom metadata as `key=value` pairs, comma-separated; applied to every record in the batch. The first `=` in each entry separates key from value, so values may contain `=`; values may not contain `,` — use `--metadata-file` for those. | None              |
-| `--metadata-file`          | Path to a `.properties` file of custom metadata key/value pairs; applied to every record in the batch. Merged with `--metadata`; a key may only appear in one source. | None            |
+| `--metadata`               | Custom metadata as `key=value` pairs, comma-separated; applied to every record in the batch. The first `=` in each entry separates key from value, so values may contain `=` but not `,`. | None              |
 
 **Examples:**
 
