@@ -100,7 +100,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     [graph, expandedGroups]
   )
 
-  const typeColors = useMemo(() => d3.scaleOrdinal(d3.schemeCategory10), [])
+  const typeColors = useMemo(() => d3.scaleOrdinal(d3.schemeObservable10), [])
 
   const labelPrefix = useMemo(() => {
     const tokens: string[] = []
@@ -141,29 +141,14 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
 
     svg.call(zoom)
 
-    const defs = svg.append('defs')
-
-    defs.append('marker')
-      .attr('id', 'arrowhead')
-      .attr('viewBox', '-0 -5 10 10')
-      .attr('refX', BOX_WIDTH / 2 + 12)
-      .attr('refY', 0)
-      .attr('orient', 'auto')
-      .attr('markerWidth', 10)
-      .attr('markerHeight', 10)
-      .append('path')
-      .attr('d', 'M 0,-5 L 10,0 L 0,5')
-      .attr('fill', '#6b7280')
-
     const link = g.append('g')
       .attr('class', 'links')
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('stroke', '#6b7280')
-      .attr('stroke-opacity', 0.85)
-      .attr('stroke-width', 2.5)
-      .attr('marker-end', 'url(#arrowhead)')
+      .attr('stroke', '#9ca3af')
+      .attr('stroke-opacity', 0.8)
+      .attr('stroke-width', 2)
 
     const node = g.append('g')
       .attr('class', 'nodes')
@@ -344,23 +329,30 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
 
   return (
     <div className="graph-wrapper">
-      <div className="graph-legend">
-        {labelPrefix && (
-          <span className="graph-legend-prefix">
-            Prefix: <code>{labelPrefix}</code>
-          </span>
-        )}
-        {types.map(type => (
-          <span key={type ?? 'unknown'} className="graph-legend-item">
-            <svg width="14" height="14" style={{ flexShrink: 0 }}>
-              <rect x="1" y="1" width="12" height="12" rx="2" ry="2" fill={typeColors(type)} />
-            </svg>
-            <span>{stripPrefix(type?.trim(), labelPrefix) || type?.trim() || 'Unknown'}</span>
-          </span>
-        ))}
-      </div>
       <div ref={containerRef} className="graph-container" style={{ height: '600px', position: 'relative' }}>
         <svg ref={svgRef} width="100%" height="100%" />
+
+        <div className="graph-timeline-axis" aria-hidden="true">
+          <span>Older</span>
+          <span className="graph-timeline-rule" />
+          <span>Newer</span>
+        </div>
+
+        <div className="graph-legend">
+          {labelPrefix && (
+            <span className="graph-legend-prefix">
+              Prefix: <code>{labelPrefix}</code>
+            </span>
+          )}
+          {types.map(type => (
+            <span key={type ?? 'unknown'} className="graph-legend-item">
+              <svg width="14" height="14" style={{ flexShrink: 0 }}>
+                <rect x="1" y="1" width="12" height="12" rx="2" ry="2" fill={typeColors(type)} />
+              </svg>
+              <span>{stripPrefix(type?.trim(), labelPrefix) || type?.trim() || 'Unknown'}</span>
+            </span>
+          ))}
+        </div>
 
         {tooltip && (
           <div

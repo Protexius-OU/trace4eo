@@ -6,7 +6,11 @@ import { fetchGraph, fetchRecord, verifyRecord, verifyFileHashes, verifySentinel
 import type { VerificationResult, FileVerificationResponse, PredecessorFileResult, Sentinel2VerificationResponse, Sentinel2HashCheckResponse, Sentinel2HashCheckFileStatus } from '../types/provenance'
 import { hashFile, hashFileBlake3Hex } from '../utils/hashFiles'
 import ProvenanceGraphViewer from '../components/ProvenanceGraphViewer'
+import ProvenanceChainList from '../components/ProvenanceChainList'
 import IntegrityChain from '../components/IntegrityChain'
+
+type ChainView = 'graph' | 'list'
+const CHAIN_VIEW_STORAGE_KEY = 'provenance-chain-view'
 
 export default function RecordGraphPage() {
   const { id } = useParams<{ id: string }>()
@@ -18,6 +22,16 @@ export default function RecordGraphPage() {
   const [isSearchingPredecessors, setIsSearchingPredecessors] = useState(false)
   const [isVerifyingTrace, setIsVerifyingTrace] = useState(false)
   const [traceVerificationResult, setTraceVerificationResult] = useState<Sentinel2VerificationResponse | null>(null)
+  const [chainView, setChainView] = useState<ChainView>(() => {
+    if (typeof window === 'undefined') return 'graph'
+    const saved = window.localStorage.getItem(CHAIN_VIEW_STORAGE_KEY)
+    return saved === 'list' ? 'list' : 'graph'
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(CHAIN_VIEW_STORAGE_KEY, chainView)
+  }, [chainView])
   const [traceVerificationError, setTraceVerificationError] = useState<string | null>(null)
   const [traceCheckStatus, setTraceCheckStatus] = useState<string | null>(null)
   const [traceCheckResult, setTraceCheckResult] = useState<Sentinel2HashCheckResponse | null>(null)
@@ -464,10 +478,6 @@ export default function RecordGraphPage() {
         )
       })()}
 
-      <p className="record-id">
-        Record ID: <span className="uuid">{id}</span>
-      </p>
-
       {recordData && (
         <IntegrityChain
           record={recordData}
@@ -482,7 +492,29 @@ export default function RecordGraphPage() {
 
       {graphError && <p className="error">Error loading graph: {String(graphError)}</p>}
 
-      {graphData && <ProvenanceGraphViewer graph={graphData} />}
+      {graphData && (
+        <>
+          <div className="chain-view-toggle">
+            <button
+              type="button"
+              className={`chain-view-toggle-btn${chainView === 'graph' ? ' active' : ''}`}
+              onClick={() => setChainView('graph')}
+            >
+              Graph
+            </button>
+            <button
+              type="button"
+              className={`chain-view-toggle-btn${chainView === 'list' ? ' active' : ''}`}
+              onClick={() => setChainView('list')}
+            >
+              List
+            </button>
+          </div>
+          {chainView === 'graph'
+            ? <ProvenanceGraphViewer graph={graphData} />
+            : <ProvenanceChainList graph={graphData} />}
+        </>
+      )}
     </div>
   )
 }
