@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './ProvenanceGraphViewer.css'
 import * as d3 from 'd3'
 import type { ProvenanceGraph, GraphNode, DisplayNode, GroupNode } from '../types/provenance'
 import { buildDisplayGraph } from '../utils/graphCollapsing'
-import { getSignerDomain } from '../utils/signerIdentity'
 import PredecessorListModal from './PredecessorListModal'
 
 interface Props {
@@ -22,17 +22,70 @@ interface SimLink {
   target: SimNode | string
 }
 
-const BOX_WIDTH = 140
-const BOX_HEIGHT = 70
+const BOX_WIDTH = 180
+const BOX_HEIGHT = 90
+const LABEL_MAX_LEN = 28
+const DEPTH_SPACING = 280
+const LINK_DISTANCE = 320
+const COLLIDE_RADIUS = BOX_WIDTH / 2 + 30
+
+function formatDate(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleDateString(undefined, { dateStyle: 'medium' })
+}
 
 function truncate(str: string | null | undefined, maxLen: number): string {
   if (!str) return ''
-  return str.length > maxLen ? str.substring(0, maxLen - 1) + '...' : str
+  return str.length > maxLen ? str.substring(0, maxLen - 1) + '…' : str
+}
+
+function commonPrefix(strings: string[]): string {
+  if (strings.length < 2) return ''
+  let prefix = strings[0] ?? ''
+  for (let i = 1; i < strings.length; i++) {
+    const s = strings[i] ?? ''
+    while (!s.startsWith(prefix)) {
+      prefix = prefix.slice(0, -1)
+      if (prefix === '') return ''
+    }
+  }
+  return prefix
+}
+
+function meaningfulPrefix(strings: string[]): string {
+  const filtered = strings.filter((s): s is string => Boolean(s))
+  if (filtered.length < 2) return ''
+  const cp = commonPrefix(filtered)
+  if (filtered.some(s => s === cp)) return ''
+  const m = cp.match(/^(.+[-_./:])/)
+  const trimmed = m?.[1] ?? ''
+  return trimmed.length >= 4 ? trimmed : ''
+}
+
+function stripPrefix(str: string | null | undefined, prefix: string): string {
+  if (!str) return ''
+  return prefix && str.startsWith(prefix) ? str.slice(prefix.length) : str
+}
+
+function NodeDetails({ node }: { node: GraphNode }) {
+  return (
+    <>
+      <div style={{ fontWeight: 600, marginBottom: '4px', paddingRight: '20px' }}>{node.dataType || 'Unknown'}</div>
+      <div><span style={{ color: '#666' }}>ID:</span> <span style={{ fontFamily: 'monospace', fontSize: '10px' }}>{node.id}</span></div>
+      <div><span style={{ color: '#666' }}>Data ID:</span> {node.dataId || 'N/A'}</div>
+      <div><span style={{ color: '#666' }}>Signed:</span> {node.signingTime ? new Date(node.signingTime).toLocaleString() : 'N/A'}</div>
+      <div><span style={{ color: '#666' }}>Signed by:</span> {node.signerIdentity || '—'}</div>
+      <div><span style={{ color: '#666' }}>Predecessors:</span> {node.predecessorCount}</div>
+    </>
+  )
 }
 
 export default function ProvenanceGraphViewer({ graph }: Props) {
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
   const [tooltip, setTooltip] = useState<{ node: DisplayNode; x: number; y: number } | null>(null)
   const [expandedGroups] = useState<Set<string>>(() => new Set())
   const [selectedGroup, setSelectedGroup] = useState<GroupNode | null>(null)
@@ -48,6 +101,17 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
   )
 
   const typeColors = useMemo(() => d3.scaleOrdinal(d3.schemeCategory10), [])
+
+  const labelPrefix = useMemo(() => {
+    const tokens: string[] = []
+    for (const n of graph.nodes) {
+      if (n.dataId) tokens.push(n.dataId)
+      if (n.dataType) tokens.push(n.dataType)
+    }
+    return meaningfulPrefix(tokens)
+  }, [graph.nodes])
+
+  const rootId = graph.rootId
 
   useEffect(() => {
     if (!svgRef.current || !containerRef.current) return
@@ -82,23 +146,23 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     defs.append('marker')
       .attr('id', 'arrowhead')
       .attr('viewBox', '-0 -5 10 10')
-      .attr('refX', BOX_WIDTH / 2 + 10)
+      .attr('refX', BOX_WIDTH / 2 + 12)
       .attr('refY', 0)
       .attr('orient', 'auto')
-      .attr('markerWidth', 6)
-      .attr('markerHeight', 6)
+      .attr('markerWidth', 10)
+      .attr('markerHeight', 10)
       .append('path')
       .attr('d', 'M 0,-5 L 10,0 L 0,5')
-      .attr('fill', '#999')
+      .attr('fill', '#6b7280')
 
     const link = g.append('g')
       .attr('class', 'links')
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('stroke', '#999')
-      .attr('stroke-opacity', 0.6)
-      .attr('stroke-width', 2)
+      .attr('stroke', '#6b7280')
+      .attr('stroke-opacity', 0.85)
+      .attr('stroke-width', 2.5)
       .attr('marker-end', 'url(#arrowhead)')
 
     const node = g.append('g')
@@ -153,6 +217,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
         // Regular node rendering
         const color = typeColors(d.dataType)
         const strokeColor = d3.color(color)?.darker(0.5)?.toString() ?? color
+        const isRoot = d.id === rootId
 
         el.append('rect')
           .attr('x', -BOX_WIDTH / 2)
@@ -162,42 +227,50 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
           .attr('rx', 6)
           .attr('ry', 6)
           .attr('fill', color)
-          .attr('stroke', strokeColor)
-          .attr('stroke-width', 2)
-          .style('cursor', 'pointer')
+          .attr('stroke', isRoot ? '#1a1a2e' : strokeColor)
+          .attr('stroke-width', isRoot ? 3 : 2)
+          .style('cursor', isRoot ? 'default' : 'pointer')
 
         const fo = el.append('foreignObject')
-          .attr('x', -BOX_WIDTH / 2 + 8)
-          .attr('y', -BOX_HEIGHT / 2 + 6)
-          .attr('width', BOX_WIDTH - 16)
-          .attr('height', BOX_HEIGHT - 12)
+          .attr('x', -BOX_WIDTH / 2 + 10)
+          .attr('y', -BOX_HEIGHT / 2 + 8)
+          .attr('width', BOX_WIDTH - 20)
+          .attr('height', BOX_HEIGHT - 16)
           .style('pointer-events', 'none')
 
         const div = fo.append('xhtml:div')
-          .style('font-size', '11px')
+          .style('font-size', '13px')
           .style('line-height', '1.3')
           .style('color', '#fff')
           .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
+
+        const primaryLabel = truncate(stripPrefix(d.dataId, labelPrefix), LABEL_MAX_LEN) || 'N/A'
+        const dateLabel = formatDate(d.signingTime)
 
         div.append('xhtml:div')
           .style('font-weight', '600')
           .style('white-space', 'nowrap')
           .style('overflow', 'hidden')
           .style('text-overflow', 'ellipsis')
-          .text(truncate(d.dataId, 14) || 'N/A')
+          .text(primaryLabel)
 
-        div.append('xhtml:div')
-          .style('font-size', '10px')
-          .style('opacity', '0.9')
-          .style('margin-top', '2px')
-          .text(getSignerDomain(d.signerIdentity))
+        if (dateLabel) {
+          div.append('xhtml:div')
+            .style('font-size', '11px')
+            .style('opacity', '0.9')
+            .style('margin-top', '4px')
+            .style('white-space', 'nowrap')
+            .style('overflow', 'hidden')
+            .style('text-overflow', 'ellipsis')
+            .text(dateLabel)
+        }
       }
     })
 
     node.on('mouseenter', function(event, d) {
       d.fx = d.x
       d.fy = d.y
-      setTooltip({ node: d, x: event.pageX + 15, y: event.pageY + 15 })
+      setTooltip({ node: d, x: event.clientX + 15, y: event.clientY + 15 })
     })
     .on('mouseleave', (_event, d) => {
       d.fx = null
@@ -207,20 +280,21 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     .on('click', (_event, d) => {
       if (d.isGroup) {
         setSelectedGroup(d)
+      } else if (d.id !== rootId) {
+        navigate(`/records/${d.id}/graph`)
       }
     })
 
     const maxDepth = Math.max(...nodes.map(n => n.depth), 0)
-    const spacing = 180
-    const graphWidth = maxDepth * spacing
+    const graphWidth = maxDepth * DEPTH_SPACING
     const offsetX = (width + graphWidth) / 2
 
     const simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink<SimNode, SimLink>(links).id(d => d.id).distance(200))
-      .force('charge', d3.forceManyBody().strength(-400))
-      .force('x', d3.forceX<SimNode>().x(d => offsetX - d.depth * spacing).strength(0.5))
+      .force('link', d3.forceLink<SimNode, SimLink>(links).id(d => d.id).distance(LINK_DISTANCE))
+      .force('charge', d3.forceManyBody().strength(-600))
+      .force('x', d3.forceX<SimNode>().x(d => offsetX - d.depth * DEPTH_SPACING).strength(0.6))
       .force('y', d3.forceY<SimNode>().y(height / 2).strength(0.05))
-      .force('collide', d3.forceCollide().radius(BOX_HEIGHT / 2 + 20))
+      .force('collide', d3.forceCollide().radius(COLLIDE_RADIUS))
       .on('tick', () => {
         link
           .attr('x1', d => (d.source as SimNode).x ?? 0)
@@ -252,7 +326,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     return () => {
       simulation.stop()
     }
-  }, [displayGraph, typeColors])
+  }, [displayGraph, typeColors, labelPrefix, rootId, navigate])
 
   // Sort types by their minimum depth in the graph (following provenance order)
   const types = useMemo(() => {
@@ -270,30 +344,23 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
 
   return (
     <div className="graph-wrapper">
+      <div className="graph-legend">
+        {labelPrefix && (
+          <span className="graph-legend-prefix">
+            Prefix: <code>{labelPrefix}</code>
+          </span>
+        )}
+        {types.map(type => (
+          <span key={type ?? 'unknown'} className="graph-legend-item">
+            <svg width="14" height="14" style={{ flexShrink: 0 }}>
+              <rect x="1" y="1" width="12" height="12" rx="2" ry="2" fill={typeColors(type)} />
+            </svg>
+            <span>{stripPrefix(type?.trim(), labelPrefix) || type?.trim() || 'Unknown'}</span>
+          </span>
+        ))}
+      </div>
       <div ref={containerRef} className="graph-container" style={{ height: '600px', position: 'relative' }}>
         <svg ref={svgRef} width="100%" height="100%" />
-
-        <div style={{
-          position: 'absolute',
-          bottom: '12px',
-          right: '12px',
-          background: 'rgba(255, 255, 255, 0.9)',
-          borderRadius: '4px',
-          padding: '8px 12px',
-          fontSize: '0.8rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '4px',
-        }}>
-          {types.map(type => (
-            <span key={type ?? 'unknown'} style={{ display: 'flex', alignItems: 'center' }}>
-              <svg width="18" height="14" style={{ marginRight: '6px', flexShrink: 0 }}>
-                <rect x="1" y="1" width="16" height="12" rx="2" ry="2" fill={typeColors(type)} />
-              </svg>
-              {type?.trim() || 'Unknown'}
-            </span>
-          ))}
-        </div>
 
         {tooltip && (
           <div
@@ -310,6 +377,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
               boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
               zIndex: 1000,
               pointerEvents: 'none',
+              maxWidth: '22rem',
             }}
           >
             {tooltip.node.isGroup ? (
@@ -318,13 +386,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
                 <div><span style={{ color: '#666' }}>Hidden:</span> {(tooltip.node as GroupNode).count} predecessors</div>
               </>
             ) : (
-              <>
-                <div style={{ fontWeight: 600, marginBottom: '4px' }}>{(tooltip.node as GraphNode).dataType || 'Unknown'}</div>
-                <div><span style={{ color: '#666' }}>ID:</span> <span style={{ fontFamily: 'monospace', fontSize: '10px' }}>{tooltip.node.id}</span></div>
-                <div><span style={{ color: '#666' }}>Data ID:</span> {(tooltip.node as GraphNode).dataId || 'N/A'}</div>
-                <div><span style={{ color: '#666' }}>Signed:</span> {(tooltip.node as GraphNode).signingTime ? new Date((tooltip.node as GraphNode).signingTime).toLocaleString() : 'N/A'}</div>
-                <div><span style={{ color: '#666' }}>Predecessors:</span> {(tooltip.node as GraphNode).predecessorCount}</div>
-              </>
+              <NodeDetails node={tooltip.node as GraphNode} />
             )}
           </div>
         )}
