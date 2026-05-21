@@ -1,0 +1,112 @@
+.chain-list-wrapper {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.chain-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.chain-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.chain-row[role="button"]:hover,
+.chain-row[role="button"]:focus-visible {
+  background: #f3f4f6;
+  outline: none;
+}
+
+.chain-row-viewing {
+  cursor: default;
+}
+
+.chain-row-highlighted,
+.chain-row-highlighted[role="button"]:hover,
+.chain-row-highlighted[role="button"]:focus-visible {
+  background: #fef9c3;
+  outline: 1px solid #facc15;
+  outline-offset: -1px;
+}
+
+.chain-rail {
+  margin: 0;
+  font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, monospace;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: #9ca3af;
+  white-space: pre;
+  flex-shrink: 0;
+  padding-top: 0.0625rem;
+  user-select: none;
+}
+
+.chain-rail-line {
+  display: inline;
+}
+
+.chain-rail-head {
+  font-weight: 600;
+}
+
+.chain-content {
+  min-width: 0;
+  flex: 1;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  padding-top: 0.0625rem;
+}
+
+.chain-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.chain-type {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+.chain-viewing-badge {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 0.0625rem 0.4375rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+.chain-data-id {
+  font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, monospace;
+  font-size: 0.75rem;
+  color: #4b5563;
+  overflow-wrap: anywhere;
+  margin-top: 0.0625rem;
+}
+
+.chain-meta {
+  color: #6b7280;
+  font-size: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.0625rem;
+}
+
+.chain-sep {
+  color: #d1d5db;
+}
