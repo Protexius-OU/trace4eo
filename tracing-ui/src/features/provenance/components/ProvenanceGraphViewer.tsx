@@ -4,6 +4,7 @@ import './ProvenanceGraphViewer.css'
 import * as d3 from 'd3'
 import type { ProvenanceGraph, GraphNode, DisplayNode, GroupNode } from '../types/provenance'
 import { buildDisplayGraph } from '../utils/graphCollapsing'
+import { meaningfulPrefix, stripPrefix, formatDate, sortTypesByMinDepth } from '../utils/labelUtils'
 import PredecessorListModal from './PredecessorListModal'
 
 interface Props {
@@ -29,44 +30,9 @@ const DEPTH_SPACING = 280
 const LINK_DISTANCE = 320
 const COLLIDE_RADIUS = BOX_WIDTH / 2 + 30
 
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return ''
-  return d.toLocaleDateString(undefined, { dateStyle: 'medium' })
-}
-
 function truncate(str: string | null | undefined, maxLen: number): string {
   if (!str) return ''
   return str.length > maxLen ? str.substring(0, maxLen - 1) + '…' : str
-}
-
-function commonPrefix(strings: string[]): string {
-  if (strings.length < 2) return ''
-  let prefix = strings[0] ?? ''
-  for (let i = 1; i < strings.length; i++) {
-    const s = strings[i] ?? ''
-    while (!s.startsWith(prefix)) {
-      prefix = prefix.slice(0, -1)
-      if (prefix === '') return ''
-    }
-  }
-  return prefix
-}
-
-function meaningfulPrefix(strings: string[]): string {
-  const filtered = strings.filter((s): s is string => Boolean(s))
-  if (filtered.length < 2) return ''
-  const cp = commonPrefix(filtered)
-  if (filtered.some(s => s === cp)) return ''
-  const m = cp.match(/^(.+[-_./:])/)
-  const trimmed = m?.[1] ?? ''
-  return trimmed.length >= 4 ? trimmed : ''
-}
-
-function stripPrefix(str: string | null | undefined, prefix: string): string {
-  if (!str) return ''
-  return prefix && str.startsWith(prefix) ? str.slice(prefix.length) : str
 }
 
 function NodeDetails({ node }: { node: GraphNode }) {
@@ -100,7 +66,13 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     [graph, expandedGroups]
   )
 
-  const typeColors = useMemo(() => d3.scaleOrdinal(d3.schemeObservable10), [])
+  const sortedTypes = useMemo(() => sortTypesByMinDepth(graph.nodes), [graph.nodes])
+
+  const typeColors = useMemo(() => {
+    const scale = d3.scaleOrdinal<string>(d3.schemeObservable10)
+    for (const t of sortedTypes) scale(t)
+    return scale
+  }, [sortedTypes])
 
   const labelPrefix = useMemo(() => {
     const tokens: string[] = []
@@ -325,19 +297,6 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     }
   }, [displayGraph, typeColors, labelPrefix, rootId, navigate])
 
-  // Sort types by their minimum depth in the graph (following provenance order)
-  const types = useMemo(() => {
-    const typeMinDepth = new Map<string, number>()
-    for (const node of graph.nodes) {
-      const current = typeMinDepth.get(node.dataType)
-      if (current === undefined || node.depth < current) {
-        typeMinDepth.set(node.dataType, node.depth)
-      }
-    }
-    return [...typeMinDepth.entries()]
-      .sort((a, b) => a[1] - b[1])
-      .map(([type]) => type)
-  }, [graph.nodes])
 
   return (
     <div className="graph-wrapper">
@@ -356,7 +315,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
               Prefix: <code>{labelPrefix}</code>
             </span>
           )}
-          {types.map(type => (
+          {sortedTypes.map(type => (
             <span key={type ?? 'unknown'} className="graph-legend-item">
               <svg width="14" height="14" style={{ flexShrink: 0 }}>
                 <rect x="1" y="1" width="12" height="12" rx="2" ry="2" fill={typeColors(type)} />
