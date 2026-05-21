@@ -4,20 +4,22 @@ import { fetchRecords, fetchFilterOptions } from '../api/provenanceApi'
 import type { RecordFilters } from '../types/provenance'
 import RecordTable from '../components/RecordTable'
 import Pagination from '@/core/components/Pagination'
+import { useAuthFetch } from '@/core/auth/useAuthFetch'
 
 export default function RecordListPage() {
+  const authFetch = useAuthFetch()
   const [page, setPage] = useState(0)
   const [filters, setFilters] = useState<RecordFilters>({})
 
   const { data: filterOptions } = useQuery({
     queryKey: ['filterOptions'],
-    queryFn: fetchFilterOptions,
+    queryFn: () => fetchFilterOptions(authFetch),
     staleTime: 60_000,
   })
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['records', page, filters],
-    queryFn: () => fetchRecords(page, 20, filters),
+    queryFn: () => fetchRecords(authFetch, page, 20, filters),
   })
 
   const handleFilterChange = useCallback((newFilters: RecordFilters) => {

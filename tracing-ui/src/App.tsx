@@ -1,13 +1,10 @@
 import { Routes, Route, Link } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import './App.css'
-import { setCurrentUser } from './core/auth/authFetch'
 import { RecordListPage, RecordGraphPage } from './features/provenance'
 
 export default function App() {
   const auth = useAuth()
-
-  setCurrentUser(auth.user ?? null)
 
   if (auth.isLoading) {
     return <div className="app"><main className="main"><p>Loading...</p></main></div>

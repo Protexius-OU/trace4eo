@@ -1,4 +1,4 @@
-import { authFetch } from '../../../core/auth/authFetch'
+import type { FetchFn } from '../../../core/auth/authFetch'
 import type { ProvenanceRecord, ProvenanceGraph, PagedResponse, RecordFilters, FilterOptions, VerificationResult, FileVerificationResponse, Sentinel2VerificationResponse, Sentinel2HashCheckResponse } from '../types/provenance'
 
 const API_BASE = '/api/provenance'
@@ -8,6 +8,7 @@ const EMPTY_PAGE: PagedResponse<ProvenanceRecord> = {
 }
 
 export async function fetchRecords(
+  fetch: FetchFn,
   page: number = 0,
   size: number = 20,
   filters: RecordFilters = {}
@@ -37,41 +38,41 @@ export async function fetchRecords(
       .forEach(t => params.append('attribute', t))
   }
 
-  const response = await authFetch(`${API_BASE}?${params}`)
+  const response = await fetch(`${API_BASE}?${params}`)
   if (!response.ok) {
-    throw new Error(`Failed to fetch records: ${response.statusText}`)
+    throw new Error(`Failed to fetch records: HTTP ${response.status}`)
   }
   return response.json()
 }
 
-export async function fetchFilterOptions(): Promise<FilterOptions> {
-  const response = await authFetch(`${API_BASE}/filters`)
+export async function fetchFilterOptions(fetch: FetchFn): Promise<FilterOptions> {
+  const response = await fetch(`${API_BASE}/filters`)
   if (!response.ok) {
-    throw new Error(`Failed to fetch filter options: ${response.statusText}`)
+    throw new Error(`Failed to fetch filter options: HTTP ${response.status}`)
   }
   return response.json()
 }
 
-export async function fetchRecord(id: string): Promise<ProvenanceRecord> {
-  const response = await authFetch(`${API_BASE}/${id}`)
+export async function fetchRecord(fetch: FetchFn, id: string): Promise<ProvenanceRecord> {
+  const response = await fetch(`${API_BASE}/${id}`)
   if (!response.ok) {
-    throw new Error(`Failed to fetch record: ${response.statusText}`)
+    throw new Error(`Failed to fetch record: HTTP ${response.status}`)
   }
   return response.json()
 }
 
-export async function fetchGraph(id: string): Promise<ProvenanceGraph> {
-  const response = await authFetch(`${API_BASE}/${id}/graph`)
+export async function fetchGraph(fetch: FetchFn, id: string): Promise<ProvenanceGraph> {
+  const response = await fetch(`${API_BASE}/${id}/graph`)
   if (!response.ok) {
-    throw new Error(`Failed to fetch graph: ${response.statusText}`)
+    throw new Error(`Failed to fetch graph: HTTP ${response.status}`)
   }
   return response.json()
 }
 
-export async function downloadZip(id: string): Promise<void> {
-  const response = await authFetch(`${API_BASE}/${id}/zip`)
+export async function downloadZip(fetch: FetchFn, id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/${id}/zip`)
   if (!response.ok) {
-    throw new Error(`Download failed: ${response.statusText}`)
+    throw new Error(`Download failed: HTTP ${response.status}`)
   }
   const blob = await response.blob()
   const url = window.URL.createObjectURL(blob)
@@ -84,48 +85,50 @@ export async function downloadZip(id: string): Promise<void> {
   window.URL.revokeObjectURL(url)
 }
 
-export async function verifyRecord(id: string): Promise<VerificationResult> {
-  const response = await authFetch(`${API_BASE}/${id}/verify`, { method: 'POST' })
+export async function verifyRecord(fetch: FetchFn, id: string): Promise<VerificationResult> {
+  const response = await fetch(`${API_BASE}/${id}/verify`, { method: 'POST' })
   if (!response.ok) {
-    throw new Error(`Verification failed: ${response.statusText}`)
+    throw new Error(`Verification failed: HTTP ${response.status}`)
   }
   return response.json()
 }
 
 export async function verifyFileHashes(
+  fetch: FetchFn,
   id: string,
   inputs: Array<{ filename: string; hashValue: string }>
 ): Promise<FileVerificationResponse> {
-  const response = await authFetch(`${API_BASE}/${id}/verify-files`, {
+  const response = await fetch(`${API_BASE}/${id}/verify-files`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(inputs),
   })
   if (!response.ok) {
-    throw new Error(`File verification failed: ${response.statusText}`)
+    throw new Error(`File verification failed: HTTP ${response.status}`)
   }
   return response.json()
 }
 
-export async function verifySentinel2Trace(id: string): Promise<Sentinel2VerificationResponse> {
-  const response = await authFetch(`${API_BASE}/sentinel-2/${id}/verify-trace`, { method: 'POST' })
+export async function verifySentinel2Trace(fetch: FetchFn, id: string): Promise<Sentinel2VerificationResponse> {
+  const response = await fetch(`${API_BASE}/sentinel-2/${id}/verify-trace`, { method: 'POST' })
   if (!response.ok) {
-    throw new Error(`Trace verification failed: ${response.statusText}`)
+    throw new Error(`Trace verification failed: HTTP ${response.status}`)
   }
   return response.json()
 }
 
 export async function verifySentinel2Files(
+  fetch: FetchFn,
   id: string,
   files: Array<{ filename: string; hashHex: string }>,
 ): Promise<Sentinel2HashCheckResponse> {
-  const response = await authFetch(`${API_BASE}/sentinel-2/${id}/verify-files`, {
+  const response = await fetch(`${API_BASE}/sentinel-2/${id}/verify-files`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ files }),
   })
   if (!response.ok) {
-    throw new Error(`Sentinel-2 verification failed: ${response.statusText}`)
+    throw new Error(`Sentinel-2 verification failed: HTTP ${response.status}`)
   }
   return response.json()
 }

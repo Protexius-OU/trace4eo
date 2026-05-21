@@ -3,6 +3,7 @@ import './RecordGraphPage.css'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchGraph, fetchRecord, verifyRecord, verifyFileHashes, verifySentinel2Trace, verifySentinel2Files } from '../api/provenanceApi'
+import { useAuthFetch } from '@/core/auth/useAuthFetch'
 import type { VerificationResult, FileVerificationResponse, PredecessorFileResult, Sentinel2VerificationResponse, Sentinel2HashCheckResponse, Sentinel2HashCheckFileStatus } from '../types/provenance'
 import { hashFile, hashFileBlake3Hex } from '../utils/hashFiles'
 import ProvenanceGraphViewer from '../components/ProvenanceGraphViewer'
@@ -13,6 +14,7 @@ type ChainView = 'graph' | 'list'
 const CHAIN_VIEW_STORAGE_KEY = 'provenance-chain-view'
 
 export default function RecordGraphPage() {
+  const authFetch = useAuthFetch()
   const { id } = useParams<{ id: string }>()
   const [isVerifying, setIsVerifying] = useState(false)
   const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null)
@@ -53,13 +55,13 @@ export default function RecordGraphPage() {
 
   const { data: graphData, isLoading: graphLoading, error: graphError } = useQuery({
     queryKey: ['graph', id],
-    queryFn: () => fetchGraph(id!),
+    queryFn: () => fetchGraph(authFetch, id!),
     enabled: !!id,
   })
 
   const { data: recordData } = useQuery({
     queryKey: ['record', id],
-    queryFn: () => fetchRecord(id!),
+    queryFn: () => fetchRecord(authFetch, id!),
     enabled: !!id,
   })
 
@@ -68,7 +70,7 @@ export default function RecordGraphPage() {
     setIsVerifying(true)
     setVerificationResult(null)
     try {
-      const result = await verifyRecord(id)
+      const result = await verifyRecord(authFetch, id)
       setVerificationResult(result)
     } catch (err) {
       setVerificationResult({
@@ -88,7 +90,7 @@ export default function RecordGraphPage() {
     setTraceVerificationResult(null)
     setTraceVerificationError(null)
     try {
-      const result = await verifySentinel2Trace(id)
+      const result = await verifySentinel2Trace(authFetch, id)
       setTraceVerificationResult(result)
     } catch (err) {
       setTraceVerificationError(err instanceof Error ? err.message : 'Trace verification failed')
@@ -117,7 +119,7 @@ export default function RecordGraphPage() {
         entries.push({ filename: f.name, hashHex })
       }
       setTraceCheckStatus(`Sending ${entries.length === 1 ? 'hash' : `${entries.length} hashes`} to server for comparison…`)
-      const result = await verifySentinel2Files(id, entries)
+      const result = await verifySentinel2Files(authFetch, id, entries)
       setTraceCheckResult(result)
     } catch (err) {
       setTraceCheckError(err instanceof Error ? err.message : 'Verification failed')
@@ -143,7 +145,7 @@ export default function RecordGraphPage() {
         const hashValue = await hashFile(file, algorithm)
         return { filename: file.name, hashValue }
       }))
-      const result = await verifyFileHashes(id, inputs)
+      const result = await verifyFileHashes(authFetch, id, inputs)
       setFileVerificationResponse(result)
 
       const notFound = result.fileResults.filter(r => r.status === 'NOT_IN_RECORD')
@@ -159,7 +161,7 @@ export default function RecordGraphPage() {
         for (const node of predecessors) {
           if (remaining.size === 0) break
           try {
-            const nodeResult = await verifyFileHashes(node.id, [...remaining.values()])
+            const nodeResult = await verifyFileHashes(authFetch, node.id, [...remaining.values()])
             for (const fr of nodeResult.fileResults) {
               if ((fr.status === 'MATCHED' || fr.status === 'MISMATCH') && remaining.has(fr.filename)) {
                 found.push({
