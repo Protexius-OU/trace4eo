@@ -274,21 +274,33 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     const graphWidth = maxDepth * DEPTH_SPACING
     const offsetX = (width + graphWidth) / 2
 
+    nodes.forEach(n => {
+      n.x = offsetX - n.depth * DEPTH_SPACING
+      n.y = height / 2
+    })
+
+    const applyPositions = () => {
+      link
+        .attr('x1', d => (d.source as SimNode).x ?? 0)
+        .attr('y1', d => (d.source as SimNode).y ?? 0)
+        .attr('x2', d => (d.target as SimNode).x ?? 0)
+        .attr('y2', d => (d.target as SimNode).y ?? 0)
+
+      node.attr('transform', d => `translate(${d.x ?? 0},${d.y ?? 0})`)
+    }
+
     const simulation = d3.forceSimulation(nodes)
       .force('link', d3.forceLink<SimNode, SimLink>(links).id(d => d.id).distance(LINK_DISTANCE))
       .force('charge', d3.forceManyBody().strength(-600))
       .force('x', d3.forceX<SimNode>().x(d => offsetX - d.depth * DEPTH_SPACING).strength(0.6))
       .force('y', d3.forceY<SimNode>().y(height / 2).strength(0.05))
       .force('collide', d3.forceCollide().radius(COLLIDE_RADIUS))
-      .on('tick', () => {
-        link
-          .attr('x1', d => (d.source as SimNode).x ?? 0)
-          .attr('y1', d => (d.source as SimNode).y ?? 0)
-          .attr('x2', d => (d.target as SimNode).x ?? 0)
-          .attr('y2', d => (d.target as SimNode).y ?? 0)
+      .stop()
 
-        node.attr('transform', d => `translate(${d.x ?? 0},${d.y ?? 0})`)
-      })
+    const ticks = Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay()))
+    simulation.tick(ticks)
+    applyPositions()
+    simulation.on('tick', applyPositions)
 
     const drag = d3.drag<SVGGElement, SimNode>()
       .on('start', (event) => {
