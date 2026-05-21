@@ -40,14 +40,16 @@ function StatusIcon({ status }: { status: Status }) {
   }
 }
 
-function FileRow({ file, status }: { file: { path: string | null; hashAlgorithm: string; hashValue: string }; status: Status }) {
+function FileRow({ file, status, showHash }: { file: { path: string | null; hashAlgorithm: string; hashValue: string }; status: Status; showHash: boolean }) {
   const isDimmed = status === 'unknown'
   return (
     <div className={`ic-file${isDimmed ? ' ic-file-dimmed' : ''}`}>
       <StatusIcon status={status} />
       <div className="ic-file-info">
         <span className="ic-file-path">{file.path}</span>
-        <code className="ic-hash-value">{file.hashAlgorithm}: {file.hashValue}</code>
+        {showHash && (
+          <code className="ic-hash-value">{file.hashAlgorithm}: {file.hashValue}</code>
+        )}
       </div>
     </div>
   )
@@ -66,13 +68,14 @@ function renderFilesCollapsed(
   files: Array<{ path: string | null; hashAlgorithm: string; hashValue: string }>,
   nodeStatus: Status,
   expanded: boolean,
-  setExpanded: (v: boolean) => void
+  setExpanded: (v: boolean) => void,
+  showHash: boolean,
 ) {
   const visible = expanded ? files : files.slice(0, FILE_COLLAPSE_THRESHOLD)
   const hidden = Math.max(0, files.length - FILE_COLLAPSE_THRESHOLD)
   return (
     <>
-      {visible.map(f => <FileRow key={f.path} file={f} status={nodeStatus} />)}
+      {visible.map(f => <FileRow key={f.path} file={f} status={nodeStatus} showHash={showHash} />)}
       <ShowMoreButton hidden={hidden} expanded={expanded} onToggle={() => setExpanded(!expanded)} />
     </>
   )
@@ -124,6 +127,7 @@ function renderFilesWithVerification(
   setUncheckedExpanded: (v: boolean) => void,
   predecessorFileResults: PredecessorFileResult[],
   isSearchingPredecessors: boolean,
+  showHash: boolean,
 ) {
   const checkedFiles = files
     .filter(f => fvr.fileResults.some(r => r.recordPath === f.path))
@@ -146,12 +150,12 @@ function renderFilesWithVerification(
         {checkedFiles.map(f => {
           const result = fvr.fileResults.find(r => r.recordPath === f.path)!
           const status: Status = result.status === 'MATCHED' ? 'pass' : 'fail'
-          return <FileRow key={f.path} file={f} status={status} />
+          return <FileRow key={f.path} file={f} status={status} showHash={showHash} />
         })}
       </div>
       {uncheckedFiles.length > 0 && (
         <div className="ic-file-section">
-          {visibleUnchecked.map(f => <FileRow key={f.path} file={f} status="unknown" />)}
+          {visibleUnchecked.map(f => <FileRow key={f.path} file={f} status="unknown" showHash={showHash} />)}
           <ShowMoreButton
             hidden={hiddenUnchecked}
             expanded={uncheckedExpanded}
@@ -188,17 +192,28 @@ function Connector({ label, status }: {
   )
 }
 
+const SHOW_CRYPTO_STORAGE_KEY = 'ic-show-crypto'
+
 export default function IntegrityChain({ record, verificationResult, fileVerificationResponse, predecessorFileResults = [], isSearchingPredecessors = false }: Props) {
   const { manifest, filesInfo, metadata, signature } = record
   const details = signature?.details
 
   const [allFilesExpanded, setAllFilesExpanded] = useState(false)
   const [uncheckedExpanded, setUncheckedExpanded] = useState(false)
+  const [showCrypto, setShowCrypto] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem(SHOW_CRYPTO_STORAGE_KEY) === 'true'
+  })
 
   useEffect(() => {
     setAllFilesExpanded(false)
     setUncheckedExpanded(false)
   }, [fileVerificationResponse])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(SHOW_CRYPTO_STORAGE_KEY, String(showCrypto))
+  }, [showCrypto])
 
   const verified = verificationResult !== null
 
@@ -228,11 +243,21 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
     <div className="integrity-chain">
       <div className="ic-header">
         <span className="ic-title">Integrity Chain</span>
-        {verified && (
-          <span className={`ic-badge ${verificationResult.status ? 'ic-badge-pass' : 'ic-badge-fail'}`}>
-            {verificationResult.status ? '✓ Verified' : '✗ Failed'}
-          </span>
-        )}
+        <div className="ic-header-actions">
+          <label className="ic-crypto-toggle">
+            <input
+              type="checkbox"
+              checked={showCrypto}
+              onChange={e => setShowCrypto(e.target.checked)}
+            />
+            <span>Cryptographic details</span>
+          </label>
+          {verified && (
+            <span className={`ic-badge ${verificationResult.status ? 'ic-badge-pass' : 'ic-badge-fail'}`}>
+              {verificationResult.status ? '✓ Verified' : '✗ Failed'}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* === Signature layer === */}
@@ -258,48 +283,52 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
         )}
       </div>
 
-      {/* Connector: signs */}
-      <Connector label={sigConnectorLabel} status={sigStatus} />
+      {showCrypto && (
+        <>
+          {/* Connector: signs */}
+          <Connector label={sigConnectorLabel} status={sigStatus} />
 
-      {/* === Manifest layer === */}
-      <div className="ic-node">
-        <div className="ic-node-head">
-          <span className="ic-node-title">Manifest</span>
-        </div>
-        <div className="ic-manifest-hashes">
-          <div className={`ic-hash ic-hash-${metaHashStatus}`}>
-            <div className="ic-hash-head">
-              <StatusIcon status={metaHashStatus} />
-              <span>Metadata hash</span>
+          {/* === Manifest layer === */}
+          <div className="ic-node">
+            <div className="ic-node-head">
+              <span className="ic-node-title">Manifest</span>
             </div>
-            {manifest && (
-              <code className="ic-hash-value">
-                {manifest.metadataHashInfo.hashAlgorithm}: {manifest.metadataHashInfo.hashValue}
-              </code>
-            )}
-          </div>
-          <div className={`ic-hash ic-hash-${filesHashStatus}`}>
-            <div className="ic-hash-head">
-              <StatusIcon status={filesHashStatus} />
-              <span>File inventory hash</span>
+            <div className="ic-manifest-hashes">
+              <div className={`ic-hash ic-hash-${metaHashStatus}`}>
+                <div className="ic-hash-head">
+                  <StatusIcon status={metaHashStatus} />
+                  <span>Metadata hash</span>
+                </div>
+                {manifest && (
+                  <code className="ic-hash-value">
+                    {manifest.metadataHashInfo.hashAlgorithm}: {manifest.metadataHashInfo.hashValue}
+                  </code>
+                )}
+              </div>
+              <div className={`ic-hash ic-hash-${filesHashStatus}`}>
+                <div className="ic-hash-head">
+                  <StatusIcon status={filesHashStatus} />
+                  <span>File inventory hash</span>
+                </div>
+                {manifest && (
+                  <code className="ic-hash-value">
+                    {manifest.filesHashInfo.hashAlgorithm}: {manifest.filesHashInfo.hashValue}
+                  </code>
+                )}
+              </div>
             </div>
-            {manifest && (
-              <code className="ic-hash-value">
-                {manifest.filesHashInfo.hashAlgorithm}: {manifest.filesHashInfo.hashValue}
-              </code>
-            )}
           </div>
-        </div>
-      </div>
 
-      {/* Split connectors: protects */}
-      <div className="ic-split">
-        <Connector label="protects" status={metaHashStatus} />
-        <Connector label="protects" status={filesHashStatus} />
-      </div>
+          {/* Split connectors: protects */}
+          <div className="ic-split">
+            <Connector label="protects" status={metaHashStatus} />
+            <Connector label="protects" status={filesHashStatus} />
+          </div>
+        </>
+      )}
 
       {/* === Data layer === */}
-      <div className="ic-split">
+      <div className={showCrypto ? 'ic-split' : 'ic-stack'}>
         {/* Metadata */}
         <div className={`ic-node ic-node-${metaHashStatus}`}>
           <div className="ic-node-head">
@@ -352,6 +381,7 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
                 setUncheckedExpanded,
                 predecessorFileResults,
                 isSearchingPredecessors,
+                showCrypto,
               )
             ) : filesInfo ? (
               renderFilesCollapsed(
@@ -359,6 +389,7 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
                 filesNodeStatus,
                 allFilesExpanded,
                 setAllFilesExpanded,
+                showCrypto,
               )
             ) : null}
             {fileVerificationResponse && (() => {
