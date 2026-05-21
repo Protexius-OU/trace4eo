@@ -12,14 +12,43 @@
   border: 1px solid #eee;
 }
 
-.graph-legend {
+.graph-timeline-axis {
+  position: absolute;
+  bottom: 14px;
+  left: 16px;
+  right: 16px;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 1rem;
-  margin-bottom: 0.75rem;
+  gap: 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.graph-timeline-rule {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, rgba(156, 163, 175, 0.6), rgba(156, 163, 175, 0.15));
+}
+
+.graph-legend {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
   font-size: 0.8125rem;
   color: #333;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  max-width: 14rem;
 }
 
 .graph-legend-item {
@@ -32,8 +61,9 @@
 .graph-legend-prefix {
   font-size: 0.75rem;
   color: #6b7280;
-  padding-right: 0.75rem;
-  border-right: 1px solid #e5e7eb;
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.25rem;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .graph-legend-prefix code {
