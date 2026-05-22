@@ -356,7 +356,6 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
 
         {tooltip && (
           <div
-            className="graph-tooltip"
             style={{
               position: 'fixed',
               left: tooltip.x,

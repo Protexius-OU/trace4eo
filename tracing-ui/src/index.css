@@ -31,6 +31,19 @@
   /* Status */
   --color-danger: #c33;
   --color-danger-bg: #fef2f2;
+  --color-status-pass-fg: #15803d;
+  --color-status-pass-bg: #f0fdf4;
+  --color-status-pass-border: #bbf7d0;
+  --color-status-pass-line: #86efac;
+  --color-status-fail-fg: #b91c1c;
+  --color-status-fail-bg: #fef2f2;
+  --color-status-fail-border: #fecaca;
+  --color-status-fail-line: #fca5a5;
+
+  /* Neutrals beyond text scale */
+  --color-text-disabled: #9ca3af;
+  --color-text-strong: #4b5563;
+  --color-line-faint: #d1d5db;
 
   /* Spacing (4px base) */
   --space-1: 0.25rem;
