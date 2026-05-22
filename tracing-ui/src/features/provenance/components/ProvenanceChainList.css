@@ -1,8 +1,8 @@
 .chain-list-wrapper {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 1rem 1.25rem 1.25rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4) 1.25rem 1.25rem;
 }
 
 .chain-list {
@@ -10,19 +10,22 @@
   flex-direction: column;
 }
 
+/* All rows share a single absolute line-height so the rail (one <pre>) and
+   the content (three <div>s) align line-for-line regardless of font-size. */
 .chain-row {
   display: flex;
   align-items: flex-start;
   gap: 0.875rem;
-  padding: 0.25rem 0.5rem 0.25rem 0.25rem;
-  border-radius: 6px;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: background 0.12s;
+  line-height: 1.25rem;
+  transition: background var(--transition-fast);
 }
 
 .chain-row[role="button"]:hover,
 .chain-row[role="button"]:focus-visible {
-  background: #f3f4f6;
+  background: var(--color-surface-muted);
   outline: none;
 }
 
@@ -40,41 +43,29 @@
 
 .chain-rail {
   margin: 0;
-  font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, monospace;
-  font-size: 0.875rem;
-  line-height: 1.4;
-  color: #9ca3af;
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  color: var(--color-text-disabled);
   white-space: pre;
   flex-shrink: 0;
-  padding-top: 0.0625rem;
   user-select: none;
-}
-
-.chain-rail-line {
-  display: inline;
-}
-
-.chain-rail-head {
-  font-weight: 600;
 }
 
 .chain-content {
   min-width: 0;
   flex: 1;
-  font-size: 0.8125rem;
-  line-height: 1.4;
-  padding-top: 0.0625rem;
+  font-size: var(--text-md);
 }
 
 .chain-title-row {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .chain-type {
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: var(--text-lg);
   overflow-wrap: anywhere;
 }
 
@@ -82,31 +73,52 @@
   font-size: 0.625rem;
   font-weight: 600;
   letter-spacing: 0.04em;
-  color: #15803d;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  color: var(--color-status-pass-fg);
+  background: var(--color-status-pass-bg);
+  border: 1px solid var(--color-status-pass-border);
   padding: 0.0625rem 0.4375rem;
   border-radius: 9999px;
   text-transform: uppercase;
 }
 
 .chain-data-id {
-  font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, monospace;
-  font-size: 0.75rem;
-  color: #4b5563;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-strong);
   overflow-wrap: anywhere;
-  margin-top: 0.0625rem;
 }
 
 .chain-meta {
-  color: #6b7280;
-  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-top: 0.0625rem;
+  gap: var(--space-1);
 }
 
 .chain-sep {
-  color: #d1d5db;
+  color: var(--color-line-faint);
+}
+
+.chain-row-show-more {
+  cursor: default;
+}
+
+.chain-row-show-more:hover {
+  background: transparent;
+}
+
+.chain-show-more-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: var(--text-md);
+  font-weight: 500;
+  color: var(--color-badge-type-fg);
+  text-align: left;
+}
+
+.chain-show-more-btn:hover {
+  text-decoration: underline;
 }

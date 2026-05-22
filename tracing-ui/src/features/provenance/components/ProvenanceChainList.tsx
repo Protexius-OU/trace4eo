@@ -8,13 +8,27 @@ interface Props {
   graph: ProvenanceGraph
 }
 
-interface RowInfo {
+interface NodeRow {
+  kind: 'node'
   node: GraphNode
   depth: number
   parentBars: boolean[]
   isLast: boolean
   hasChildren: boolean
 }
+
+interface ShowMoreRow {
+  kind: 'show-more'
+  pathKey: string
+  hidden: number
+  depth: number
+  parentBars: boolean[]
+}
+
+type DisplayRow = NodeRow | ShowMoreRow
+
+const INITIAL_LIMIT = 5
+const SHOW_MORE_STEP = 10
 
 function commonPrefix(strings: string[]): string {
   if (strings.length < 2) return ''
@@ -51,9 +65,42 @@ function formatDate(iso: string | null | undefined): string {
   return d.toLocaleDateString(undefined, { dateStyle: 'medium' })
 }
 
+function nodeHeadRail(parentBars: boolean[], depth: number, isLast: boolean): string {
+  let s = ''
+  for (const bar of parentBars) s += bar ? '│  ' : '   '
+  if (depth > 0) s += isLast ? '└──' : '├──'
+  s += '●'
+  return s
+}
+
+function nodeContRail(parentBars: boolean[], depth: number, isLast: boolean, hasChildren: boolean): string {
+  let s = ''
+  for (const bar of parentBars) s += bar ? '│  ' : '   '
+  if (depth > 0) s += isLast ? '   ' : '│  '
+  s += hasChildren ? '│' : ' '
+  return s
+}
+
+function showMoreRail(parentBars: boolean[]): string {
+  let s = ''
+  for (const bar of parentBars) s += bar ? '│  ' : '   '
+  s += '└─ '
+  return s
+}
+
 export default function ProvenanceChainList({ graph }: Props) {
   const navigate = useNavigate()
   const [hoveredDupId, setHoveredDupId] = useState<string | null>(null)
+  const [limits, setLimits] = useState<Map<string, number>>(() => new Map())
+
+  function showMore(pathKey: string) {
+    setLimits(prev => {
+      const next = new Map(prev)
+      const current = next.get(pathKey) ?? INITIAL_LIMIT
+      next.set(pathKey, current + SHOW_MORE_STEP)
+      return next
+    })
+  }
 
   // Sort types by their minimum depth so colors are assigned in the same
   // order as the graph view (which seeds its ordinal scale via the legend).
@@ -104,65 +151,81 @@ export default function ProvenanceChainList({ graph }: Props) {
     return m
   }, [graph.edges])
 
-  const rows = useMemo((): RowInfo[] => {
-    const out: RowInfo[] = []
+  const rows = useMemo((): DisplayRow[] => {
+    const out: DisplayRow[] = []
 
-    function visit(id: string, depth: number, isLast: boolean, parentBars: boolean[], ancestors: ReadonlySet<string>) {
+    function visit(id: string, depth: number, isLast: boolean, parentBars: boolean[], ancestors: ReadonlySet<string>, parentPath: string) {
       if (ancestors.has(id)) return
       const node = nodeById.get(id)
       if (!node) return
 
       const preds = (predecessorMap.get(id) ?? []).filter(pid => !ancestors.has(pid))
-      out.push({ node, depth, parentBars, isLast, hasChildren: preds.length > 0 })
+      out.push({ kind: 'node', node, depth, parentBars, isLast, hasChildren: preds.length > 0 })
+
+      if (preds.length === 0) return
+
+      const pathKey = parentPath === '' ? id : `${parentPath}|${id}`
+      const limit = Math.min(limits.get(pathKey) ?? INITIAL_LIMIT, preds.length)
+      const hidden = preds.length - limit
 
       const childAncestors = new Set(ancestors)
       childAncestors.add(id)
+      const childParentBars = [...parentBars, !isLast]
 
-      for (let i = 0; i < preds.length; i++) {
-        const isLastChild = i === preds.length - 1
-        const childParentBars = [...parentBars, !isLast]
-        visit(preds[i]!, depth + 1, isLastChild, childParentBars, childAncestors)
+      for (let i = 0; i < limit; i++) {
+        const isLastChild = i === limit - 1 && hidden === 0
+        visit(preds[i]!, depth + 1, isLastChild, childParentBars, childAncestors, pathKey)
+      }
+
+      if (hidden > 0) {
+        out.push({
+          kind: 'show-more',
+          pathKey,
+          hidden,
+          depth: depth + 1,
+          parentBars: childParentBars,
+        })
       }
     }
 
-    visit(graph.rootId, 0, true, [], new Set())
+    visit(graph.rootId, 0, true, [], new Set(), '')
     return out
-  }, [graph.rootId, predecessorMap, nodeById])
+  }, [graph.rootId, predecessorMap, nodeById, limits])
 
   const duplicateIds = useMemo(() => {
     const counts = new Map<string, number>()
-    for (const r of rows) counts.set(r.node.id, (counts.get(r.node.id) ?? 0) + 1)
+    for (const r of rows) {
+      if (r.kind !== 'node') continue
+      counts.set(r.node.id, (counts.get(r.node.id) ?? 0) + 1)
+    }
     const dups = new Set<string>()
     for (const [id, count] of counts) if (count > 1) dups.add(id)
     return dups
   }, [rows])
 
-  function buildRail(info: RowInfo, kind: 'head' | 'cont'): string {
-    let s = ''
-    for (const bar of info.parentBars) {
-      s += bar ? '│  ' : '   '
-    }
-    if (kind === 'head') {
-      if (info.depth > 0) {
-        s += info.isLast ? '└──' : '├──'
-      }
-      s += '●'
-    } else {
-      if (info.depth > 0) {
-        s += info.isLast ? '   ' : '│  '
-      }
-      s += info.hasChildren ? '│' : ' '
-    }
-    return s
-  }
-
   return (
     <div className="chain-list-wrapper">
       <div className="chain-list">
         {rows.map((row, idx) => {
+          if (row.kind === 'show-more') {
+            const remaining = Math.min(SHOW_MORE_STEP, row.hidden)
+            return (
+              <div key={`sm-${row.pathKey}-${idx}`} className="chain-row chain-row-show-more">
+                <pre className="chain-rail" aria-hidden="true">{showMoreRail(row.parentBars)}</pre>
+                <button
+                  type="button"
+                  className="chain-show-more-btn"
+                  onClick={() => showMore(row.pathKey)}
+                >
+                  Show {remaining} more
+                </button>
+              </div>
+            )
+          }
+
           const isViewing = row.node.id === graph.rootId
-          const headRail = buildRail(row, 'head')
-          const contRail = buildRail(row, 'cont')
+          const headRail = nodeHeadRail(row.parentBars, row.depth, row.isLast)
+          const contRail = nodeContRail(row.parentBars, row.depth, row.isLast, row.hasChildren)
           const color = typeColors(row.node.dataType)
           const date = formatDate(row.node.signingTime)
           const strippedDataId = stripPrefix(row.node.dataId, labelPrefix)
@@ -176,7 +239,6 @@ export default function ProvenanceChainList({ graph }: Props) {
               className={
                 'chain-row' +
                 (isViewing ? ' chain-row-viewing' : '') +
-                (isDuplicate ? ' chain-row-duplicate' : '') +
                 (isHighlighted ? ' chain-row-highlighted' : '')
               }
               onClick={() => {
@@ -198,11 +260,11 @@ export default function ProvenanceChainList({ graph }: Props) {
               }}
             >
               <pre className="chain-rail" aria-hidden="true">
-                <span className="chain-rail-line chain-rail-head" style={{ color }}>{headRail}</span>
+                <span style={{ color }}>{headRail}</span>
                 {'\n'}
-                <span className="chain-rail-line">{contRail}</span>
+                {contRail}
                 {'\n'}
-                <span className="chain-rail-line">{contRail}</span>
+                {contRail}
               </pre>
               <div className="chain-content">
                 <div className="chain-title-row">
