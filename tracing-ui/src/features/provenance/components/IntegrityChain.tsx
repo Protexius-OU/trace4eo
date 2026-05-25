@@ -64,13 +64,15 @@ function ShowMoreButton({ hidden, expanded, onToggle }: { hidden: number; expand
   )
 }
 
-function renderFilesCollapsed(
-  files: Array<{ path: string | null; hashAlgorithm: string; hashValue: string }>,
-  nodeStatus: Status,
-  expanded: boolean,
-  setExpanded: (v: boolean) => void,
-  showHash: boolean,
-) {
+interface FilesCollapsedProps {
+  files: Array<{ path: string | null; hashAlgorithm: string; hashValue: string }>
+  nodeStatus: Status
+  expanded: boolean
+  setExpanded: (v: boolean) => void
+  showHash: boolean
+}
+
+function FilesCollapsed({ files, nodeStatus, expanded, setExpanded, showHash }: FilesCollapsedProps) {
   const visible = expanded ? files : files.slice(0, FILE_COLLAPSE_THRESHOLD)
   const hidden = Math.max(0, files.length - FILE_COLLAPSE_THRESHOLD)
   return (
@@ -120,15 +122,25 @@ function NotInRecordRow({
   )
 }
 
-function renderFilesWithVerification(
-  files: FileHashInfo[],
-  fvr: FileVerificationResponse,
-  uncheckedExpanded: boolean,
-  setUncheckedExpanded: (v: boolean) => void,
-  predecessorFileResults: PredecessorFileResult[],
-  isSearchingPredecessors: boolean,
-  showHash: boolean,
-) {
+interface FilesWithVerificationProps {
+  files: FileHashInfo[]
+  fvr: FileVerificationResponse
+  uncheckedExpanded: boolean
+  setUncheckedExpanded: (v: boolean) => void
+  predecessorFileResults: PredecessorFileResult[]
+  isSearchingPredecessors: boolean
+  showHash: boolean
+}
+
+function FilesWithVerification({
+  files,
+  fvr,
+  uncheckedExpanded,
+  setUncheckedExpanded,
+  predecessorFileResults,
+  isSearchingPredecessors,
+  showHash,
+}: FilesWithVerificationProps) {
   const checkedFiles = files
     .filter(f => fvr.fileResults.some(r => r.recordPath === f.path))
     .sort((a, b) => {
@@ -374,23 +386,23 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
           </div>
           <div className="ic-node-body">
             {fileVerificationResponse ? (
-              renderFilesWithVerification(
-                filesInfo?.files ?? [],
-                fileVerificationResponse,
-                uncheckedExpanded,
-                setUncheckedExpanded,
-                predecessorFileResults,
-                isSearchingPredecessors,
-                showCrypto,
-              )
+              <FilesWithVerification
+                files={filesInfo?.files ?? []}
+                fvr={fileVerificationResponse}
+                uncheckedExpanded={uncheckedExpanded}
+                setUncheckedExpanded={setUncheckedExpanded}
+                predecessorFileResults={predecessorFileResults}
+                isSearchingPredecessors={isSearchingPredecessors}
+                showHash={showCrypto}
+              />
             ) : filesInfo ? (
-              renderFilesCollapsed(
-                filesInfo.files,
-                filesNodeStatus,
-                allFilesExpanded,
-                setAllFilesExpanded,
-                showCrypto,
-              )
+              <FilesCollapsed
+                files={filesInfo.files}
+                nodeStatus={filesNodeStatus}
+                expanded={allFilesExpanded}
+                setExpanded={setAllFilesExpanded}
+                showHash={showCrypto}
+              />
             ) : null}
             {fileVerificationResponse && (() => {
               const total = fileVerificationResponse.fileResults.length

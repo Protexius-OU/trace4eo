@@ -1,15 +1,11 @@
-import type { User } from 'oidc-client-ts'
+export type FetchFn = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
 
-let currentUser: User | null = null
-
-export function setCurrentUser(user: User | null) {
-  currentUser = user
-}
-
-export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+export function authFetch(
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  token: string | null | undefined,
+): Promise<Response> {
   const headers = new Headers(init?.headers)
-  if (currentUser?.access_token) {
-    headers.set('Authorization', `Bearer ${currentUser.access_token}`)
-  }
+  if (token) headers.set('Authorization', `Bearer ${token}`)
   return fetch(input, { ...init, headers })
 }

@@ -25,6 +25,21 @@ the `--fresh` flag:
 ./start-dev.sh --fresh
 ```
 
+To populate the deployment with sample provenance records (two tier-1 batches of 50, two tier-2 aggregates, and a
+tier-3/4/5 chain), first start the Sigstore OIDC token daemon in a separate terminal — it performs a one-time
+browser login and then keeps refreshing it, stored on path `~/.sigstore-id-token`:
+
+```bash
+python3 sigstore-token-daemon.py
+```
+
+Then either pass `--seed` to `start-dev.sh`, or run `./seed-dev.sh` directly after the services are up:
+
+```bash
+./start-dev.sh --seed
+./seed-dev.sh                 # equivalent, when services are already running
+```
+
 ### Building a container image for the tracing system
 
 ```bash

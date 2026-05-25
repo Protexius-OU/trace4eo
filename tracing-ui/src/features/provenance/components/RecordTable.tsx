@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import type { AttributeChip, ProvenanceRecord, FilterOptions, RecordFilters } from '../types/provenance'
 import { downloadZip } from '../api/provenanceApi'
 import { getSignerDomain } from '../utils/signerIdentity'
+import { useAuthFetch } from '@/core/auth/useAuthFetch'
 import { useCheckboxFilter } from '../utils/useCheckboxFilter'
 import { FilterDropdown, DataIdFilter } from './Filters'
 
@@ -177,6 +178,7 @@ function AttributesFilter({ chips, onChange }: AttributesFilterProps) {
 }
 
 export default function RecordTable({ records, filterOptions, filters, onFilterChange }: Props) {
+  const authFetch = useAuthFetch()
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
   const getSignerEmail = (record: ProvenanceRecord): string | null => {
@@ -205,7 +207,7 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
   const handleDownload = async (id: string) => {
     setDownloadingId(id)
     try {
-      await downloadZip(id)
+      await downloadZip(authFetch, id)
     } catch (err) {
       console.error('Download failed:', err)
     } finally {

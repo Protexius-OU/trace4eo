@@ -4,7 +4,7 @@ import './ProvenanceGraphViewer.css'
 import * as d3 from 'd3'
 import type { ProvenanceGraph, GraphNode, DisplayNode, GroupNode } from '../types/provenance'
 import { buildDisplayGraph } from '../utils/graphCollapsing'
-import PredecessorListModal from './PredecessorListModal'
+import { meaningfulPrefix, stripPrefix, formatDate, sortTypesByMinDepth } from '../utils/labelUtils'
 
 interface Props {
   graph: ProvenanceGraph
@@ -29,44 +29,9 @@ const DEPTH_SPACING = 280
 const LINK_DISTANCE = 320
 const COLLIDE_RADIUS = BOX_WIDTH / 2 + 30
 
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return ''
-  return d.toLocaleDateString(undefined, { dateStyle: 'medium' })
-}
-
 function truncate(str: string | null | undefined, maxLen: number): string {
   if (!str) return ''
   return str.length > maxLen ? str.substring(0, maxLen - 1) + '…' : str
-}
-
-function commonPrefix(strings: string[]): string {
-  if (strings.length < 2) return ''
-  let prefix = strings[0] ?? ''
-  for (let i = 1; i < strings.length; i++) {
-    const s = strings[i] ?? ''
-    while (!s.startsWith(prefix)) {
-      prefix = prefix.slice(0, -1)
-      if (prefix === '') return ''
-    }
-  }
-  return prefix
-}
-
-function meaningfulPrefix(strings: string[]): string {
-  const filtered = strings.filter((s): s is string => Boolean(s))
-  if (filtered.length < 2) return ''
-  const cp = commonPrefix(filtered)
-  if (filtered.some(s => s === cp)) return ''
-  const m = cp.match(/^(.+[-_./:])/)
-  const trimmed = m?.[1] ?? ''
-  return trimmed.length >= 4 ? trimmed : ''
-}
-
-function stripPrefix(str: string | null | undefined, prefix: string): string {
-  if (!str) return ''
-  return prefix && str.startsWith(prefix) ? str.slice(prefix.length) : str
 }
 
 function NodeDetails({ node }: { node: GraphNode }) {
@@ -87,12 +52,10 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const [tooltip, setTooltip] = useState<{ node: DisplayNode; x: number; y: number } | null>(null)
-  const [expandedGroups] = useState<Set<string>>(() => new Set())
-  const [selectedGroup, setSelectedGroup] = useState<GroupNode | null>(null)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set())
 
-  // Reset selected group when graph changes
   useEffect(() => {
-    setSelectedGroup(null)
+    setExpandedGroups(new Set())
   }, [graph])
 
   const displayGraph = useMemo(
@@ -100,7 +63,13 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     [graph, expandedGroups]
   )
 
-  const typeColors = useMemo(() => d3.scaleOrdinal(d3.schemeObservable10), [])
+  const sortedTypes = useMemo(() => sortTypesByMinDepth(graph.nodes), [graph.nodes])
+
+  const typeColors = useMemo(() => {
+    const scale = d3.scaleOrdinal<string>(d3.schemeObservable10)
+    for (const t of sortedTypes) scale(t)
+    return scale
+  }, [sortedTypes])
 
   const labelPrefix = useMemo(() => {
     const tokens: string[] = []
@@ -264,7 +233,12 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     })
     .on('click', (_event, d) => {
       if (d.isGroup) {
-        setSelectedGroup(d)
+        setExpandedGroups(prev => {
+          const next = new Set(prev)
+          if (next.has(d.id)) next.delete(d.id)
+          else next.add(d.id)
+          return next
+        })
       } else if (d.id !== rootId) {
         navigate(`/records/${d.id}/graph`)
       }
@@ -274,21 +248,33 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     const graphWidth = maxDepth * DEPTH_SPACING
     const offsetX = (width + graphWidth) / 2
 
+    nodes.forEach(n => {
+      n.x = offsetX - n.depth * DEPTH_SPACING
+      n.y = height / 2
+    })
+
+    const applyPositions = () => {
+      link
+        .attr('x1', d => (d.source as SimNode).x ?? 0)
+        .attr('y1', d => (d.source as SimNode).y ?? 0)
+        .attr('x2', d => (d.target as SimNode).x ?? 0)
+        .attr('y2', d => (d.target as SimNode).y ?? 0)
+
+      node.attr('transform', d => `translate(${d.x ?? 0},${d.y ?? 0})`)
+    }
+
     const simulation = d3.forceSimulation(nodes)
       .force('link', d3.forceLink<SimNode, SimLink>(links).id(d => d.id).distance(LINK_DISTANCE))
       .force('charge', d3.forceManyBody().strength(-600))
       .force('x', d3.forceX<SimNode>().x(d => offsetX - d.depth * DEPTH_SPACING).strength(0.6))
       .force('y', d3.forceY<SimNode>().y(height / 2).strength(0.05))
       .force('collide', d3.forceCollide().radius(COLLIDE_RADIUS))
-      .on('tick', () => {
-        link
-          .attr('x1', d => (d.source as SimNode).x ?? 0)
-          .attr('y1', d => (d.source as SimNode).y ?? 0)
-          .attr('x2', d => (d.target as SimNode).x ?? 0)
-          .attr('y2', d => (d.target as SimNode).y ?? 0)
+      .stop()
 
-        node.attr('transform', d => `translate(${d.x ?? 0},${d.y ?? 0})`)
-      })
+    const ticks = Math.ceil(Math.log(simulation.alphaMin()) / Math.log(1 - simulation.alphaDecay()))
+    simulation.tick(ticks)
+    applyPositions()
+    simulation.on('tick', applyPositions)
 
     const drag = d3.drag<SVGGElement, SimNode>()
       .on('start', (event) => {
@@ -313,19 +299,6 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     }
   }, [displayGraph, typeColors, labelPrefix, rootId, navigate])
 
-  // Sort types by their minimum depth in the graph (following provenance order)
-  const types = useMemo(() => {
-    const typeMinDepth = new Map<string, number>()
-    for (const node of graph.nodes) {
-      const current = typeMinDepth.get(node.dataType)
-      if (current === undefined || node.depth < current) {
-        typeMinDepth.set(node.dataType, node.depth)
-      }
-    }
-    return [...typeMinDepth.entries()]
-      .sort((a, b) => a[1] - b[1])
-      .map(([type]) => type)
-  }, [graph.nodes])
 
   return (
     <div className="graph-wrapper">
@@ -344,7 +317,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
               Prefix: <code>{labelPrefix}</code>
             </span>
           )}
-          {types.map(type => (
+          {sortedTypes.map(type => (
             <span key={type ?? 'unknown'} className="graph-legend-item">
               <svg width="14" height="14" style={{ flexShrink: 0 }}>
                 <rect x="1" y="1" width="12" height="12" rx="2" ry="2" fill={typeColors(type)} />
@@ -383,12 +356,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
         )}
       </div>
 
-      {selectedGroup && (
-        <PredecessorListModal
-          nodes={graph.nodes.filter(n => selectedGroup.hiddenNodeIds.includes(n.id))}
-          onClose={() => setSelectedGroup(null)}
-        />
-      )}
+
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAuthFetch } from '@/core/auth/useAuthFetch'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchRecords, fetchFilterOptions } from '../../provenance/api/provenanceApi'
@@ -18,6 +19,8 @@ interface Props {
 const PAGE_SIZE = 20
 
 export default function LocationRecordsModal({ countryName, countryKey, onClose }: Props) {
+  const authFetch = useAuthFetch()
+  const [dataIdQuery, setDataIdQuery] = useState('')
   const locationAttribute = useMemo<AttributeChip[]>(
     () => [{ key: 'location', value: countryKey }],
     [countryKey],
@@ -51,6 +54,9 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
   const { data, isLoading: recordsLoading, error: recordsError } = useQuery({
     queryKey: ['recordsByLocation', countryKey, page, filters],
     queryFn: () => fetchRecords(page, PAGE_SIZE, filters),
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['recordsByLocation', countryKey],
+    queryFn: () => fetchRecords(authFetch, 0, MAX_ROWS_PER_COUNTRY, { attributes: `location=${countryKey}` }),
   })
 
   const isLoading = recordsLoading || filterOptionsLoading
