@@ -31,11 +31,7 @@ export async function fetchRecords(
     filters.signerIdentities.forEach(s => params.append('signerIdentity', s))
   }
   if (filters.attributes) {
-    filters.attributes
-      .trim()
-      .split(/\s+/)
-      .filter(t => t.includes('='))
-      .forEach(t => params.append('attribute', t))
+    filters.attributes.forEach(chip => params.append('attribute', `${chip.key}=${chip.value}`))
   }
 
   const response = await fetch(`${API_BASE}?${params}`)

@@ -88,11 +88,16 @@ export interface PagedResponse<T> {
   size: number
 }
 
+export interface AttributeChip {
+  key: string
+  value: string
+}
+
 export interface RecordFilters {
   dataTypes?: string[]
   dataId?: string
   signerIdentities?: string[]
-  attributes?: string
+  attributes?: AttributeChip[]
 }
 
 export interface FilterOptions {

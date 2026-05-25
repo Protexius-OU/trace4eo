@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import './RecordTable.css'
 import { Link } from 'react-router-dom'
-import type { ProvenanceRecord, FilterOptions, RecordFilters } from '../types/provenance'
+import type { AttributeChip, ProvenanceRecord, FilterOptions, RecordFilters } from '../types/provenance'
 import { downloadZip } from '../api/provenanceApi'
 import { getSignerDomain } from '../utils/signerIdentity'
 import { useAuthFetch } from '@/core/auth/useAuthFetch'
+import { useCheckboxFilter } from '../utils/useCheckboxFilter'
 import { FilterDropdown, DataIdFilter } from './Filters'
 
 const COLUMN_COUNT = 5
@@ -61,8 +62,8 @@ function Tooltip({ text, children }: TooltipProps) {
 }
 
 interface AttributesFilterProps {
-  value: string
-  onChange: (value: string) => void
+  chips: AttributeChip[]
+  onChange: (chips: AttributeChip[]) => void
 }
 
 function AttributeBadge({ entryKey, value }: { entryKey: string; value: string }) {
@@ -88,31 +89,14 @@ function AttributeBadges({ attributes }: { attributes: Record<string, string> | 
   )
 }
 
-type AttributeChip = { key: string; value: string }
-
-function parseChips(filterValue: string): AttributeChip[] {
-  const trimmed = filterValue.trim()
-  if (!trimmed) return []
-  return trimmed.split(/\s+/).map(token => {
-    const eq = token.indexOf('=')
-    return { key: token.slice(0, eq), value: token.slice(eq + 1) }
-  })
-}
-
-function serializeChips(chips: AttributeChip[]): string {
-  return chips.map(c => `${c.key}=${c.value}`).join(' ')
-}
-
-function AttributesFilter({ value, onChange }: AttributesFilterProps) {
+function AttributesFilter({ chips, onChange }: AttributesFilterProps) {
   const [inputValue, setInputValue] = useState('')
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const chips = parseChips(value)
-
   useEffect(() => {
     setError(null)
-  }, [value])
+  }, [chips])
 
   const commitInput = () => {
     const token = inputValue.trim()
@@ -140,13 +124,13 @@ function AttributesFilter({ value, onChange }: AttributesFilterProps) {
       setError(null)
       return
     }
-    onChange(serializeChips([...chips, ...additions]))
+    onChange([...chips, ...additions])
     setInputValue('')
     setError(null)
   }
 
   const removeChip = (idx: number) => {
-    onChange(serializeChips(chips.filter((_, i) => i !== idx)))
+    onChange(chips.filter((_, i) => i !== idx))
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -193,36 +177,6 @@ function AttributesFilter({ value, onChange }: AttributesFilterProps) {
   )
 }
 
-function useCheckboxFilter(
-  filterKey: 'dataTypes' | 'signerIdentities',
-  allValues: string[],
-  filters: RecordFilters,
-  onFilterChange: (f: RecordFilters) => void
-) {
-  const selected = new Set(filters[filterKey] ?? allValues)
-
-  const toggle = useCallback((value: string) => {
-    const current = new Set(filters[filterKey] ?? allValues)
-    if (current.has(value)) {
-      current.delete(value)
-    } else {
-      current.add(value)
-    }
-    const updated = current.size === allValues.length ? undefined : [...current]
-    onFilterChange({ ...filters, [filterKey]: updated })
-  }, [filterKey, allValues, filters, onFilterChange])
-
-  const selectAll = useCallback(() => {
-    onFilterChange({ ...filters, [filterKey]: undefined })
-  }, [filterKey, filters, onFilterChange])
-
-  const clearAll = useCallback(() => {
-    onFilterChange({ ...filters, [filterKey]: [] })
-  }, [filterKey, filters, onFilterChange])
-
-  return { selected, toggle, selectAll, clearAll }
-}
-
 export default function RecordTable({ records, filterOptions, filters, onFilterChange }: Props) {
   const authFetch = useAuthFetch()
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
@@ -246,8 +200,8 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
     onFilterChange({ ...filters, dataId: value || undefined })
   }, [filters, onFilterChange])
 
-  const handleAttributesChange = useCallback((value: string) => {
-    onFilterChange({ ...filters, attributes: value.trim() || undefined })
+  const handleAttributesChange = useCallback((chips: AttributeChip[]) => {
+    onFilterChange({ ...filters, attributes: chips.length > 0 ? chips : undefined })
   }, [filters, onFilterChange])
 
   const handleDownload = async (id: string) => {
@@ -265,7 +219,7 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
     !!filters.dataId ||
     filters.dataTypes !== undefined ||
     filters.signerIdentities !== undefined ||
-    !!filters.attributes
+    (filters.attributes?.length ?? 0) > 0
 
   const clearFilters = () => onFilterChange({})
 
@@ -303,7 +257,7 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
             </th>
             <th>
               <AttributesFilter
-                value={filters.attributes ?? ''}
+                chips={filters.attributes ?? []}
                 onChange={handleAttributesChange}
               />
             </th>
