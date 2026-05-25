@@ -3,6 +3,7 @@ import { useAuth } from 'react-oidc-context'
 import './App.css'
 import { setCurrentUser } from './core/auth/authFetch'
 import { RecordListPage, RecordGraphPage } from './features/provenance'
+import { LocationsMapPage } from './features/locations'
 
 export default function App() {
   const auth = useAuth()
@@ -71,6 +72,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<RecordListPage />} />
           <Route path="/records/:id/graph" element={<RecordGraphPage />} />
+          <Route path="/map" element={<LocationsMapPage />} />
         </Routes>
       </main>
     </div>

@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import './Modal.css'
 import type { GraphNode } from '../types/provenance'
@@ -12,7 +12,10 @@ interface Props {
 
 function useNodeCheckboxFilter(allValues: string[]) {
   const [selectedOverride, setSelectedOverride] = useState<Set<string> | null>(null)
-  const selected = selectedOverride ?? new Set(allValues)
+  const selected = useMemo(
+    () => selectedOverride ?? new Set(allValues),
+    [selectedOverride, allValues],
+  )
 
   const toggle = useCallback((value: string) => {
     setSelectedOverride(prev => {
@@ -34,6 +37,14 @@ function useNodeCheckboxFilter(allValues: string[]) {
 
 export default function PredecessorListModal({ nodes, onClose }: Props) {
   const [dataIdQuery, setDataIdQuery] = useState('')
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
 
   const allTypes = useMemo(
     () => Array.from(new Set(nodes.map(n => n.dataType).filter(Boolean))).sort(),
