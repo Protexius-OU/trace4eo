@@ -14,13 +14,19 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,7 +45,7 @@ class ProvenanceGraphServiceTest {
     @Test
     void buildGraphReturnsEmptyWhenRootNotFound() {
         UUID rootId = UUID.randomUUID();
-        when(provenanceRegistry.get(rootId)).thenReturn(Optional.empty());
+        stubRegistry();
 
         Optional<ProvenanceGraph> result = graphService.buildGraph(rootId);
 
@@ -50,7 +56,7 @@ class ProvenanceGraphServiceTest {
     void buildGraphReturnsSingleNodeGraphWhenNoPredecessors() {
         UUID rootId = UUID.randomUUID();
         ProvenanceRecord rootRecord = createRecord(rootId, "TypeA", Collections.emptyList());
-        when(provenanceRegistry.get(rootId)).thenReturn(Optional.of(rootRecord));
+        stubRegistry(rootRecord);
 
         Optional<ProvenanceGraph> result = graphService.buildGraph(rootId);
 
@@ -71,8 +77,7 @@ class ProvenanceGraphServiceTest {
         ProvenanceRecord predecessorRecord = createRecord(predecessorId, "TypeB", Collections.emptyList());
         ProvenanceRecord rootRecord = createRecord(rootId, "TypeA", List.of(new Predecessor(predecessorId)));
 
-        when(provenanceRegistry.get(rootId)).thenReturn(Optional.of(rootRecord));
-        when(provenanceRegistry.get(predecessorId)).thenReturn(Optional.of(predecessorRecord));
+        stubRegistry(rootRecord, predecessorRecord);
 
         Optional<ProvenanceGraph> result = graphService.buildGraph(rootId);
 
@@ -95,8 +100,7 @@ class ProvenanceGraphServiceTest {
 
         ProvenanceRecord rootRecord = createRecord(rootId, "TypeA", List.of(new Predecessor(missingPredecessorId)));
 
-        when(provenanceRegistry.get(rootId)).thenReturn(Optional.of(rootRecord));
-        when(provenanceRegistry.get(missingPredecessorId)).thenReturn(Optional.empty());
+        stubRegistry(rootRecord);
 
         Optional<ProvenanceGraph> result = graphService.buildGraph(rootId);
 
@@ -106,13 +110,14 @@ class ProvenanceGraphServiceTest {
         assertEquals(1, graph.edges().size());
         assertEquals(1, graph.metadata().missingPredecessors().size());
         assertEquals(missingPredecessorId, graph.metadata().missingPredecessors().getFirst());
+        assertEquals(0, graph.metadata().maxDepth());
     }
 
     @Test
     void buildGraphHandlesNullPredecessorsList() {
         UUID rootId = UUID.randomUUID();
         ProvenanceRecord rootRecord = createRecordWithNullPredecessors(rootId, "TypeA");
-        when(provenanceRegistry.get(rootId)).thenReturn(Optional.of(rootRecord));
+        stubRegistry(rootRecord);
 
         Optional<ProvenanceGraph> result = graphService.buildGraph(rootId);
 
@@ -130,8 +135,7 @@ class ProvenanceGraphServiceTest {
         ProvenanceRecord predecessorRecord = createRecord(predecessorId, "TypeB", List.of(new Predecessor(rootId)));
         ProvenanceRecord rootRecord = createRecord(rootId, "TypeA", List.of(new Predecessor(predecessorId)));
 
-        when(provenanceRegistry.get(rootId)).thenReturn(Optional.of(rootRecord));
-        when(provenanceRegistry.get(predecessorId)).thenReturn(Optional.of(predecessorRecord));
+        stubRegistry(rootRecord, predecessorRecord);
 
         Optional<ProvenanceGraph> result = graphService.buildGraph(rootId);
 
@@ -157,10 +161,7 @@ class ProvenanceGraphServiceTest {
             new Predecessor(pred3Id)
         ));
 
-        when(provenanceRegistry.get(rootId)).thenReturn(Optional.of(rootRecord));
-        when(provenanceRegistry.get(pred1Id)).thenReturn(Optional.of(pred1));
-        when(provenanceRegistry.get(pred2Id)).thenReturn(Optional.of(pred2));
-        when(provenanceRegistry.get(pred3Id)).thenReturn(Optional.of(pred3));
+        stubRegistry(rootRecord, pred1, pred2, pred3);
 
         Optional<ProvenanceGraph> result = graphService.buildGraph(rootId);
 
@@ -181,8 +182,7 @@ class ProvenanceGraphServiceTest {
         ProvenanceRecord rootRecord = createRecordWithSigningTime(rootId, "TypeA", "data-123",
             List.of(new Predecessor(predecessorId)), signingTime);
 
-        when(provenanceRegistry.get(rootId)).thenReturn(Optional.of(rootRecord));
-        when(provenanceRegistry.get(predecessorId)).thenReturn(Optional.of(predecessorRecord));
+        stubRegistry(rootRecord, predecessorRecord);
 
         Optional<ProvenanceGraph> result = graphService.buildGraph(rootId);
 
@@ -198,6 +198,41 @@ class ProvenanceGraphServiceTest {
         assertEquals(signingTime, rootNode.signingTime());
         assertEquals(0, rootNode.depth());
         assertEquals(1, rootNode.predecessorCount());
+    }
+
+    @Test
+    void buildGraphBatchesFetchOncePerLevel() {
+        UUID rootId = UUID.randomUUID();
+        UUID midId = UUID.randomUUID();
+        UUID leafId = UUID.randomUUID();
+
+        ProvenanceRecord leaf = createRecord(leafId, "TypeC", Collections.emptyList());
+        ProvenanceRecord mid = createRecord(midId, "TypeB", List.of(new Predecessor(leafId)));
+        ProvenanceRecord root = createRecord(rootId, "TypeA", List.of(new Predecessor(midId)));
+
+        stubRegistry(root, mid, leaf);
+
+        graphService.buildGraph(rootId);
+
+        verify(provenanceRegistry, times(3)).findAllByIds(anyCollection());
+    }
+
+    private void stubRegistry(ProvenanceRecord... records) {
+        Map<UUID, ProvenanceRecord> byId = new HashMap<>();
+        for (ProvenanceRecord record : records) {
+            byId.put(record.id(), record);
+        }
+        when(provenanceRegistry.findAllByIds(anyCollection())).thenAnswer(invocation -> {
+            Collection<UUID> ids = invocation.getArgument(0);
+            Map<UUID, ProvenanceRecord> result = new HashMap<>();
+            for (UUID id : ids) {
+                ProvenanceRecord record = byId.get(id);
+                if (record != null) {
+                    result.put(id, record);
+                }
+            }
+            return result;
+        });
     }
 
     private ProvenanceRecord createRecord(UUID id, String dataType, List<Predecessor> predecessors) {

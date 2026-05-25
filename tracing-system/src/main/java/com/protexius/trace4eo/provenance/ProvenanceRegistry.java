@@ -15,6 +15,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -107,17 +108,38 @@ public class ProvenanceRegistry {
                     s.signature
                 from provenance_record pr
                 inner join signature s on pr.id = s.id
-                left join (
-                    select *
-                    from verification_log v where v.provenance_record_id = :id
-                    order by created_at desc
-                    limit 1
-                ) vl on pr.id = vl.provenance_record_id
                 where pr.id = :id
                 """)
             .param("id", id)
             .query(this::mapRow)
             .optional();
+    }
+
+    public Map<UUID, ProvenanceRecord> findAllByIds(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Set<UUID> uniqueIds = Set.copyOf(ids);
+        List<ProvenanceRecord> records = jdbcClient.sql("""
+                select
+                    pr.id,
+                    pr.manifest,
+                    pr.metadata,
+                    pr.files,
+                    pr.uploader_identity,
+                    s.signature
+                from provenance_record pr
+                inner join signature s on pr.id = s.id
+                where pr.id in (:ids)
+                """)
+            .param("ids", uniqueIds)
+            .query(this::mapRow)
+            .list();
+        Map<UUID, ProvenanceRecord> byId = new HashMap<>(records.size());
+        for (ProvenanceRecord record : records) {
+            byId.put(record.id(), record);
+        }
+        return byId;
     }
 
     public List<ProvenanceRecord> findAll(int page, int size, RecordFilterCriteria criteria) {

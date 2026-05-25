@@ -11,11 +11,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,70 +36,69 @@ public class ProvenanceGraphService {
     }
 
     public Optional<GraphWithRecords> buildGraphWithRecords(UUID rootId) {
-        Optional<ProvenanceRecord> rootRecord = provenanceRegistry.get(rootId);
-        if (rootRecord.isEmpty()) {
-            log.warn("Root provenance record not found: {}", rootId);
-            return Optional.empty();
-        }
-
         Set<UUID> visited = new HashSet<>();
         List<GraphNode> nodes = new ArrayList<>();
         List<GraphEdge> edges = new ArrayList<>();
         List<UUID> missingPredecessors = new ArrayList<>();
         Map<UUID, ProvenanceRecord> loadedRecords = new LinkedHashMap<>();
 
-        Queue<TraversalItem> queue = new LinkedList<>();
-        queue.add(new TraversalItem(rootId, 0));
-
+        Set<UUID> currentLevel = new LinkedHashSet<>();
+        currentLevel.add(rootId);
+        int depth = 0;
         int actualMaxDepth = 0;
 
-        while (!queue.isEmpty()) {
-            TraversalItem item = queue.poll();
+        while (!currentLevel.isEmpty()) {
+            Map<UUID, ProvenanceRecord> levelRecords = provenanceRegistry.findAllByIds(currentLevel);
+            Set<UUID> nextLevel = new LinkedHashSet<>();
 
-            if (visited.contains(item.id())) {
-                continue;
-            }
+            for (UUID id : currentLevel) {
+                if (!visited.add(id)) {
+                    continue;
+                }
+                ProvenanceRecord record = levelRecords.get(id);
+                if (record == null) {
+                    if (depth == 0) {
+                        log.warn("Root provenance record not found: {}", rootId);
+                        return Optional.empty();
+                    }
+                    log.warn("Predecessor record not found: {}", id);
+                    missingPredecessors.add(id);
+                    continue;
+                }
 
-            visited.add(item.id());
-            actualMaxDepth = Math.max(actualMaxDepth, item.depth());
+                loadedRecords.put(id, record);
+                actualMaxDepth = Math.max(actualMaxDepth, depth);
 
-            Optional<ProvenanceRecord> optionalRecord = provenanceRegistry.get(item.id());
-            if (optionalRecord.isEmpty()) {
-                log.warn("Predecessor record not found: {}", item.id());
-                missingPredecessors.add(item.id());
-                continue;
-            }
+                List<Predecessor> predecessors = record.metadata().predecessors();
+                if (predecessors == null) {
+                    predecessors = Collections.emptyList();
+                }
 
-            ProvenanceRecord record = optionalRecord.get();
-            loadedRecords.put(record.id(), record);
-            List<Predecessor> predecessors = record.metadata().predecessors();
-            if (predecessors == null) {
-                predecessors = Collections.emptyList();
-            }
+                String signerIdentity = record.signature().details() != null
+                    ? record.signature().details().signerIdentity()
+                    : null;
 
-            String signerIdentity = null;
-            if (record.signature().details() != null) {
-                signerIdentity = record.signature().details().signerIdentity();
-            }
+                nodes.add(new GraphNode(
+                    id,
+                    record.metadata().dataId(),
+                    record.metadata().dataType(),
+                    record.signature().signingTime(),
+                    depth,
+                    predecessors.size(),
+                    signerIdentity
+                ));
 
-            GraphNode node = new GraphNode(
-                record.id(),
-                record.metadata().dataId(),
-                record.metadata().dataType(),
-                record.signature().signingTime(),
-                item.depth(),
-                predecessors.size(),
-                signerIdentity
-            );
-            nodes.add(node);
-
-            for (Predecessor predecessor : predecessors) {
-                UUID predecessorId = predecessor.id();
-                edges.add(new GraphEdge(record.id(), predecessorId));
-                if (!visited.contains(predecessorId)) {
-                    queue.add(new TraversalItem(predecessorId, item.depth() + 1));
+                for (Predecessor predecessor : predecessors) {
+                    UUID predecessorId = predecessor.id();
+                    edges.add(new GraphEdge(id, predecessorId));
+                    if (!visited.contains(predecessorId)) {
+                        nextLevel.add(predecessorId);
+                    }
                 }
             }
+
+            currentLevel = nextLevel;
+            depth++;
         }
 
         GraphMetadata metadata = new GraphMetadata(
@@ -114,8 +112,5 @@ public class ProvenanceGraphService {
             rootId, nodes.size(), edges.size());
 
         return Optional.of(new GraphWithRecords(graph, loadedRecords));
-    }
-
-    private record TraversalItem(UUID id, int depth) {
     }
 }
