@@ -83,6 +83,10 @@ graalvmNative {
             buildArgs.add("--initialize-at-run-time=io.grpc.netty.shaded.io.netty.internal.tcnative")
             buildArgs.add("--initialize-at-run-time=io.grpc.netty.shaded.io.netty.handler.ssl")
             buildArgs.add("-Dio.grpc.netty.shaded.io.netty.handler.ssl.noOpenSsl=true")
+            // JLine (via Spring Shell) calls System.load to load its native terminal library.
+            // On JDK 24+ this triggers a restricted-method warning at startup unless native
+            // access is explicitly granted to the unnamed module (classpath).
+            buildArgs.add("--enable-native-access=ALL-UNNAMED")
             // NOTE: com.google.protobuf and com.google.gson are intentionally NOT initialized at
             // build time. Build-time initialization freezes protobuf's MessageSchema with JVM
             // object-layout Unsafe offsets that differ from GraalVM native-image layout, causing
