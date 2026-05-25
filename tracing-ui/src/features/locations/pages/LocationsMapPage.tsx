@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { fetchLocationCounts } from '../api/locationsApi'
+import { useAuthFetch } from '@/core/auth/useAuthFetch'
 import GlobeHeatMap from '../components/GlobeHeatMap'
 import './LocationsMapPage.css'
 
 export default function LocationsMapPage() {
+  const authFetch = useAuthFetch()
   const { data, isLoading, error } = useQuery({
     queryKey: ['locationCounts'],
-    queryFn: fetchLocationCounts,
+    queryFn: () => fetchLocationCounts(authFetch),
   })
 
   return (

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as d3 from 'd3'
 import type { ProvenanceGraph, GraphNode } from '../types/provenance'
+import { meaningfulPrefix, stripPrefix, formatDate, sortTypesByMinDepth } from '../utils/labelUtils'
 import './ProvenanceChainList.css'
 
 interface Props {
@@ -29,41 +30,6 @@ type DisplayRow = NodeRow | ShowMoreRow
 
 const INITIAL_LIMIT = 5
 const SHOW_MORE_STEP = 10
-
-function commonPrefix(strings: string[]): string {
-  if (strings.length < 2) return ''
-  let prefix = strings[0] ?? ''
-  for (let i = 1; i < strings.length; i++) {
-    const s = strings[i] ?? ''
-    while (!s.startsWith(prefix)) {
-      prefix = prefix.slice(0, -1)
-      if (prefix === '') return ''
-    }
-  }
-  return prefix
-}
-
-function meaningfulPrefix(strings: string[]): string {
-  const filtered = strings.filter((s): s is string => Boolean(s))
-  if (filtered.length < 2) return ''
-  const cp = commonPrefix(filtered)
-  if (filtered.some(s => s === cp)) return ''
-  const m = cp.match(/^(.+[-_./:])/)
-  const trimmed = m?.[1] ?? ''
-  return trimmed.length >= 4 ? trimmed : ''
-}
-
-function stripPrefix(str: string | null | undefined, prefix: string): string {
-  if (!str) return ''
-  return prefix && str.startsWith(prefix) ? str.slice(prefix.length) : str
-}
-
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return ''
-  return d.toLocaleDateString(undefined, { dateStyle: 'medium' })
-}
 
 function nodeHeadRail(parentBars: boolean[], depth: number, isLast: boolean): string {
   let s = ''
@@ -102,20 +68,7 @@ export default function ProvenanceChainList({ graph }: Props) {
     })
   }
 
-  // Sort types by their minimum depth so colors are assigned in the same
-  // order as the graph view (which seeds its ordinal scale via the legend).
-  const sortedTypes = useMemo(() => {
-    const typeMinDepth = new Map<string, number>()
-    for (const node of graph.nodes) {
-      const current = typeMinDepth.get(node.dataType)
-      if (current === undefined || node.depth < current) {
-        typeMinDepth.set(node.dataType, node.depth)
-      }
-    }
-    return [...typeMinDepth.entries()]
-      .sort((a, b) => a[1] - b[1])
-      .map(([type]) => type)
-  }, [graph.nodes])
+  const sortedTypes = useMemo(() => sortTypesByMinDepth(graph.nodes), [graph.nodes])
 
   const typeColors = useMemo(() => {
     const scale = d3.scaleOrdinal<string>(d3.schemeObservable10)

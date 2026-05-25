@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useAuthFetch } from '@/core/auth/useAuthFetch'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchRecords } from '../../provenance/api/provenanceApi'
@@ -59,6 +60,7 @@ function toRow(record: ProvenanceRecord): Row {
 }
 
 export default function LocationRecordsModal({ countryName, countryKey, onClose }: Props) {
+  const authFetch = useAuthFetch()
   const [dataIdQuery, setDataIdQuery] = useState('')
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['recordsByLocation', countryKey],
-    queryFn: () => fetchRecords(0, MAX_ROWS_PER_COUNTRY, { attributes: `location=${countryKey}` }),
+    queryFn: () => fetchRecords(authFetch, 0, MAX_ROWS_PER_COUNTRY, { attributes: `location=${countryKey}` }),
   })
 
   const rows = useMemo<Row[]>(() => (data?.content ?? []).map(toRow), [data])
