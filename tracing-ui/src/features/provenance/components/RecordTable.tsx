@@ -233,6 +233,7 @@ function useCheckboxFilter(
 export default function RecordTable({ records, filterOptions, filters, onFilterChange }: Props) {
   const authFetch = useAuthFetch()
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [downloadErrors, setDownloadErrors] = useState<Record<string, string>>({})
 
   const getSignerEmail = (record: ProvenanceRecord): string | null => {
     return record.signature?.details?.signerIdentity ?? null
@@ -259,10 +260,12 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
 
   const handleDownload = async (id: string) => {
     setDownloadingId(id)
+    setDownloadErrors(prev => { const next = { ...prev }; delete next[id]; return next })
     try {
       await downloadZip(authFetch, id)
     } catch (err) {
       console.error('Download failed:', err)
+      setDownloadErrors(prev => ({ ...prev, [id]: 'Download failed' }))
     } finally {
       setDownloadingId(null)
     }
@@ -362,11 +365,17 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
                     <button
                       onClick={() => handleDownload(record.id)}
                       disabled={downloadingId === record.id}
-                      className="btn btn-icon"
-                      title="Download"
+                      className={`btn btn-icon${downloadErrors[record.id] ? ' btn-icon-error' : ''}`}
+                      title={downloadErrors[record.id] ?? 'Download'}
+                      aria-label={downloadErrors[record.id] ?? 'Download'}
                     >
                       {downloadingId === record.id ? (
                         <span>...</span>
+                      ) : downloadErrors[record.id] ? (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                          <path d="M8 8a.75.75 0 0 1-.75-.75v-4.5a.75.75 0 0 1 1.5 0v4.5A.75.75 0 0 1 8 8zm0 3a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
+                          <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/>
+                        </svg>
                       ) : (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                           <path d="M8 12l-4-4h2.5V3h3v5H12L8 12z"/>

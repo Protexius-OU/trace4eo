@@ -120,6 +120,12 @@ td .btn-icon:hover {
   background: var(--color-surface-hover);
 }
 
+td .btn-icon-error,
+td .btn-icon-error:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
 td .btn-primary {
   font-size: var(--text-sm);
   padding: var(--space-1-5) var(--space-3);
