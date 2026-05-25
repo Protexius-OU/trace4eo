@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuthFetch } from '@/core/auth/useAuthFetch'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchRecords, fetchFilterOptions } from '../../provenance/api/provenanceApi'
 import { FilterDropdown, DataIdFilter } from '../../provenance/components/Filters'
 import { useCheckboxFilter } from '../../provenance/utils/useCheckboxFilter'
@@ -18,9 +18,21 @@ interface Props {
 
 const PAGE_SIZE = 20
 
+function useDelayedFlag(active: boolean, delayMs: number): boolean {
+  const [delayed, setDelayed] = useState(false)
+  useEffect(() => {
+    if (!active) {
+      setDelayed(false)
+      return
+    }
+    const id = window.setTimeout(() => setDelayed(true), delayMs)
+    return () => window.clearTimeout(id)
+  }, [active, delayMs])
+  return delayed
+}
+
 export default function LocationRecordsModal({ countryName, countryKey, onClose }: Props) {
   const authFetch = useAuthFetch()
-  const [dataIdQuery, setDataIdQuery] = useState('')
   const locationAttribute = useMemo<AttributeChip[]>(
     () => [{ key: 'location', value: countryKey }],
     [countryKey],
@@ -47,19 +59,24 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
     error: filterOptionsError,
   } = useQuery({
     queryKey: ['filterOptions'],
-    queryFn: fetchFilterOptions,
+    queryFn: () => fetchFilterOptions(authFetch),
     staleTime: 60_000,
   })
 
-  const { data, isLoading: recordsLoading, error: recordsError } = useQuery({
+  const {
+    data,
+    isLoading: recordsLoading,
+    isFetching: recordsFetching,
+    error: recordsError,
+  } = useQuery({
     queryKey: ['recordsByLocation', countryKey, page, filters],
-    queryFn: () => fetchRecords(page, PAGE_SIZE, filters),
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['recordsByLocation', countryKey],
-    queryFn: () => fetchRecords(authFetch, 0, MAX_ROWS_PER_COUNTRY, { attributes: `location=${countryKey}` }),
+    queryFn: () => fetchRecords(authFetch, page, PAGE_SIZE, filters),
+    placeholderData: keepPreviousData,
   })
 
-  const isLoading = recordsLoading || filterOptionsLoading
+  const initialLoading = (recordsLoading && !data) || filterOptionsLoading
+  const isRefetching = recordsFetching && !recordsLoading
+  const showRefetchIndicator = useDelayedFlag(isRefetching, 300)
   const error = recordsError ?? filterOptionsError
 
   const signerDisplayValues = useMemo(
@@ -93,14 +110,15 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
             X
           </button>
         </div>
-        <div className="modal-table-scroll">
-          {isLoading && <p>Loading records…</p>}
+        <div className={`modal-table-scroll${showRefetchIndicator ? ' is-refetching' : ''}`}>
+          {showRefetchIndicator && <div className="modal-loading-bar" aria-hidden="true" />}
+          {initialLoading && <p>Loading records…</p>}
           {error && (
             <p style={{ color: '#b91c1c' }}>
               Error loading records: {error instanceof Error ? error.message : 'Unknown error'}
             </p>
           )}
-          {!isLoading && !error && filterOptions && (
+          {!initialLoading && !error && filterOptions && (
             <table>
               <thead>
                 <tr>
