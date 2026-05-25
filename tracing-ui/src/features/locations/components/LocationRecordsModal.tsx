@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchRecords } from '../../provenance/api/provenanceApi'
+import { fetchRecords, fetchFilterOptions } from '../../provenance/api/provenanceApi'
 import { FilterDropdown, DataIdFilter } from '../../provenance/components/Filters'
+import { useCheckboxFilter } from '../../provenance/utils/useCheckboxFilter'
 import { getSignerDomain } from '../../provenance/utils/signerIdentity'
-import type { ProvenanceRecord } from '../../provenance/types/provenance'
+import type { AttributeChip, RecordFilters } from '../../provenance/types/provenance'
+import Pagination from '@/core/components/Pagination'
 import '../../provenance/components/Modal.css'
 
 interface Props {
@@ -13,53 +15,20 @@ interface Props {
   onClose: () => void
 }
 
-interface Row {
-  id: string
-  dataId: string
-  dataType: string
-  signingTime: string | null
-  signerIdentity: string | null
-}
-
-const MAX_ROWS_PER_COUNTRY = 200
-
-function useCheckboxFilter(allValues: string[]) {
-  const [override, setOverride] = useState<Set<string> | null>(null)
-  const selected = useMemo(
-    () => override ?? new Set(allValues),
-    [override, allValues],
-  )
-
-  const toggle = useCallback((value: string) => {
-    setOverride(prev => {
-      const current = new Set(prev ?? allValues)
-      if (current.has(value)) {
-        current.delete(value)
-      } else {
-        current.add(value)
-      }
-      return current.size === allValues.length ? null : current
-    })
-  }, [allValues])
-
-  const selectAll = useCallback(() => setOverride(null), [])
-  const clearAll = useCallback(() => setOverride(new Set()), [])
-
-  return { selected, toggle, selectAll, clearAll, isActive: override !== null }
-}
-
-function toRow(record: ProvenanceRecord): Row {
-  return {
-    id: record.id,
-    dataId: record.metadata.dataId,
-    dataType: record.metadata.dataType,
-    signingTime: record.signature?.signingTime ?? null,
-    signerIdentity: record.signature?.details?.signerIdentity ?? null,
-  }
-}
+const PAGE_SIZE = 20
 
 export default function LocationRecordsModal({ countryName, countryKey, onClose }: Props) {
-  const [dataIdQuery, setDataIdQuery] = useState('')
+  const locationAttribute = useMemo<AttributeChip[]>(
+    () => [{ key: 'location', value: countryKey }],
+    [countryKey],
+  )
+  const [page, setPage] = useState(0)
+  const [filters, setFilters] = useState<RecordFilters>({ attributes: locationAttribute })
+
+  const handleFilterChange = useCallback((next: RecordFilters) => {
+    setFilters({ ...next, attributes: locationAttribute })
+    setPage(0)
+  }, [locationAttribute])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -69,49 +38,46 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose])
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['recordsByLocation', countryKey],
-    queryFn: () => fetchRecords(0, MAX_ROWS_PER_COUNTRY, { attributes: `location=${countryKey}` }),
+  const {
+    data: filterOptions,
+    isLoading: filterOptionsLoading,
+    error: filterOptionsError,
+  } = useQuery({
+    queryKey: ['filterOptions'],
+    queryFn: fetchFilterOptions,
+    staleTime: 60_000,
   })
 
-  const rows = useMemo<Row[]>(() => (data?.content ?? []).map(toRow), [data])
-  const totalElements = data?.totalElements ?? rows.length
-  const isTruncated = totalElements > rows.length
+  const { data, isLoading: recordsLoading, error: recordsError } = useQuery({
+    queryKey: ['recordsByLocation', countryKey, page, filters],
+    queryFn: () => fetchRecords(page, PAGE_SIZE, filters),
+  })
 
-  const allTypes = useMemo(
-    () => Array.from(new Set(rows.map(r => r.dataType).filter(Boolean))).sort(),
-    [rows],
-  )
-  const allSigners = useMemo(
-    () => Array.from(new Set(rows.map(r => r.signerIdentity).filter((s): s is string => !!s))).sort(),
-    [rows],
-  )
+  const isLoading = recordsLoading || filterOptionsLoading
+  const error = recordsError ?? filterOptionsError
+
   const signerDisplayValues = useMemo(
-    () => new Map(allSigners.map(email => [email, getSignerDomain(email)])),
-    [allSigners],
+    () => new Map((filterOptions?.signerIdentities ?? []).map(email => [email, getSignerDomain(email)])),
+    [filterOptions],
   )
 
-  const typeFilter = useCheckboxFilter(allTypes)
-  const signerFilter = useCheckboxFilter(allSigners)
+  const typeFilter = useCheckboxFilter('dataTypes', filterOptions?.dataTypes ?? [], filters, handleFilterChange)
+  const signerFilter = useCheckboxFilter('signerIdentities', filterOptions?.signerIdentities ?? [], filters, handleFilterChange)
 
-  const filtered = useMemo(() => {
-    const query = dataIdQuery.trim().toLowerCase()
-    return rows.filter(row => {
-      if (query && !(row.dataId ?? '').toLowerCase().includes(query)) return false
-      if (typeFilter.isActive && !typeFilter.selected.has(row.dataType)) return false
-      if (signerFilter.isActive && !signerFilter.selected.has(row.signerIdentity ?? '')) return false
-      return true
-    })
-  }, [rows, dataIdQuery, typeFilter.isActive, typeFilter.selected, signerFilter.isActive, signerFilter.selected])
+  const handleDataIdChange = useCallback((value: string) => {
+    handleFilterChange({ ...filters, dataId: value || undefined })
+  }, [filters, handleFilterChange])
+
+  const records = data?.content ?? []
+  const totalElements = data?.totalElements ?? 0
+  const totalPages = data?.totalPages ?? 0
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content modal-content-wide" onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2 style={{ margin: 0 }}>
-            Records from {countryName} ({filtered.length}
-            {filtered.length !== rows.length && <> of {rows.length}</>}
-            {isTruncated && <> — first {rows.length} of {totalElements}</>})
+            Records from {countryName}
           </h2>
           <button
             className="btn btn-secondary"
@@ -128,17 +94,17 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
               Error loading records: {error instanceof Error ? error.message : 'Unknown error'}
             </p>
           )}
-          {!isLoading && !error && (
+          {!isLoading && !error && filterOptions && (
             <table>
               <thead>
                 <tr>
                   <th>
-                    <DataIdFilter value={dataIdQuery} onChange={setDataIdQuery} />
+                    <DataIdFilter value={filters.dataId ?? ''} onChange={handleDataIdChange} />
                   </th>
                   <th>
                     <FilterDropdown
                       label="Type"
-                      values={allTypes}
+                      values={filterOptions.dataTypes}
                       selected={typeFilter.selected}
                       onToggle={typeFilter.toggle}
                       onSelectAll={typeFilter.selectAll}
@@ -149,7 +115,7 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
                   <th>
                     <FilterDropdown
                       label="Signed by"
-                      values={allSigners}
+                      values={filterOptions.signerIdentities}
                       displayValues={signerDisplayValues}
                       selected={signerFilter.selected}
                       onToggle={signerFilter.toggle}
@@ -160,32 +126,34 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
+                {records.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="td-empty">No records match the current filters</td>
                   </tr>
                 ) : (
-                  filtered.map(row => (
-                    <tr key={row.id}>
+                  records.map(record => (
+                    <tr key={record.id}>
                       <td>
                         <Link
-                          to={`/records/${row.id}/graph`}
+                          to={`/records/${record.id}/graph`}
                           style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
                           onClick={onClose}
                         >
-                          {row.dataId || row.id}
+                          {record.metadata.dataId || record.id}
                         </Link>
                       </td>
                       <td>
-                        <span className="badge badge-type">{row.dataType || 'Unknown'}</span>
+                        <span className="badge badge-type">{record.metadata.dataType || 'Unknown'}</span>
                       </td>
                       <td>
-                        {row.signingTime
-                          ? new Date(row.signingTime).toLocaleDateString()
+                        {record.signature?.signingTime
+                          ? new Date(record.signature.signingTime).toLocaleDateString()
                           : '-'}
                       </td>
                       <td style={{ fontSize: '0.8rem' }}>
-                        {row.signerIdentity ? getSignerDomain(row.signerIdentity) : '-'}
+                        {record.signature?.details?.signerIdentity
+                          ? getSignerDomain(record.signature.details.signerIdentity)
+                          : '-'}
                       </td>
                     </tr>
                   ))
@@ -194,6 +162,16 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
             </table>
           )}
         </div>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
+        {data && (
+          <p style={{ textAlign: 'center', marginTop: '1rem', color: '#666' }}>
+            {totalElements} total records
+          </p>
+        )}
       </div>
     </div>
   )
