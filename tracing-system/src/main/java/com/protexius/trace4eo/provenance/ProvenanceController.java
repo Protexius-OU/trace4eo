@@ -72,6 +72,11 @@ public class ProvenanceController {
         return provenanceService.getFilterOptions();
     }
 
+    @GetMapping("/location-counts")
+    public List<LocationCount> getLocationCounts() {
+        return provenanceService.getLocationCounts();
+    }
+
     @PostMapping("/validate-predecessors")
     public List<UUID> findMissingPredecessors(@RequestBody List<UUID> ids) {
         return provenanceService.findMissing(ids);

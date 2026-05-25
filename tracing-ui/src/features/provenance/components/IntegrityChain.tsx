@@ -284,11 +284,11 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
             <div>Uploaded by <strong>{record.uploaderIdentity ?? '—'}</strong></div>
             <div>
               <a
-                href={`https://search.sigstore.dev/?logIndex=${details.rekorLogIndex}`}
+                href={`https://search.sigstore.dev/?hash=${details.manifestHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Transparency log #{details.rekorLogIndex}
+                View Rekor transparency log.
               </a>
             </div>
           </div>

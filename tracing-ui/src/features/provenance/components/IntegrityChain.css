@@ -1,9 +1,9 @@
 .integrity-chain {
   padding: 1.25rem;
   margin-bottom: 1.25rem;
-  border-radius: 12px;
-  background: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Header */
@@ -11,21 +11,21 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .ic-header-actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .ic-crypto-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  font-size: 0.75rem;
-  color: #6b7280;
+  gap: var(--space-1-5);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
   cursor: pointer;
   user-select: none;
 }
@@ -37,74 +37,74 @@
 
 .ic-title {
   font-weight: 600;
-  font-size: 0.875rem;
-  color: #1a1a2e;
+  font-size: var(--text-lg);
+  color: var(--color-brand);
 }
 
 .ic-badge {
   font-size: 0.6875rem;
   font-weight: 600;
-  padding: 0.125rem 0.5rem;
+  padding: 0.125rem var(--space-2);
   border-radius: 9999px;
 }
 
 .ic-badge-pass {
-  color: #15803d;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  color: var(--color-status-pass-fg);
+  background: var(--color-status-pass-bg);
+  border: 1px solid var(--color-status-pass-border);
 }
 
 .ic-badge-fail {
-  color: #b91c1c;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  color: var(--color-status-fail-fg);
+  background: var(--color-status-fail-bg);
+  border: 1px solid var(--color-status-fail-border);
 }
 
 /* Nodes (boxes in the chain) */
 .ic-node {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
   background: #f9fafb;
   transition: border-color 0.2s, background 0.2s;
 }
 
 .ic-node-pass {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  border-color: var(--color-status-pass-border);
+  background: var(--color-status-pass-bg);
 }
 
 .ic-node-fail {
-  border-color: #fecaca;
-  background: #fef2f2;
+  border-color: var(--color-status-fail-border);
+  background: var(--color-status-fail-bg);
 }
 
 .ic-node-head {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: var(--space-1-5);
 }
 
 .ic-node-title {
   font-weight: 600;
-  font-size: 0.8125rem;
-  color: #1a1a2e;
+  font-size: var(--text-md);
+  color: var(--color-brand);
 }
 
 .ic-node-body {
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   color: #555;
-  margin-top: 0.375rem;
+  margin-top: var(--space-1-5);
   display: grid;
   gap: 0.125rem;
 }
 
 .ic-node-body strong {
-  color: #333;
+  color: var(--color-text);
 }
 
 .ic-node-body a {
-  color: #4338ca;
+  color: var(--color-badge-type-fg);
   text-decoration: none;
 }
 
@@ -115,26 +115,26 @@
 /* Status icons */
 .ic-status {
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   width: 1rem;
   text-align: center;
   flex-shrink: 0;
 }
 
 .ic-status-pass {
-  color: #15803d;
+  color: var(--color-status-pass-fg);
 }
 
 .ic-status-fail {
-  color: #b91c1c;
+  color: var(--color-status-fail-fg);
 }
 
 .ic-status-skipped {
-  color: #6b7280;
+  color: var(--color-text-muted);
 }
 
 .ic-status-unknown {
-  color: #9ca3af;
+  color: var(--color-text-disabled);
 }
 
 /* Connectors (vertical lines between layers) */
@@ -147,14 +147,14 @@
 
 .ic-line {
   width: 1px;
-  height: 0.5rem;
-  background: #d1d5db;
+  height: var(--space-2);
+  background: var(--color-line-faint);
   transition: background 0.2s;
 }
 
 .ic-label {
   font-size: 0.625rem;
-  color: #9ca3af;
+  color: var(--color-text-disabled);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   line-height: 1.4;
@@ -164,61 +164,61 @@
 }
 
 .ic-connector-pass .ic-line {
-  background: #86efac;
+  background: var(--color-status-pass-line);
 }
 
 .ic-connector-pass .ic-label {
-  color: #15803d;
+  color: var(--color-status-pass-fg);
 }
 
 .ic-connector-fail .ic-line {
-  background: #fca5a5;
+  background: var(--color-status-fail-line);
 }
 
 .ic-connector-fail .ic-label {
-  color: #b91c1c;
+  color: var(--color-status-fail-fg);
 }
 
 /* Manifest box */
 .ic-manifest-hashes {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .ic-hash {
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 0.5rem;
-  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  background: var(--color-surface);
   transition: border-color 0.2s, background 0.2s;
 }
 
 .ic-hash-pass {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+  border-color: var(--color-status-pass-border);
+  background: var(--color-status-pass-bg);
 }
 
 .ic-hash-fail {
-  border-color: #fecaca;
-  background: #fef2f2;
+  border-color: var(--color-status-fail-border);
+  background: var(--color-status-fail-bg);
 }
 
 .ic-hash-head {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  font-size: 0.75rem;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
   font-weight: 500;
-  color: #333;
+  color: var(--color-text);
 }
 
 .ic-hash-value {
   display: block;
   font-size: 0.6875rem;
-  color: #6b7280;
-  margin-top: 0.25rem;
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
   word-break: break-all;
 }
 
@@ -226,14 +226,14 @@
 .ic-split {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 /* Vertical stack — used in default view when manifest layer is hidden */
 .ic-stack {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 /* Metadata fields */
@@ -241,20 +241,20 @@
   display: grid;
   grid-template-columns: 5.5rem 1fr;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .ic-field-label {
   font-size: 0.6875rem;
   font-weight: 500;
-  color: #9ca3af;
+  color: var(--color-text-disabled);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   white-space: nowrap;
 }
 
 .ic-field-value {
-  color: #333;
+  color: var(--color-text);
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -263,7 +263,7 @@
 .ic-file {
   display: flex;
   align-items: flex-start;
-  gap: 0.25rem;
+  gap: var(--space-1);
 }
 
 .ic-file-info {
@@ -274,7 +274,7 @@
 }
 
 .ic-file-path {
-  font-family: 'SF Mono', SFMono-Regular, ui-monospace, 'Cascadia Code', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.6875rem;
   overflow-wrap: anywhere;
 }
@@ -285,18 +285,18 @@
 
 .ic-file-count {
   font-size: 0.6875rem;
-  color: #6b7280;
-  background: #f3f4f6;
-  padding: 0 0.375rem;
+  color: var(--color-text-muted);
+  background: var(--color-surface-muted);
+  padding: 0 var(--space-1-5);
   border-radius: 9999px;
   margin-left: auto;
 }
 
 .ic-note {
   font-size: 0.6875rem;
-  color: #6b7280;
+  color: var(--color-text-muted);
   font-style: italic;
-  margin-top: 0.25rem;
+  margin-top: var(--space-1);
 }
 
 .ic-show-more {
@@ -305,9 +305,9 @@
   padding: 0;
   cursor: pointer;
   font-size: 0.6875rem;
-  color: #4338ca;
+  color: var(--color-badge-type-fg);
   text-align: left;
-  margin-top: 0.25rem;
+  margin-top: var(--space-1);
 }
 
 .ic-show-more:hover {
@@ -315,14 +315,14 @@
 }
 
 .ic-file-section + .ic-file-section {
-  margin-top: 0.25rem;
-  padding-top: 0.25rem;
-  border-top: 1px solid #e5e7eb;
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--color-border);
 }
 
 .ic-label .ic-connector-hash {
   font-size: 0.6875rem;
-  color: #6b7280;
+  color: var(--color-text-muted);
   word-break: break-all;
   display: block;
   margin-top: 0.125rem;
@@ -341,7 +341,7 @@
 }
 
 .ic-predecessor-result a {
-  color: #4338ca;
+  color: var(--color-badge-type-fg);
   text-decoration: none;
 }
 
@@ -350,23 +350,23 @@
 }
 
 .ic-predecessor-matched {
-  color: #15803d;
+  color: var(--color-status-pass-fg);
 }
 
 .ic-predecessor-mismatch {
-  color: #b91c1c;
+  color: var(--color-status-fail-fg);
 }
 
 /* Summary */
 .ic-summary {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid #e5e7eb;
-  font-size: 0.75rem;
-  color: #6b7280;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
   text-align: center;
 }
 
 .ic-summary-fail {
-  color: #b91c1c;
+  color: var(--color-status-fail-fg);
 }

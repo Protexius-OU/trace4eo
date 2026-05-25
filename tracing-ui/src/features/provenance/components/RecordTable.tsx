@@ -5,6 +5,7 @@ import type { ProvenanceRecord, FilterOptions, RecordFilters } from '../types/pr
 import { downloadZip } from '../api/provenanceApi'
 import { getSignerDomain } from '../utils/signerIdentity'
 import { useAuthFetch } from '@/core/auth/useAuthFetch'
+import { FilterDropdown, DataIdFilter } from './Filters'
 
 const COLUMN_COUNT = 5
 
@@ -56,107 +57,6 @@ function Tooltip({ text, children }: TooltipProps) {
         </div>
       )}
     </>
-  )
-}
-
-interface FilterDropdownProps {
-  label: string
-  values: string[]
-  displayValues?: Map<string, string>
-  selected: Set<string>
-  onToggle: (value: string) => void
-  onSelectAll: () => void
-  onClearAll: () => void
-}
-
-function FilterDropdown({ label, values, displayValues, selected, onToggle, onSelectAll, onClearAll }: FilterDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const allSelected = selected.size === values.length
-  const noneSelected = selected.size === 0
-  const filterActive = !allSelected
-  const toggleLabel = allSelected ? label : `${label} (${selected.size}/${values.length})`
-
-  return (
-    <div className="filter-dropdown" ref={dropdownRef}>
-      <button
-        type="button"
-        className={`filter-dropdown-toggle ${filterActive ? 'filter-active' : ''}`}
-        onClick={() => setIsOpen(!isOpen)}
-        aria-expanded={isOpen}
-        aria-haspopup="true"
-      >
-        {toggleLabel}
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" className="dropdown-arrow">
-          <path d="M2 4l4 4 4-4H2z"/>
-        </svg>
-      </button>
-      {isOpen && (
-        <div className="filter-dropdown-menu">
-          <div className="filter-dropdown-actions">
-            <button type="button" onClick={onSelectAll} disabled={allSelected}>Check all</button>
-            <button type="button" onClick={onClearAll} disabled={noneSelected}>Uncheck all</button>
-          </div>
-          <div className="filter-dropdown-items">
-            {values.map(value => (
-              <label key={value} className="filter-dropdown-item">
-                <input
-                  type="checkbox"
-                  checked={selected.has(value)}
-                  onChange={() => onToggle(value)}
-                />
-                <span>{displayValues?.get(value) ?? value}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-interface DataIdFilterProps {
-  value: string
-  onChange: (value: string) => void
-}
-
-function DataIdFilter({ value, onChange }: DataIdFilterProps) {
-  const [localValue, setLocalValue] = useState(value)
-
-  useEffect(() => {
-    setLocalValue(value)
-  }, [value])
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      onChange(localValue)
-    }
-  }
-
-  return (
-    <div className="filter-dropdown">
-      <input
-        type="text"
-        placeholder="Search Data ID..."
-        title="Press Enter to search"
-        value={localValue}
-        onChange={e => setLocalValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        className="filter-text-input"
-      />
-    </div>
   )
 }
 
