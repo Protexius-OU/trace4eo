@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useId } from 'react'
 import './RecordTable.css'
 import { Link } from 'react-router-dom'
 import type { ProvenanceRecord, FilterOptions, RecordFilters } from '../types/provenance'
@@ -25,8 +25,9 @@ function Tooltip({ text, children }: TooltipProps) {
   const [show, setShow] = useState(false)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const ref = useRef<HTMLSpanElement>(null)
+  const tooltipId = useId()
 
-  const handleMouseEnter = () => {
+  const handleShow = () => {
     if (text && ref.current) {
       const rect = ref.current.getBoundingClientRect()
       setPosition({ x: rect.left, y: rect.bottom + 4 })
@@ -42,14 +43,20 @@ function Tooltip({ text, children }: TooltipProps) {
     <>
       <span
         ref={ref}
-        onMouseEnter={handleMouseEnter}
+        onMouseEnter={handleShow}
         onMouseLeave={() => setShow(false)}
+        onFocus={handleShow}
+        onBlur={() => setShow(false)}
+        aria-describedby={tooltipId}
+        tabIndex={0}
         className="tooltip-trigger"
       >
         {children}
       </span>
       {show && (
         <div
+          id={tooltipId}
+          role="tooltip"
           className="tooltip"
           style={{ left: position.x, top: position.y }}
         >

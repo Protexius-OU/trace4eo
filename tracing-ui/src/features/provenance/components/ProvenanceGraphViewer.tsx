@@ -37,12 +37,12 @@ function truncate(str: string | null | undefined, maxLen: number): string {
 function NodeDetails({ node }: { node: GraphNode }) {
   return (
     <>
-      <div style={{ fontWeight: 600, marginBottom: '4px', paddingRight: '20px' }}>{node.dataType || 'Unknown'}</div>
-      <div><span style={{ color: '#666' }}>ID:</span> <span style={{ fontFamily: 'monospace', fontSize: '10px' }}>{node.id}</span></div>
-      <div><span style={{ color: '#666' }}>Data ID:</span> {node.dataId || 'N/A'}</div>
-      <div><span style={{ color: '#666' }}>Signed:</span> {node.signingTime ? new Date(node.signingTime).toLocaleString() : 'N/A'}</div>
-      <div><span style={{ color: '#666' }}>Signed by:</span> {node.signerIdentity || '—'}</div>
-      <div><span style={{ color: '#666' }}>Predecessors:</span> {node.predecessorCount}</div>
+      <div className="graph-tooltip__title">{node.dataType || 'Unknown'}</div>
+      <div><span className="graph-node-label">ID:</span> <span className="graph-node-id">{node.id}</span></div>
+      <div><span className="graph-node-label">Data ID:</span> {node.dataId || 'N/A'}</div>
+      <div><span className="graph-node-label">Signed:</span> {node.signingTime ? new Date(node.signingTime).toLocaleString() : 'N/A'}</div>
+      <div><span className="graph-node-label">Signed by:</span> {node.signerIdentity || '—'}</div>
+      <div><span className="graph-node-label">Predecessors:</span> {node.predecessorCount}</div>
     </>
   )
 }
@@ -329,25 +329,13 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
 
         {tooltip && (
           <div
-            style={{
-              position: 'fixed',
-              left: tooltip.x,
-              top: tooltip.y,
-              background: 'white',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              padding: '8px 12px',
-              fontSize: '12px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              zIndex: 1000,
-              pointerEvents: 'none',
-              maxWidth: '22rem',
-            }}
+            className="graph-tooltip"
+            style={{ left: tooltip.x, top: tooltip.y }}
           >
             {tooltip.node.isGroup ? (
               <>
-                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Grouped Predecessors</div>
-                <div><span style={{ color: '#666' }}>Hidden:</span> {(tooltip.node as GroupNode).count} predecessors</div>
+                <div className="graph-tooltip__title">Grouped Predecessors</div>
+                <div><span className="graph-node-label">Hidden:</span> {(tooltip.node as GroupNode).count} predecessors</div>
               </>
             ) : (
               <NodeDetails node={tooltip.node as GraphNode} />
