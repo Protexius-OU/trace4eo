@@ -142,6 +142,10 @@ public class ProvenanceService {
         );
     }
 
+    public List<LocationCount> getLocationCounts() {
+        return provenanceRegistry.countByLocation();
+    }
+
     @Transactional
     public void save(ProvenanceRecord provenanceRecord, String uploaderIdentity) {
         validate(provenanceRecord);

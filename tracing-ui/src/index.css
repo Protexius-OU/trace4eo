@@ -81,6 +81,9 @@
   --z-popover: 50;
   --z-dropdown: 100;
   --z-tooltip: 1000;
+
+  /* Layout */
+  --header-height: 56px;
 }
 
 * {
@@ -107,7 +110,7 @@ body {
   background: #1a1a2e;
   color: white;
   padding: 0 2rem;
-  height: 56px;
+  height: var(--header-height);
   display: flex;
   align-items: center;
 }

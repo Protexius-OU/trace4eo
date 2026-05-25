@@ -16,6 +16,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -180,6 +181,25 @@ public class ProvenanceRegistry {
             .list();
     }
 
+    public List<LocationCount> countByLocation() {
+        return jdbcClient.sql("""
+                select country, count(*) as record_count
+                from (
+                    select lower(trim(pr.metadata->'attributes'->>'location')) as country
+                    from provenance_record pr
+                ) loc
+                where country is not null
+                  and country <> ''
+                group by country
+                order by record_count desc, country asc
+                """)
+            .query((rs, rowNum) -> new LocationCount(
+                rs.getString("country"),
+                rs.getLong("record_count")
+            ))
+            .list();
+    }
+
     private void appendFilters(StringBuilder sql, RecordFilterCriteria criteria) {
         if (criteria.dataTypes() != null && !criteria.dataTypes().isEmpty()) {
             sql.append(" and pr.metadata->>'dataType' in (:dataTypes)");
@@ -194,8 +214,8 @@ public class ProvenanceRegistry {
         if (attributes != null && !attributes.isEmpty()) {
             int size = attributes.keyToValues().size();
             for (int i = 0; i < size; i++) {
-                sql.append(" and pr.metadata->'attributes'->>:attrKey_").append(i)
-                    .append(" in (:attrValues_").append(i).append(")");
+                sql.append(" and lower(pr.metadata->'attributes'->>:attrKey_").append(i)
+                    .append(") in (:attrValues_").append(i).append(")");
             }
         }
     }
@@ -218,11 +238,17 @@ public class ProvenanceRegistry {
             int index = 0;
             for (Map.Entry<String, List<String>> entry : attributes.keyToValues().entrySet()) {
                 query = query.param("attrKey_" + index, entry.getKey());
-                query = query.param("attrValues_" + index, entry.getValue());
+                query = query.param("attrValues_" + index, lowercased(entry.getValue()));
                 index++;
             }
         }
         return query;
+    }
+
+    private List<String> lowercased(List<String> values) {
+        return values.stream()
+            .map(v -> v == null ? null : v.toLowerCase(Locale.ROOT))
+            .toList();
     }
 
     public void addVerificationLog(UUID provenanceRecordId, Instant createdAt, boolean status) {
