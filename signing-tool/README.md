@@ -51,7 +51,7 @@ Create a provenance record containing multiple files with metadata.
 | `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set)                                                                                                                                                       | None              |
 | `--realm`                  | Keycloak realm                                                                                                                                                                                                    | trace4eo          |
 | `--save-record`            | Save the provenance record                                                                                                                                                                                        | true              |
-| `--metadata`               | Custom metadata as `key=value` pairs, comma-separated (e.g. `env=prod,owner=alice`). The first `=` in each entry separates key from value, so values may contain `=` but not `,`.                                  | None              |
+| `--metadata`               | Custom metadata as `key=value` pairs, comma-separated (e.g. `env=prod,owner=alice`). The first `=` in each entry separates key from value, so values may contain `=` but not `,`.                                 | None              |
 
 **Examples:**
 
@@ -62,7 +62,8 @@ Create a provenance record containing multiple files with metadata.
   --data-id S2A_MSIL1C_20240101"
 ```
 
-Attach custom metadata inline:
+<details>
+<summary>Attach custom metadata inline</summary>
 
 ```bash
 ./gradlew :signing-tool:bootRun --args="create-provenance-record \
@@ -72,7 +73,10 @@ Attach custom metadata inline:
   --metadata env=prod,operator=alice,ticket=PROV-123"
 ```
 
-Include all TIF files from a directory in a single record:
+</details>
+
+<details>
+<summary>Include all TIF files from a directory in a single record</summary>
 
 ```bash
 ./gradlew :signing-tool:bootRun --args="create-provenance-record \
@@ -82,7 +86,10 @@ Include all TIF files from a directory in a single record:
   --data-id S2A_MSIL1C_20240101"
 ```
 
-Combine explicit files with a directory scan:
+</details>
+
+<details>
+<summary>Combine explicit files with a directory scan</summary>
 
 ```bash
 ./gradlew :signing-tool:bootRun --args="create-provenance-record \
@@ -93,7 +100,10 @@ Combine explicit files with a directory scan:
   --data-id S2A_MSIL1C_20240101"
 ```
 
-Create and register with a tracing system:
+</details>
+
+<details>
+<summary>Create and register with a tracing system</summary>
 
 ```bash
 ./gradlew :signing-tool:bootRun --args="create-provenance-record \
@@ -104,29 +114,31 @@ Create and register with a tracing system:
   --keycloak-url http://localhost:8180"
 ```
 
+</details>
+
 ### batch-sign
 
 Sign multiple files, creating one provenance record per file.
 
 **Options:**
 
-| Option                     | Description                                                                                                                                                              | Default           |
-|----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|
-| `--files`                  | Explicit list of files to sign (either this or `--directory` is required)                                                                                                | None              |
-| `--directory`              | Directory containing files to sign (either this or `--files` is required)                                                                                                | None              |
-| `--pattern`                | Glob pattern for files in directory                                                                                                                                      | `*`               |
-| `--provenance-record-type` | Type of provenance record                                                                                                                                                | Required          |
-| `--data-id`                | Data ID prefix for provenance records; each file gets `<data-id>/<filename>`                                                                                             | Required          |
-| `--output`                 | Output directory for saved records (used with `--save-record`)                                                                                                           | Current directory |
-| `--hash-algorithm`         | Hash algorithm to use                                                                                                                                                    | SHA256            |
-| `--register-url`           | Tracing backend URL to register provenance records                                                                                                                       | None              |
-| `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set)                                                                                                              | None              |
-| `--realm`                  | Keycloak realm                                                                                                                                                           | trace4eo          |
-| `--save-record`            | Save the provenance records                                                                                                                                              | true              |
-| `--create-record-ids-file` | Write a plain-text file with the IDs of all successfully signed provenance records, one UUID per line (written to `--output` directory, or current directory if omitted) | false             |
-| `--threads`                | Maximum number of files to sign concurrently                                                                                                                             | 3                 |
-| `--start-index`            | Start index (inclusive) into the alphabetically-sorted file list. Use with `--end-index` to process a slice of a large directory across multiple invocations.            | 0                 |
-| `--end-index`              | End index (exclusive) into the alphabetically-sorted file list.                                                                                                          | Total file count  |
+| Option                     | Description                                                                                                                                                                               | Default           |
+|----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|
+| `--files`                  | Explicit list of files to sign (either this or `--directory` is required)                                                                                                                 | None              |
+| `--directory`              | Directory containing files to sign (either this or `--files` is required)                                                                                                                 | None              |
+| `--pattern`                | Glob pattern for files in directory                                                                                                                                                       | `*`               |
+| `--provenance-record-type` | Type of provenance record                                                                                                                                                                 | Required          |
+| `--data-id`                | Data ID prefix for provenance records; each file gets `<data-id>/<filename>`                                                                                                              | Required          |
+| `--output`                 | Output directory for saved records (used with `--save-record`)                                                                                                                            | Current directory |
+| `--hash-algorithm`         | Hash algorithm to use                                                                                                                                                                     | SHA256            |
+| `--register-url`           | Tracing backend URL to register provenance records                                                                                                                                        | None              |
+| `--keycloak-url`           | Keycloak server URL (required when `--register-url` is set)                                                                                                                               | None              |
+| `--realm`                  | Keycloak realm                                                                                                                                                                            | trace4eo          |
+| `--save-record`            | Save the provenance records                                                                                                                                                               | true              |
+| `--create-record-ids-file` | Write a plain-text file with the IDs of all successfully signed provenance records, one UUID per line (written to `--output` directory, or current directory if omitted)                  | false             |
+| `--threads`                | Maximum number of files to sign concurrently                                                                                                                                              | 3                 |
+| `--start-index`            | Start index (inclusive) into the alphabetically-sorted file list. Use with `--end-index` to process a slice of a large directory across multiple invocations.                             | 0                 |
+| `--end-index`              | End index (exclusive) into the alphabetically-sorted file list.                                                                                                                           | Total file count  |
 | `--metadata`               | Custom metadata as `key=value` pairs, comma-separated; applied to every record in the batch. The first `=` in each entry separates key from value, so values may contain `=` but not `,`. | None              |
 
 **Examples:**
@@ -141,7 +153,8 @@ Sign specific files:
   --output /data/output"
 ```
 
-Sign all TIF files in a directory:
+<details>
+<summary>Sign all TIF files in a directory</summary>
 
 ```bash
 ./gradlew :signing-tool:bootRun --args="batch-sign \
@@ -152,7 +165,10 @@ Sign all TIF files in a directory:
   --output /data/output"
 ```
 
-Sign and register with a tracing system:
+</details>
+
+<details>
+<summary>Sign and register with a tracing system</summary>
 
 ```bash
 ./gradlew :signing-tool:bootRun --args="batch-sign \
@@ -165,7 +181,10 @@ Sign and register with a tracing system:
   --keycloak-url http://localhost:8180"
 ```
 
-Capture record IDs for use as predecessors in a follow-up record:
+</details>
+
+<details>
+<summary>Capture record IDs for use as predecessors in a follow-up record</summary>
 
 ```bash
 # Step 1: sign the source files and capture their record IDs
@@ -185,6 +204,8 @@ Capture record IDs for use as predecessors in a follow-up record:
   --predecessors-file /data/output/record-ids-1708300000000.txt \
   --output /data/output"
 ```
+
+</details>
 
 ### register-records
 
@@ -212,7 +233,8 @@ Register every zip in a directory:
   --keycloak-url http://localhost:8180"
 ```
 
-Register specific files:
+<details>
+<summary>Register specific files</summary>
 
 ```bash
 ./gradlew :signing-tool:bootRun --args="register-records \
@@ -221,6 +243,8 @@ Register specific files:
   --keycloak-url http://localhost:8180"
 ```
 
+</details>
+
 ### get-oidc-token
 
 Obtain a Sigstore OIDC token interactively.
@@ -228,6 +252,36 @@ Obtain a Sigstore OIDC token interactively.
 ```bash
 ./gradlew :signing-tool:bootRun --args="get-oidc-token"
 ```
+
+### sigstore-token-daemon
+
+Perform a one-time Sigstore device-flow OIDC login, write the `id_token` to disk, then keep refreshing it before
+expiry so downstream batch flows can pick up a fresh token without having to log in again.
+
+**Options:**
+
+| Option                   | Description                                   | Default                     |
+|--------------------------|-----------------------------------------------|-----------------------------|
+| `--issuer`               | Sigstore OIDC issuer                          | Discovered via Sigstore TUF |
+| `--token-file`           | Path to write the `id_token` to               | `~/.sigstore-id-token`      |
+| `--refresh-lead-seconds` | Refresh this many seconds before token expiry | 10                          |
+
+The token file is written atomically with owner-only permissions (`rw-------`). If the issuer doesn't return a
+refresh token, the daemon falls back to re-running the device flow on each expiry.
+
+```bash
+./gradlew :signing-tool:bootRun --args="sigstore-token-daemon"
+```
+
+<details>
+<summary>Write to a custom path</summary>
+
+```bash
+./gradlew :signing-tool:bootRun --args="sigstore-token-daemon \
+  --token-file /var/run/trace4eo/sigstore-id-token"
+```
+
+</details>
 
 ## Notes
 
