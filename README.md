@@ -30,7 +30,7 @@ tier-3/4/5 chain), first start the Sigstore OIDC token daemon in a separate term
 browser login and then keeps refreshing it, stored on path `~/.sigstore-id-token`:
 
 ```bash
-python3 sigstore-token-daemon.py
+./gradlew :signing-tool:bootRun --args="sigstore-token-daemon"
 ```
 
 Then either pass `--seed` to `start-dev.sh`, or run `./seed-dev.sh` directly after the services are up:
