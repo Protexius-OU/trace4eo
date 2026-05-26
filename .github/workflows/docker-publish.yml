@@ -7,10 +7,23 @@ on:
         description: 'Version tag for images (e.g. v1.2.3). If omitted, only :latest is pushed.'
         required: false
         type: string
+      components:
+        description: 'Which images to publish.'
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - backend
+          - frontend
   workflow_call:
     inputs:
       version:
         required: true
+        type: string
+      components:
+        required: false
+        default: both
         type: string
 
 env:
@@ -19,6 +32,7 @@ env:
 jobs:
   build-backend:
     name: Build and Publish Backend
+    if: inputs.components == 'both' || inputs.components == 'backend'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -59,6 +73,7 @@ jobs:
 
   build-frontend:
     name: Build and Publish Frontend
+    if: inputs.components == 'both' || inputs.components == 'frontend'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
