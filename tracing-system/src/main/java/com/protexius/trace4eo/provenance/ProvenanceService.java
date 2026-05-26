@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
@@ -130,6 +131,9 @@ public class ProvenanceService {
     }
 
     public PagedResponse<ProvenanceRecord> findAll(int page, int size, RecordFilterCriteria criteria) {
+        if (criteria.recordIds() != null && criteria.recordIds().isEmpty()) {
+            return PagedResponse.of(List.of(), 0, page, size);
+        }
         var records = provenanceRegistry.findAll(page, size, criteria);
         var total = provenanceRegistry.count(criteria);
         return PagedResponse.of(records, total, page, size);
@@ -142,8 +146,8 @@ public class ProvenanceService {
         );
     }
 
-    public List<LocationCount> getLocationCounts() {
-        return provenanceRegistry.countByLocation();
+    public List<LocationCount> getLocationCountsForIds(Collection<UUID> ids) {
+        return provenanceRegistry.countByLocationForIds(ids);
     }
 
     @Transactional
