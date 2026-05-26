@@ -10,7 +10,7 @@
 #
 # Requires:
 #   - Local docker deployment running (./start-dev.sh)
-#   - sigstore-token-daemon.py running with a fresh token in ~/.sigstore-id-token
+#   - signing-tool sigstore-token-daemon command running with a fresh token in ~/.sigstore-id-token
 
 set -euo pipefail
 
@@ -20,7 +20,7 @@ TOKEN_FILE=$HOME/.sigstore-id-token
 WORK_DIR=build/seed-data
 
 if [ ! -s "$TOKEN_FILE" ]; then
-  echo "ERROR: $TOKEN_FILE missing or empty. Start sigstore-token-daemon.py first." >&2
+  echo "ERROR: $TOKEN_FILE missing or empty. Start the signing-tool sigstore-token-daemon command first." >&2
   exit 1
 fi
 
