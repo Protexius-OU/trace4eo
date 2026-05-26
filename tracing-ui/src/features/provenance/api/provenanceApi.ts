@@ -33,6 +33,7 @@ export async function fetchRecords(
   if (filters.attributes) {
     filters.attributes.forEach(chip => params.append('attribute', `${chip.key}=${chip.value}`))
   }
+  if (filters.inChainOf) params.set('inChainOf', filters.inChainOf)
 
   const response = await fetch(`${API_BASE}?${params}`)
   if (!response.ok) {

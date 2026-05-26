@@ -1,12 +1,15 @@
 package com.protexius.trace4eo.provenance;
 
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 public record RecordFilterCriteria(
     List<String> dataTypes,
     String dataId,
     List<String> signerIdentities,
-    AttributeFilter attributes
+    AttributeFilter attributes,
+    Set<UUID> recordIds
 ) {
 
     public static RecordFilterCriteria of(
@@ -19,11 +22,16 @@ public record RecordFilterCriteria(
             dataTypes,
             dataId,
             signerIdentities,
-            AttributeFilterParser.parse(rawAttributeTokens)
+            AttributeFilterParser.parse(rawAttributeTokens),
+            null
         );
     }
 
     public static RecordFilterCriteria none() {
-        return new RecordFilterCriteria(null, null, null, AttributeFilter.empty());
+        return new RecordFilterCriteria(null, null, null, AttributeFilter.empty(), null);
+    }
+
+    public RecordFilterCriteria withRecordIds(Set<UUID> ids) {
+        return new RecordFilterCriteria(dataTypes, dataId, signerIdentities, attributes, ids);
     }
 }

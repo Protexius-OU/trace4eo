@@ -1,1 +1,1 @@
-export { default as LocationsMapPage } from './pages/LocationsMapPage'
+export { default as ProvenanceChainMap } from './components/ProvenanceChainMap'

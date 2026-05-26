@@ -98,6 +98,7 @@ export interface RecordFilters {
   dataId?: string
   signerIdentities?: string[]
   attributes?: AttributeChip[]
+  inChainOf?: string
 }
 
 export interface FilterOptions {
