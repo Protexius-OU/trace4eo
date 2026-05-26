@@ -3,6 +3,7 @@ package com.protexius.trace4eo.signing;
 import com.protexius.trace4eo.signing.commands.BatchSigningTool;
 import com.protexius.trace4eo.signing.commands.RegisterRecordsTool;
 import com.protexius.trace4eo.signing.commands.SigningTool;
+import com.protexius.trace4eo.signing.commands.SigstoreTokenDaemon;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.shell.core.command.CommandRegistry;
@@ -47,6 +48,11 @@ class NativeCommandsConfiguration {
     @Bean
     CommandFactoryBean registerRecordsCommand() {
         return commandBean(RegisterRecordsTool.class, "registerRecords");
+    }
+
+    @Bean
+    CommandFactoryBean sigstoreTokenDaemonCommand() {
+        return commandBean(SigstoreTokenDaemon.class, "sigstoreTokenDaemon");
     }
 
     private CommandFactoryBean commandBean(Class<?> cls, String methodName) {

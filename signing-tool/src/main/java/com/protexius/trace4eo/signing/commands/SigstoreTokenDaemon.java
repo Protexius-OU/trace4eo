@@ -41,14 +41,14 @@ public class SigstoreTokenDaemon {
     @Command(name = "sigstore-token-daemon",
         description = "Run a device-flow OIDC login against Sigstore, write the id_token to "
             + "--token-file, then loop refreshing it before expiry. Stop with Ctrl+C.")
-    public void run(
+    public void sigstoreTokenDaemon(
         @Option(longName = "issuer",
             description = "Sigstore OIDC issuer (default: discover via Sigstore TUF)") String issuer,
         @Option(longName = "token-file",
             description = "Path to write the id_token to (default ~/.sigstore-id-token)") Path tokenFile,
         @Option(longName = "refresh-lead-seconds",
             description = "Refresh this many seconds before expiry",
-            defaultValue = "10") int refreshLeadSeconds
+            defaultValue = "10") Integer refreshLeadSeconds
     ) throws IOException {
         Path resolvedTokenFile = resolveTokenFile(tokenFile);
         try {
