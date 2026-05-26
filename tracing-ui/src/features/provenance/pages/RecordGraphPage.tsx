@@ -36,7 +36,7 @@ export default function RecordGraphPage() {
     enabled: !!id,
   })
 
-  const { data: recordData } = useQuery({
+  const { data: recordData, error: recordError } = useQuery({
     queryKey: ['record', id],
     queryFn: () => fetchRecord(authFetch, id!),
     enabled: !!id,
@@ -141,6 +141,8 @@ export default function RecordGraphPage() {
           isSearchingPredecessors={rv.isSearchingPredecessors}
         />
       )}
+
+      {recordError && <p className="error">Error loading record: {String(recordError)}</p>}
 
       {graphLoading && <p className="loading">Loading graph...</p>}
 
