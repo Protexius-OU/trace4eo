@@ -4,15 +4,19 @@ set -e
 set -a && source "$(dirname "$0")/.env" && set +a
 
 FRESH=false
+SEED=false
 
 for arg in "$@"; do
   case $arg in
     --fresh)
       FRESH=true
       ;;
+    --seed)
+      SEED=true
+      ;;
     *)
       echo "Unknown argument: $arg"
-      echo "Usage: ./start-dev.sh [--fresh]"
+      echo "Usage: ./start-dev.sh [--fresh] [--seed]"
       exit 1
       ;;
   esac
@@ -34,3 +38,7 @@ docker compose exec -T keycloak /opt/keycloak/bin/kcadm.sh update realms/master 
 
 ./config/keycloak/configure-token-exchange.sh
 echo "All services started. Frontend at http://localhost:3000, backend at http://localhost:8080"
+
+if [ "$SEED" = true ]; then
+  "$(dirname "$0")/seed-dev.sh"
+fi

@@ -1,8 +1,8 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Globe, { type GlobeMethods } from 'react-globe.gl'
 import { feature } from 'topojson-client'
-import { scaleSequential, interpolateYlOrRd } from 'd3'
-import { MeshPhongMaterial } from 'three'
+import { scaleSequentialLog, interpolateOrRd } from 'd3'
+import { MeshBasicMaterial } from 'three'
 import countries110m from 'world-atlas/countries-110m.json'
 import type { LocationCount } from '../types/locations'
 import { normalizeCountryName, resolveCountryKey } from '../utils/countryAliases'
@@ -20,10 +20,12 @@ interface Props {
 }
 
 const EUROPE_VIEW = { lat: 52, lng: 15, altitude: 1.8 }
-const BACKGROUND = '#05070d'
-const ZERO_COUNT_COLOR = '#1a2030'
-const STROKE_COLOR = '#2a3142'
-const SIDE_COLOR = 'rgba(0, 0, 0, 0.25)'
+const BACKGROUND = '#faf8f3'
+const OCEAN_COLOR = '#c8d6e2'
+const ZERO_COUNT_COLOR = '#e8e0cf'
+const STROKE_COLOR = '#6b7888'
+const SIDE_COLOR = 'rgba(15, 23, 42, 0.08)'
+const POLYGON_ALTITUDE = 0.01
 
 // Parsed once per page load. The TopoJSON cannot change at runtime.
 const COUNTRY_POLYGONS: CountryFeature[] = (() => {
@@ -35,11 +37,7 @@ const COUNTRY_POLYGONS: CountryFeature[] = (() => {
 })()
 
 // Module-scope so navigating away from /map and back doesn't reallocate.
-const GLOBE_MATERIAL = new MeshPhongMaterial({
-  color: '#0a0f1c',
-  emissive: '#02030a',
-  shininess: 2,
-})
+const GLOBE_MATERIAL = new MeshBasicMaterial({ color: OCEAN_COLOR })
 
 export default function GlobeHeatMap({ counts }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -61,8 +59,8 @@ export default function GlobeHeatMap({ counts }: Props) {
   )
 
   const colorScale = useMemo(() => {
-    const domainMax = Math.max(maxCount, 1)
-    return scaleSequential(interpolateYlOrRd).domain([0, domainMax])
+    const domainMax = Math.max(maxCount, 2)
+    return scaleSequentialLog((t: number) => interpolateOrRd(0.2 + 0.65 * t)).domain([1, domainMax])
   }, [maxCount])
 
   useLayoutEffect(() => {
@@ -99,13 +97,6 @@ export default function GlobeHeatMap({ counts }: Props) {
   const polygonSideColor = useCallback(() => SIDE_COLOR, [])
   const polygonStrokeColor = useCallback(() => STROKE_COLOR, [])
 
-  const polygonAltitude = useCallback((p: object) => {
-    const count = countForFeature(p)
-    if (count === 0) return 0.005
-    const normalized = maxCount === 0 ? 0 : count / maxCount
-    return 0.012 + 0.07 * normalized
-  }, [countForFeature, maxCount])
-
   const polygonLabel = useCallback((p: object) => {
     const feat = p as CountryFeature
     const name = feat.properties?.name ?? 'Unknown'
@@ -137,15 +128,13 @@ export default function GlobeHeatMap({ counts }: Props) {
           backgroundColor={BACKGROUND}
           globeImageUrl={null}
           globeMaterial={GLOBE_MATERIAL}
-          showAtmosphere
-          atmosphereColor="#3b6ea5"
-          atmosphereAltitude={0.18}
+          showAtmosphere={false}
           showGraticules={false}
           polygonsData={COUNTRY_POLYGONS}
           polygonCapColor={polygonCapColor}
           polygonSideColor={polygonSideColor}
           polygonStrokeColor={polygonStrokeColor}
-          polygonAltitude={polygonAltitude}
+          polygonAltitude={POLYGON_ALTITUDE}
           polygonLabel={polygonLabel}
           polygonsTransitionDuration={400}
           onPolygonClick={onPolygonClick}

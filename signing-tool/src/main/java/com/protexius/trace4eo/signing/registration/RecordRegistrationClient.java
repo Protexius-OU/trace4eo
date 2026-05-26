@@ -101,19 +101,19 @@ public class RecordRegistrationClient {
     }
 
     public void checkSignerAccess(String registerUrl, String accessToken) {
-        checkAccess(registerUrl + "/check-access", accessToken,
+        checkAccess("Signer", registerUrl + "/check-access", accessToken,
             "Your account is not authorised to sign records. "
                 + "Ask the system administrator to grant the 'signer' role "
                 + "or add your email domain to the allowlist.");
     }
 
     public void checkUploaderAccess(String registerUrl, String accessToken) {
-        checkAccess(registerUrl + "/check-uploader-access", accessToken,
+        checkAccess("Uploader", registerUrl + "/check-uploader-access", accessToken,
             "Your account is not authorised to register provenance records. "
                 + "Ask the system administrator to grant the 'uploader' role.");
     }
 
-    private void checkAccess(String url, String accessToken, String forbiddenMessage) {
+    private void checkAccess(String roleLabel, String url, String accessToken, String forbiddenMessage) {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -128,7 +128,7 @@ public class RecordRegistrationClient {
                 throw new RegistrationException(
                     String.format("Access check failed: HTTP %d - %s", response.statusCode(), response.body()));
             }
-            log.info("Access check passed for: {}", extractEmail(accessToken));
+            log.info("{} access check passed for: {}", roleLabel, extractEmail(accessToken));
         } catch (RegistrationException e) {
             throw e;
         } catch (InterruptedException e) {

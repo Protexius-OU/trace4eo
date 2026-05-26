@@ -550,6 +550,63 @@ class ProvenanceRegistryTest {
     }
 
     @Test
+    void findAllByIdsReturnsEmptyMapForEmptyInput() {
+        assertTrue(provenanceRegistry.findAllByIds(List.of()).isEmpty());
+    }
+
+    @Test
+    void findAllByIdsReturnsSingleRecordWhenFound() {
+        UUID id = UUID.randomUUID();
+        createRecordWithId(id);
+
+        Map<UUID, ProvenanceRecord> result = provenanceRegistry.findAllByIds(List.of(id));
+
+        assertEquals(1, result.size());
+        assertNotNull(result.get(id));
+        assertEquals(id, result.get(id).id());
+    }
+
+    @Test
+    void findAllByIdsReturnsEmptyMapWhenNoneFound() {
+        Map<UUID, ProvenanceRecord> result = provenanceRegistry.findAllByIds(
+            List.of(UUID.randomUUID(), UUID.randomUUID())
+        );
+
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void findAllByIdsReturnsOnlyPresentRecords() {
+        UUID present1 = UUID.randomUUID();
+        UUID present2 = UUID.randomUUID();
+        UUID missing = UUID.randomUUID();
+        createRecordWithId(present1);
+        createRecordWithId(present2);
+
+        Map<UUID, ProvenanceRecord> result = provenanceRegistry.findAllByIds(
+            List.of(present1, missing, present2)
+        );
+
+        assertEquals(2, result.size());
+        assertTrue(result.containsKey(present1));
+        assertTrue(result.containsKey(present2));
+        assertFalse(result.containsKey(missing));
+    }
+
+    @Test
+    void findAllByIdsHandlesDuplicateIds() {
+        UUID id = UUID.randomUUID();
+        createRecordWithId(id);
+
+        Map<UUID, ProvenanceRecord> result = provenanceRegistry.findAllByIds(
+            List.of(id, id, id)
+        );
+
+        assertEquals(1, result.size());
+        assertNotNull(result.get(id));
+    }
+
+    @Test
     void countByLocationGroupsByLowercaseValue() {
         createRecordWithAttributes("type-a", Map.of("location", "Germany"));
         createRecordWithAttributes("type-a", Map.of("location", "germany"));
