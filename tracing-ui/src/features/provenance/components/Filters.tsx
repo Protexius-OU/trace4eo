@@ -32,8 +32,15 @@ export function FilterDropdown({ label, values, displayValues, selected, onToggl
       if (menuRef.current?.contains(target)) return
       setIsOpen(false)
     }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false)
+    }
     document.addEventListener('mousedown', handleMouseDown)
-    return () => document.removeEventListener('mousedown', handleMouseDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [isOpen])
 
   useEffect(() => {

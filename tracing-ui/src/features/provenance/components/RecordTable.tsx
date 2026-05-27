@@ -16,6 +16,7 @@ interface Props {
   filterOptions: FilterOptions
   filters: RecordFilters
   onFilterChange: (filters: RecordFilters) => void
+  isFetching?: boolean
 }
 
 interface TooltipProps {
@@ -185,7 +186,7 @@ function AttributesFilter({ chips, onChange }: AttributesFilterProps) {
   )
 }
 
-export default function RecordTable({ records, filterOptions, filters, onFilterChange }: Props) {
+export default function RecordTable({ records, filterOptions, filters, onFilterChange, isFetching }: Props) {
   const authFetch = useAuthFetch()
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [downloadErrors, setDownloadErrors] = useState<Record<string, string>>({})
@@ -235,7 +236,7 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
   const clearFilters = () => onFilterChange({})
 
   return (
-    <div className="table-container">
+    <div className={`table-container${isFetching ? ' table-fetching' : ''}`}>
       <table>
         <thead>
           <tr>

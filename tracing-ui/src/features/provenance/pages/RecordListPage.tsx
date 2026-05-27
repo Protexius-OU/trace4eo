@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { fetchRecords, fetchFilterOptions } from '../api/provenanceApi'
 import type { RecordFilters } from '../types/provenance'
 import RecordTable from '../components/RecordTable'
@@ -17,9 +17,10 @@ export default function RecordListPage() {
     staleTime: 60_000,
   })
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, isFetching, error } = useQuery({
     queryKey: ['records', page, filters],
     queryFn: () => fetchRecords(authFetch, page, 20, filters),
+    placeholderData: keepPreviousData,
   })
 
   const handleFilterChange = useCallback((newFilters: RecordFilters) => {
@@ -42,6 +43,7 @@ export default function RecordListPage() {
             filterOptions={filterOptions}
             filters={filters}
             onFilterChange={handleFilterChange}
+            isFetching={isFetching}
           />
           <Pagination
             page={page}
