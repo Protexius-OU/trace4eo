@@ -85,3 +85,31 @@
   margin-bottom: 1rem;
 }
 
+.modal-error {
+  color: var(--color-status-fail-fg);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+.modal-header h2 {
+  margin: 0;
+}
+
+.modal-header .btn-secondary {
+  padding: var(--space-1) var(--space-3);
+}
+
+.modal-data-id-link {
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+}
+
+.modal-cell-sm {
+  font-size: var(--text-md);
+}
+

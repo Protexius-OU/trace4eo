@@ -59,10 +59,10 @@
   margin-bottom: 0.4rem;
 }
 
-.trace-verification-meta {
+.trace-verification .trace-verification-meta {
   font-size: 0.85em;
   opacity: 0.85;
-  margin-top: 0.75rem !important;
+  margin-top: 0.75rem;
 }
 
 .trace-verification-hint {
@@ -78,9 +78,9 @@
 }
 
 .trace-verification-progress {
-  background: #f5f5f5;
-  border-color: #bdbdbd;
-  color: #424242;
+  background: var(--color-surface-muted);
+  border-color: var(--color-text-faint);
+  color: var(--color-text-strong);
   font-style: italic;
 }
 
@@ -104,15 +104,15 @@
 }
 
 .trace-verification-row-ok td {
-  color: #1b5e20;
+  color: var(--color-success);
 }
 
 .trace-verification-row-hash_mismatch td {
-  color: #b53f04;
+  color: var(--color-warning);
 }
 
 .trace-verification-row-file_not_in_trace td {
-  color: #757575;
+  color: var(--color-text-muted);
 }
 
 .trace-verification-details {
@@ -136,15 +136,15 @@
 }
 
 .trace-verification-ok {
-  background: #e8f5e9;
-  border-color: #66bb6a;
-  color: #1b5e20;
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
+  color: var(--color-success);
 }
 
 .trace-verification-error {
-  background: #fff3e0;
-  border-color: #ffa726;
-  color: #b53f04;
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+  color: var(--color-warning);
 }
 
 .chain-view-toggle {

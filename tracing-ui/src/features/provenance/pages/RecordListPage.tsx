@@ -48,7 +48,7 @@ export default function RecordListPage() {
             totalPages={data.totalPages}
             onPageChange={setPage}
           />
-          <p style={{ textAlign: 'center', marginTop: '1rem', color: '#666' }}>
+          <p className="pagination-summary">
             {data.totalElements} total records
           </p>
         </>

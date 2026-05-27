@@ -302,7 +302,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
 
   return (
     <div className="graph-wrapper">
-      <div ref={containerRef} className="graph-container" style={{ height: '600px', position: 'relative' }}>
+      <div ref={containerRef} className="graph-container">
         <svg ref={svgRef} width="100%" height="100%" />
 
         <div className="graph-timeline-axis" aria-hidden="true">
@@ -319,7 +319,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
           )}
           {sortedTypes.map(type => (
             <span key={type ?? 'unknown'} className="graph-legend-item">
-              <svg width="14" height="14" style={{ flexShrink: 0 }}>
+              <svg width="14" height="14">
                 <rect x="1" y="1" width="12" height="12" rx="2" ry="2" fill={typeColors(type)} />
               </svg>
               <span>{stripPrefix(type?.trim(), labelPrefix) || type?.trim() || 'Unknown'}</span>

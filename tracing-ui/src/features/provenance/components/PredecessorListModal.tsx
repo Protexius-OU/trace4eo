@@ -75,15 +75,14 @@ export default function PredecessorListModal({ nodes, onClose }: Props) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content modal-content-wide" onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 style={{ margin: 0 }}>
+        <div className="modal-header">
+          <h2>
             Collapsed Predecessors ({filtered.length}
             {filtered.length !== nodes.length && <> of {nodes.length}</>})
           </h2>
           <button
             className="btn btn-secondary"
             onClick={onClose}
-            style={{ padding: '0.25rem 0.75rem' }}
           >
             X
           </button>
@@ -130,7 +129,7 @@ export default function PredecessorListModal({ nodes, onClose }: Props) {
                     <td>
                       <Link
                         to={`/records/${node.id}/graph`}
-                        style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+                        className="modal-data-id-link"
                         onClick={onClose}
                       >
                         {node.dataId || node.id}
@@ -144,7 +143,7 @@ export default function PredecessorListModal({ nodes, onClose }: Props) {
                         ? new Date(node.signingTime).toLocaleDateString()
                         : '-'}
                     </td>
-                    <td style={{ fontSize: '0.8rem' }}>
+                    <td className="modal-cell-sm">
                       {node.signerIdentity ? getSignerDomain(node.signerIdentity) : '-'}
                     </td>
                   </tr>

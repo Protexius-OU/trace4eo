@@ -102,7 +102,7 @@ export default function RecordGraphPage() {
                 ref={traceFileInputRef}
                 type="file"
                 multiple
-                style={{ display: 'none' }}
+                className="hidden"
                 onChange={handleVerifyTraceFile}
               />
             </>
@@ -111,7 +111,7 @@ export default function RecordGraphPage() {
             ref={fileInputRef}
             type="file"
             multiple
-            style={{ display: 'none' }}
+            className="hidden"
             onChange={handleVerifyFiles}
           />
           <Link to="/" className="btn btn-secondary">Back to List</Link>

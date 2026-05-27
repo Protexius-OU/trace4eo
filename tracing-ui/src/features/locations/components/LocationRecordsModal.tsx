@@ -98,14 +98,13 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content modal-content-wide" onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 style={{ margin: 0 }}>
+        <div className="modal-header">
+          <h2>
             Records from {countryName}
           </h2>
           <button
             className="btn btn-secondary"
             onClick={onClose}
-            style={{ padding: '0.25rem 0.75rem' }}
           >
             X
           </button>
@@ -114,7 +113,7 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
           {showRefetchIndicator && <div className="modal-loading-bar" aria-hidden="true" />}
           {initialLoading && <p>Loading records…</p>}
           {error && (
-            <p style={{ color: '#b91c1c' }}>
+            <p className="modal-error">
               Error loading records: {error instanceof Error ? error.message : 'Unknown error'}
             </p>
           )}
@@ -160,7 +159,7 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
                       <td>
                         <Link
                           to={`/records/${record.id}/graph`}
-                          style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+                          className="modal-data-id-link"
                           onClick={onClose}
                         >
                           {record.metadata.dataId || record.id}
@@ -174,7 +173,7 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
                           ? new Date(record.signature.signingTime).toLocaleDateString()
                           : '-'}
                       </td>
-                      <td style={{ fontSize: '0.8rem' }}>
+                      <td className="modal-cell-sm">
                         {record.signature?.details?.signerIdentity
                           ? getSignerDomain(record.signature.details.signerIdentity)
                           : '-'}
@@ -192,7 +191,7 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
           onPageChange={setPage}
         />
         {data && (
-          <p style={{ textAlign: 'center', marginTop: '1rem', color: '#666' }}>
+          <p className="pagination-summary">
             {totalElements} total records
           </p>
         )}

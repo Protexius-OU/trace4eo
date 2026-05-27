@@ -40,6 +40,14 @@
   --color-status-fail-border: #fecaca;
   --color-status-fail-line: #fca5a5;
 
+  /* Status — success/warning (trace verification) */
+  --color-success: #1b5e20;
+  --color-success-bg: #e8f5e9;
+  --color-success-border: #66bb6a;
+  --color-warning: #b53f04;
+  --color-warning-bg: #fff3e0;
+  --color-warning-border: #ffa726;
+
   /* Neutrals beyond text scale */
   --color-text-disabled: #9ca3af;
   --color-text-strong: #4b5563;
@@ -232,6 +240,10 @@ h1 {
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.hidden {
+  display: none;
 }
 
 /* Loading and error states */
