@@ -21,15 +21,15 @@ cd tracing-ui && npx tsc --noEmit
 Four Gradle modules (Java 25) plus a React frontend:
 
 - **provenance** — core library, exported as API to other modules. Contains record model (`ProvenanceRecord`, `Metadata`, `Manifest`, `FilesInfo`), builder pattern for record construction, Sigstore-based signing/verification services, JSON/ZIP container I/O, and custom Jackson serializers (`ProvenanceJsonMapper`).
-- **signing-tool** — Spring Shell CLI. `SigningTool` with `create-provenance-record` (single record) and `batch-sign` (batch, optional HTTP registration with Keycloak auth).
-- **verification-tool** — Spring Shell CLI. `VerificationTool` with `verify` and `verify-provenance-record` commands.
+- **signing-tool** — Spring Shell CLI. Commands: `create-provenance-record` (single record), `batch-sign` (one record per file), `register-records` (register signed records to the tracing system over HTTP with Keycloak auth), `get-oidc-token` (fetch an OIDC token), and `sigstore-token-daemon` (background daemon that keeps a Sigstore OIDC token refreshed at `~/.sigstore-id-token`).
+- **verification-tool** — Spring Shell CLI. `VerificationTool` with the `verify-provenance-record` command.
 - **tracing-system** — Spring Boot web app. REST API (`/api/provenance`), PostgreSQL via Flyway, Keycloak OAuth2 resource server, provenance graph traversal (BFS). Uses Testcontainers for integration tests.
 - **tracing-ui** — React/TypeScript (Vite), D3 graph visualization, TanStack React Query. Built separately with npm.
 
 ## Local Dev Environment
 
 ```bash
-./build-dev.sh   # builds Docker images
+./build-dev.sh   # gradle clean build (all module jars), then backend + frontend Docker images
 ./start-dev.sh   # start all services via Docker Compose
 ./stop-dev.sh    # stop all services
 ```
