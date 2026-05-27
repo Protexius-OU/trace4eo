@@ -2,6 +2,7 @@ import { Routes, Route, Link } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
 import './App.css'
 import { RecordListPage, RecordGraphPage } from './features/provenance'
+import HashChainSandboxPage from './features/provenance/pages/HashChainSandboxPage'
 
 export default function App() {
   const auth = useAuth()
@@ -68,6 +69,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<RecordListPage />} />
           <Route path="/records/:id/graph" element={<RecordGraphPage />} />
+          <Route path="/hash-chain-sandbox" element={<HashChainSandboxPage />} />
         </Routes>
       </main>
     </div>
