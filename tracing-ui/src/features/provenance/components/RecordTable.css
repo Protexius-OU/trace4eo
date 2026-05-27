@@ -25,7 +25,7 @@
 
 .table-container.table-fetching {
   opacity: 0.6;
-  transition: opacity 0.15s;
+  transition: opacity var(--transition-base);
 }
 
 table {
@@ -62,7 +62,7 @@ td:first-child {
 }
 
 .dropdown-arrow {
-  margin-left: 4px;
+  margin-left: var(--space-1);
 }
 
 .tooltip-trigger {
@@ -167,7 +167,7 @@ td .btn-primary {
 
 .filter-dropdown-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + var(--space-1));
   left: 0;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -262,7 +262,7 @@ td .btn-primary {
 
 .filter-error-popover {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + var(--space-1));
   right: 0;
   background: var(--color-surface);
   border: 1px solid var(--color-danger);
@@ -288,7 +288,7 @@ td .btn-primary {
 /* === Badges === */
 .badge {
   display: inline-block;
-  padding: 0.2rem var(--space-2);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   font-size: var(--text-sm);
   font-weight: 500;
@@ -314,13 +314,13 @@ td .btn-primary {
 }
 
 .badge-attribute-key {
-  padding: 0.25rem 0.4rem;
+  padding: var(--space-1) var(--space-1-5);
   background: var(--color-surface-muted);
   color: var(--color-text-muted);
 }
 
 .badge-attribute-value {
-  padding: 0.25rem 0.4rem;
+  padding: var(--space-1) var(--space-1-5);
   background: var(--color-surface);
   color: var(--color-text);
   font-weight: 500;
@@ -344,7 +344,7 @@ td .btn-primary {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
-  padding: 0.2rem 0.3rem;
+  padding: var(--space-1);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
@@ -369,7 +369,7 @@ td .btn-primary {
   background: transparent;
   font-size: var(--text-sm);
   color: var(--color-text);
-  padding: 0.1rem 0.2rem;
+  padding: var(--space-1);
 }
 
 .attribute-chip-input input::placeholder {
@@ -403,7 +403,7 @@ td .btn-primary {
 .uploader-via {
   font-size: var(--text-xs);
   color: var(--color-text-subtle);
-  margin-top: 2px;
+  margin-top: var(--space-1);
 }
 
 /* === Tooltip === */

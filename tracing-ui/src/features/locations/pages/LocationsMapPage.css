@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: #faf8f3;
+  background: var(--color-surface-map);
   overflow: hidden;
 }
 
@@ -13,17 +13,17 @@
   top: 1.5rem;
   left: 50%;
   transform: translateX(-50%);
-  padding: 0.5rem 1rem;
+  padding: var(--space-2) var(--space-4);
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   color: #475569;
-  font-size: 0.9rem;
+  font-size: var(--text-lg);
   z-index: 2;
   pointer-events: none;
 }
 
 .locations-status-error {
-  color: #b91c1c;
-  border-color: #fca5a5;
+  color: var(--color-status-fail-fg);
+  border-color: var(--color-status-fail-line);
 }
