@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useId } from 'react'
+import { AlertCircle, Download } from 'lucide-react'
 import './RecordTable.css'
 import { Link } from 'react-router-dom'
 import type { AttributeChip, ProvenanceRecord, FilterOptions, RecordFilters } from '../types/provenance'
@@ -326,15 +327,9 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
                       {downloadingId === record.id ? (
                         <span>...</span>
                       ) : downloadErrors[record.id] ? (
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                          <path d="M8 8a.75.75 0 0 1-.75-.75v-4.5a.75.75 0 0 1 1.5 0v4.5A.75.75 0 0 1 8 8zm0 3a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
-                          <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-                        </svg>
+                        <AlertCircle size={16} aria-hidden="true" />
                       ) : (
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                          <path d="M8 12l-4-4h2.5V3h3v5H12L8 12z"/>
-                          <path d="M14 13v1H2v-1h12z"/>
-                        </svg>
+                        <Download size={16} aria-hidden="true" />
                       )}
                     </button>
                   </div>

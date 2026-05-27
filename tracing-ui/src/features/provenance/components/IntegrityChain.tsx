@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { Check, X, Minus, HelpCircle } from 'lucide-react'
 import type { ProvenanceRecord, VerificationResult, VerificationStepName, FileVerificationResponse, FileHashInfo, PredecessorFileResult } from '../types/provenance'
 import './IntegrityChain.css'
 
@@ -31,12 +32,13 @@ function connectorClass(status: Status): string {
 }
 
 function StatusIcon({ status }: { status: Status }) {
+  const props = { size: 14, strokeWidth: 2.5, 'aria-hidden': true as const }
   switch (status) {
-    case 'pass': return <span className="ic-status ic-status-pass">✓</span>
-    case 'fail': return <span className="ic-status ic-status-fail">✗</span>
-    case 'skipped': return <span className="ic-status ic-status-skipped">&ndash;</span>
-    case 'unknown': return <span className="ic-status ic-status-unknown">?</span>
-    default: return null
+    case 'pass':    return <Check       {...props} className="ic-status ic-status-pass" />
+    case 'fail':    return <X           {...props} className="ic-status ic-status-fail" />
+    case 'skipped': return <Minus       {...props} className="ic-status ic-status-skipped" />
+    case 'unknown': return <HelpCircle  {...props} className="ic-status ic-status-unknown" />
+    default:        return null
   }
 }
 
@@ -109,7 +111,11 @@ function NotInRecordRow({
               {predecessorResult.recordDataId} ({predecessorResult.recordDataType})
             </Link>
             {' — '}
-            {predecessorResult.status === 'MATCHED' ? '✓ Matched' : '✗ Mismatch'}
+            <span className="ic-status-inline">
+              {predecessorResult.status === 'MATCHED'
+                ? <><Check size={12} strokeWidth={2.5} aria-hidden="true" />Matched</>
+                : <><X size={12} strokeWidth={2.5} aria-hidden="true" />Mismatch</>}
+            </span>
             {` at depth ${predecessorResult.foundAtDepth}`}
           </span>
         ) : isSearching ? (
@@ -266,7 +272,9 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
           </label>
           {verified && (
             <span className={`ic-badge ${verificationResult.status ? 'ic-badge-pass' : 'ic-badge-fail'}`}>
-              {verificationResult.status ? '✓ Verified' : '✗ Failed'}
+              {verificationResult.status
+                ? <><Check size={12} strokeWidth={2.5} aria-hidden="true" />Verified</>
+                : <><X size={12} strokeWidth={2.5} aria-hidden="true" />Failed</>}
             </span>
           )}
         </div>

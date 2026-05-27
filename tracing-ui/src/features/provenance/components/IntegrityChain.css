@@ -42,6 +42,9 @@
 }
 
 .ic-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
   font-size: 0.6875rem;
   font-weight: 600;
   padding: 0.125rem var(--space-2);
@@ -114,10 +117,6 @@
 
 /* Status icons */
 .ic-status {
-  font-weight: 700;
-  font-size: var(--text-sm);
-  width: 1rem;
-  text-align: center;
   flex-shrink: 0;
 }
 
@@ -355,6 +354,13 @@
 
 .ic-predecessor-mismatch {
   color: var(--color-status-fail-fg);
+}
+
+.ic-status-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  vertical-align: middle;
 }
 
 /* Summary */

@@ -1,5 +1,6 @@
 import { Routes, Route, Link } from 'react-router-dom'
 import { useAuth } from 'react-oidc-context'
+import { Globe, LogOut } from 'lucide-react'
 import './App.css'
 import { RecordListPage, RecordGraphPage } from './features/provenance'
 import { LocationsMapPage } from './features/locations'
@@ -30,11 +31,7 @@ export default function App() {
         <main className="main login">
           <div className="login-card">
             <div className="login-icon">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M2 12h20" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              </svg>
+              <Globe size={48} aria-hidden="true" />
             </div>
             <h1 className="login-title">Trace4EO</h1>
             <p className="login-subtitle">Earth Observation Provenance Tracing</p>
@@ -56,11 +53,7 @@ export default function App() {
           <div className="nav-right">
             <span className="nav-user">{auth.user?.profile.email}</span>
             <button className="btn-icon" onClick={() => auth.signoutRedirect()} title="Sign Out">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
+              <LogOut size={18} aria-hidden="true" />
             </button>
           </div>
         </nav>
