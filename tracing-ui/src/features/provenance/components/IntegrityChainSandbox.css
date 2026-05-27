@@ -1,0 +1,108 @@
+/* Hash-chain sandbox — extra styles on top of IntegrityChain.css */
+
+.scb {
+  max-width: 56rem;
+  margin-inline: auto;
+}
+
+/* Recomputed vs sealed hash rows */
+.scb-hashes {
+  display: grid;
+  gap: 0.125rem;
+  margin-top: var(--space-1);
+}
+
+.scb-hash-row {
+  display: grid;
+  grid-template-columns: 4rem 1fr;
+  align-items: baseline;
+  gap: var(--space-1-5);
+}
+
+.scb-hash-tag {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-disabled);
+  text-align: right;
+}
+
+/* Truncate hashes to ~30 chars with an ellipsis; full value on hover (title) */
+.scb-hash-value {
+  display: block;
+  max-width: 30ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scb-hash-sealed {
+  color: var(--color-text-disabled);
+}
+
+/* The recomputed hash, when it no longer matches the signed baseline */
+.scb-hash-changed {
+  color: var(--color-status-fail-fg);
+  font-weight: 600;
+}
+
+/* Editable source data */
+.scb-input-label {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--color-text-muted);
+  margin: var(--space-1-5) 0 var(--space-1);
+}
+
+.scb-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  resize: vertical;
+}
+
+.scb-input:focus {
+  outline: none;
+  border-color: var(--color-brand);
+}
+
+.scb-mono {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  overflow-wrap: anywhere;
+}
+
+/* Inline editable metadata attribute (e.g. Location) */
+.scb-field-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  color: var(--color-text);
+  padding: 0.125rem var(--space-1-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.scb-field-input:focus {
+  outline: none;
+  border-color: var(--color-brand);
+}
+
+/* Page shell */
+.scb-intro {
+  max-width: 56rem;
+  margin: 0 auto var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
