@@ -5,6 +5,7 @@ import * as d3 from 'd3'
 import type { ProvenanceGraph, GraphNode, DisplayNode, GroupNode } from '../types/provenance'
 import { buildDisplayGraph } from '../utils/graphCollapsing'
 import { meaningfulPrefix, stripPrefix, formatDate, sortTypesByMinDepth } from '../utils/labelUtils'
+import PredecessorListModal from './PredecessorListModal'
 
 interface Props {
   graph: ProvenanceGraph
@@ -52,10 +53,11 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
   const [tooltip, setTooltip] = useState<{ node: DisplayNode; x: number; y: number } | null>(null)
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => new Set())
+  const [expandedGroups] = useState<Set<string>>(() => new Set())
+  const [selectedGroup, setSelectedGroup] = useState<GroupNode | null>(null)
 
   useEffect(() => {
-    setExpandedGroups(new Set())
+    setSelectedGroup(null)
   }, [graph])
 
   const displayGraph = useMemo(
@@ -233,12 +235,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     })
     .on('click', (_event, d) => {
       if (d.isGroup) {
-        setExpandedGroups(prev => {
-          const next = new Set(prev)
-          if (next.has(d.id)) next.delete(d.id)
-          else next.add(d.id)
-          return next
-        })
+        setSelectedGroup(d)
       } else if (d.id !== rootId) {
         navigate(`/records/${d.id}/graph`)
       }
@@ -344,7 +341,12 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
         )}
       </div>
 
-
+      {selectedGroup && (
+        <PredecessorListModal
+          nodes={graph.nodes.filter(n => selectedGroup.hiddenNodeIds.includes(n.id))}
+          onClose={() => setSelectedGroup(null)}
+        />
+      )}
     </div>
   )
 }
