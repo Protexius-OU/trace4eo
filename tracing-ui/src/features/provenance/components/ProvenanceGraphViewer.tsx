@@ -273,6 +273,23 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
     applyPositions()
     simulation.on('tick', applyPositions)
 
+    // Fit the entire provenance chain within the viewport on initial render
+    const bounds = g.node()?.getBBox()
+    if (bounds && bounds.width > 0 && bounds.height > 0) {
+      const FIT_PADDING = 48
+      const fitScale = Math.max(0.1, Math.min(
+        1,
+        (width - FIT_PADDING * 2) / bounds.width,
+        (height - FIT_PADDING * 2) / bounds.height
+      ))
+      const cx = bounds.x + bounds.width / 2
+      const cy = bounds.y + bounds.height / 2
+      const initialTransform = d3.zoomIdentity
+        .translate(width / 2 - cx * fitScale, height / 2 - cy * fitScale)
+        .scale(fitScale)
+      svg.call(zoom.transform, initialTransform)
+    }
+
     const drag = d3.drag<SVGGElement, SimNode>()
       .on('start', (event) => {
         if (!event.active) simulation.alphaTarget(0.3).restart()
