@@ -250,10 +250,42 @@ h1 {
 .loading, .error {
   text-align: center;
   padding: 2rem;
-  color: #888;
+  color: var(--color-text-subtle);
   font-size: 0.875rem;
 }
 
 .error {
   color: #c62828;
 }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes loading-slide {
+  0%   { background-position: -40% 0; }
+  100% { background-position: 140% 0; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-cell {
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-muted) 25%,
+    var(--color-surface-hover) 50%,
+    var(--color-surface-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.skeleton-cell--wide    { width: 70%; }
+.skeleton-cell--medium  { width: 50%; }
+.skeleton-cell--narrow  { width: 35%; }
+.skeleton-cell--actions { width: 80px; }

@@ -4,12 +4,19 @@ import { Globe, LogOut } from 'lucide-react'
 import './App.css'
 import { RecordListPage, RecordGraphPage } from './features/provenance'
 import { LocationsMapPage } from './features/locations'
+import Spinner from '@/core/components/Spinner'
 
 export default function App() {
   const auth = useAuth()
 
   if (auth.isLoading) {
-    return <div className="app"><main className="main"><p>Loading...</p></main></div>
+    return (
+      <div className="app">
+        <main className="main">
+          <Spinner label="Loading…" />
+        </main>
+      </div>
+    )
   }
 
   if (auth.error) {

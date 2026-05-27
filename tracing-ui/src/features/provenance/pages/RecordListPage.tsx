@@ -5,6 +5,8 @@ import type { RecordFilters } from '../types/provenance'
 import RecordTable from '../components/RecordTable'
 import Pagination from '@/core/components/Pagination'
 import { useAuthFetch } from '@/core/auth/useAuthFetch'
+import LoadingBar from '@/core/components/LoadingBar'
+import { useDelayedFlag } from '@/core/hooks/useDelayedFlag'
 
 export default function RecordListPage() {
   const authFetch = useAuthFetch()
@@ -23,6 +25,8 @@ export default function RecordListPage() {
     placeholderData: keepPreviousData,
   })
 
+  const showRefetchBar = useDelayedFlag(isFetching && !isLoading, 300)
+
   const handleFilterChange = useCallback((newFilters: RecordFilters) => {
     setFilters(newFilters)
     setPage(0)
@@ -32,27 +36,31 @@ export default function RecordListPage() {
     <div>
       <h1>Provenance Records</h1>
 
-      {isLoading && <p className="loading">Loading records...</p>}
-
       {error && <p className="error">Error loading records: {String(error)}</p>}
 
-      {data && filterOptions && (
+      {filterOptions && (
         <>
+          {showRefetchBar && <LoadingBar />}
           <RecordTable
-            records={data.content}
+            records={data?.content ?? []}
             filterOptions={filterOptions}
             filters={filters}
             onFilterChange={handleFilterChange}
             isFetching={isFetching}
+            isLoading={isLoading}
           />
-          <Pagination
-            page={page}
-            totalPages={data.totalPages}
-            onPageChange={setPage}
-          />
-          <p className="pagination-summary">
-            {data.totalElements} total records
-          </p>
+          {data && (
+            <>
+              <Pagination
+                page={page}
+                totalPages={data.totalPages}
+                onPageChange={setPage}
+              />
+              <p className="pagination-summary">
+                {data.totalElements} total records
+              </p>
+            </>
+          )}
         </>
       )}
     </div>

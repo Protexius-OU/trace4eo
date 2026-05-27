@@ -8,6 +8,7 @@ import { useCheckboxFilter } from '../../provenance/utils/useCheckboxFilter'
 import { getSignerDomain } from '../../provenance/utils/signerIdentity'
 import type { AttributeChip, RecordFilters } from '../../provenance/types/provenance'
 import Pagination from '@/core/components/Pagination'
+import { useDelayedFlag } from '@/core/hooks/useDelayedFlag'
 import '../../provenance/components/Modal.css'
 
 interface Props {
@@ -17,19 +18,6 @@ interface Props {
 }
 
 const PAGE_SIZE = 20
-
-function useDelayedFlag(active: boolean, delayMs: number): boolean {
-  const [delayed, setDelayed] = useState(false)
-  useEffect(() => {
-    if (!active) {
-      setDelayed(false)
-      return
-    }
-    const id = window.setTimeout(() => setDelayed(true), delayMs)
-    return () => window.clearTimeout(id)
-  }, [active, delayMs])
-  return delayed
-}
 
 export default function LocationRecordsModal({ countryName, countryKey, onClose }: Props) {
   const authFetch = useAuthFetch()
@@ -55,7 +43,6 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
 
   const {
     data: filterOptions,
-    isLoading: filterOptionsLoading,
     error: filterOptionsError,
   } = useQuery({
     queryKey: ['filterOptions'],
@@ -74,7 +61,6 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
     placeholderData: keepPreviousData,
   })
 
-  const initialLoading = (recordsLoading && !data) || filterOptionsLoading
   const isRefetching = recordsFetching && !recordsLoading
   const showRefetchIndicator = useDelayedFlag(isRefetching, 300)
   const error = recordsError ?? filterOptionsError
@@ -111,13 +97,12 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
         </div>
         <div className={`modal-table-scroll${showRefetchIndicator ? ' is-refetching' : ''}`}>
           {showRefetchIndicator && <div className="modal-loading-bar" aria-hidden="true" />}
-          {initialLoading && <p>Loading records…</p>}
           {error && (
             <p className="modal-error">
               Error loading records: {error instanceof Error ? error.message : 'Unknown error'}
             </p>
           )}
-          {!initialLoading && !error && filterOptions && (
+          {!error && filterOptions && (
             <table>
               <thead>
                 <tr>
@@ -149,7 +134,16 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
                 </tr>
               </thead>
               <tbody>
-                {records.length === 0 ? (
+                {recordsLoading && !data ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={i}>
+                      <td><div className="skeleton-cell skeleton-cell--wide" /></td>
+                      <td><div className="skeleton-cell skeleton-cell--narrow" /></td>
+                      <td><div className="skeleton-cell skeleton-cell--narrow" /></td>
+                      <td><div className="skeleton-cell skeleton-cell--medium" /></td>
+                    </tr>
+                  ))
+                ) : records.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="td-empty">No records match the current filters</td>
                   </tr>

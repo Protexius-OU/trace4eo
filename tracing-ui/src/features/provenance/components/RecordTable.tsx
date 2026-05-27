@@ -10,6 +10,7 @@ import { useCheckboxFilter } from '../utils/useCheckboxFilter'
 import { FilterDropdown, DataIdFilter } from './Filters'
 
 const COLUMN_COUNT = 5
+const SKELETON_ROWS = 8
 
 interface Props {
   records: ProvenanceRecord[]
@@ -17,6 +18,7 @@ interface Props {
   filters: RecordFilters
   onFilterChange: (filters: RecordFilters) => void
   isFetching?: boolean
+  isLoading?: boolean
 }
 
 interface TooltipProps {
@@ -186,7 +188,7 @@ function AttributesFilter({ chips, onChange }: AttributesFilterProps) {
   )
 }
 
-export default function RecordTable({ records, filterOptions, filters, onFilterChange, isFetching }: Props) {
+export default function RecordTable({ records, filterOptions, filters, onFilterChange, isFetching, isLoading }: Props) {
   const authFetch = useAuthFetch()
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
   const [downloadErrors, setDownloadErrors] = useState<Record<string, string>>({})
@@ -277,7 +279,17 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
           </tr>
         </thead>
         <tbody>
-          {records.length === 0 ? (
+          {isLoading ? (
+            Array.from({ length: SKELETON_ROWS }).map((_, i) => (
+              <tr key={i}>
+                <td><div className="skeleton-cell skeleton-cell--wide" /></td>
+                <td><div className="skeleton-cell skeleton-cell--narrow" /></td>
+                <td><div className="skeleton-cell skeleton-cell--medium" /></td>
+                <td><div className="skeleton-cell skeleton-cell--medium" /></td>
+                <td><div className="skeleton-cell skeleton-cell--actions" /></td>
+              </tr>
+            ))
+          ) : records.length === 0 ? (
             <tr>
               <td colSpan={COLUMN_COUNT} className="td-empty">
                 No records match the current filters

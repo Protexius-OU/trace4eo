@@ -1,0 +1,30 @@
+.spinner-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: var(--space-3);
+}
+
+.spinner-page--fill {
+  position: absolute;
+  inset: 0;
+}
+
+.spinner-ring {
+  border-radius: 50%;
+  border-style: solid;
+  border-color: var(--color-border);
+  border-top-color: var(--color-accent);
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.spinner-ring--md { width: 32px; height: 32px; border-width: 3px; }
+.spinner-ring--sm { width: 18px; height: 18px; border-width: 2px; }
+
+.spinner-label {
+  font-size: var(--text-lg);
+  color: var(--color-text-subtle);
+}

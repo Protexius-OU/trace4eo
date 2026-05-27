@@ -11,6 +11,7 @@ import Sentinel2FileCheckResult from '../components/Sentinel2FileCheckResult'
 import ProvenanceGraphViewer from '../components/ProvenanceGraphViewer'
 import ProvenanceChainList from '../components/ProvenanceChainList'
 import IntegrityChain from '../components/IntegrityChain'
+import Spinner from '@/core/components/Spinner'
 
 type ChainView = 'graph' | 'list'
 const CHAIN_VIEW_STORAGE_KEY = 'provenance-chain-view'
@@ -144,7 +145,7 @@ export default function RecordGraphPage() {
 
       {recordError && <p className="error">Error loading record: {String(recordError)}</p>}
 
-      {graphLoading && <p className="loading">Loading graph...</p>}
+      {graphLoading && <Spinner label="Loading graph…" />}
 
       {graphError && <p className="error">Error loading graph: {String(graphError)}</p>}
 
