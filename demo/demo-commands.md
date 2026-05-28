@@ -49,14 +49,14 @@ INPUT=plan-enriched.jsonl ./sign-tree.sh
 ## AI use case - Batch 2
 
 ```bash
-nohup python3 discover-tree.py \
+python3 discover-tree.py \
   --root /eodata/Sentinel-2/AUX/S2_GRI_L1C \
   --record-type s2-gri \
   --data-id-prefix s2-gri \
   --metadata mission=sentinel-2 \
   --group-depth 2 \
   --skip-per-parent 30 \
-  --max-per-parent=30 &
+  --max-per-parent=30
 ```
 
 ```bash
