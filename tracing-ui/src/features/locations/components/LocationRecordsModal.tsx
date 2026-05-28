@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { X } from 'lucide-react'
 import { useAuthFetch } from '@/core/auth/useAuthFetch'
 import { Link } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
@@ -93,10 +94,12 @@ export default function LocationRecordsModal({ countryName, countryKey, chainRoo
             Records from {countryName}
           </h2>
           <button
-            className="btn btn-secondary"
+            type="button"
+            className="btn btn-icon"
             onClick={onClose}
+            aria-label="Close"
           >
-            X
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
         <div className={`modal-table-scroll${showRefetchIndicator ? ' is-refetching' : ''}`}>

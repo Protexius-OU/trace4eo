@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
+import { X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import './Modal.css'
 import type { GraphNode } from '../types/provenance'
@@ -81,10 +82,12 @@ export default function PredecessorListModal({ nodes, onClose }: Props) {
             {filtered.length !== nodes.length && <> of {nodes.length}</>})
           </h2>
           <button
-            className="btn btn-secondary"
+            type="button"
+            className="btn btn-icon"
             onClick={onClose}
+            aria-label="Close"
           >
-            X
+            <X size={16} aria-hidden="true" />
           </button>
         </div>
         <div className="modal-table-scroll">

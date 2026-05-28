@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useId } from 'react'
-import { AlertCircle, Download } from 'lucide-react'
+import { AlertCircle, Download, X } from 'lucide-react'
 import './RecordTable.css'
 import { Link } from 'react-router-dom'
 import type { AttributeChip, ProvenanceRecord, FilterOptions, RecordFilters } from '../types/provenance'
@@ -169,7 +169,7 @@ function AttributesFilter({ chips, onChange }: AttributesFilterProps) {
             onClick={(e) => { e.stopPropagation(); removeChip(i) }}
             aria-label={`Remove ${chip.key}=${chip.value}`}
           >
-            ×
+            <X size={12} aria-hidden="true" />
           </button>
         </span>
       ))}

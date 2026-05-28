@@ -95,8 +95,13 @@
   margin: 0;
 }
 
-.modal-header .btn-secondary {
-  padding: var(--space-1) var(--space-3);
+.modal-header .btn-icon {
+  padding: var(--space-1);
+  color: var(--color-text-muted);
+}
+
+.modal-header .btn-icon:hover {
+  color: var(--color-text);
 }
 
 .modal-data-id-link {
