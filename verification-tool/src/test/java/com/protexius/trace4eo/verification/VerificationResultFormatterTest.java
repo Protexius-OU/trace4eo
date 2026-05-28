@@ -14,21 +14,27 @@ class VerificationResultFormatterTest {
 
     private final TextVerificationResultFormatter formatter = new TextVerificationResultFormatter();
 
+    private String format(ProvenanceVerificationResult result) {
+        return formatter.format(List.of(result), VerificationFormatOptions.defaults());
+    }
+
+    private String format(List<ProvenanceVerificationResult> results) {
+        return formatter.format(results, VerificationFormatOptions.defaults());
+    }
+
     // --- Single result with no steps (signature verification) ---
 
     @Test
     void successNoSteps_showsSignatureVerificationHeader() {
-        ProvenanceVerificationResult result = new ProvenanceVerificationResult();
-        String output = formatter.format(result);
+        String output = format(new ProvenanceVerificationResult());
         assertTrue(output.contains("=== Signature Verification ==="));
         assertTrue(output.contains("PASSED"));
     }
 
     @Test
     void failureNoSteps_showsErrorDetails() {
-        ProvenanceVerificationResult result = new ProvenanceVerificationResult(
-            ProvenanceVerificationError.SIGNATURE_VERIFICATION_FAILED, "Signature could not be verified");
-        String output = formatter.format(result);
+        String output = format(new ProvenanceVerificationResult(
+            ProvenanceVerificationError.SIGNATURE_VERIFICATION_FAILED, "Signature could not be verified"));
         assertTrue(output.contains("=== Signature Verification ==="));
         assertTrue(output.contains("FAILED"));
         assertTrue(output.contains("SIGNATURE_VERIFICATION_FAILED"));
@@ -45,8 +51,7 @@ class VerificationResultFormatterTest {
             VerificationStep.success(VerificationStepName.FILE_CONTENTS, "1 of 1 file content hashes verified"),
             VerificationStep.success(VerificationStepName.SIGNATURE, "Signature verified against manifest")
         );
-        ProvenanceVerificationResult result = new ProvenanceVerificationResult(steps);
-        String output = formatter.format(result);
+        String output = format(new ProvenanceVerificationResult(steps));
         assertTrue(output.contains("=== Provenance Record Verification ==="));
         assertTrue(output.contains("PASSED"));
         assertTrue(output.contains("4/4"));
@@ -67,8 +72,7 @@ class VerificationResultFormatterTest {
             VerificationStep.failure(VerificationStepName.SIGNATURE, "Signature verification failed",
                 "Signature could not be verified")
         );
-        ProvenanceVerificationResult result = new ProvenanceVerificationResult(steps);
-        String output = formatter.format(result);
+        String output = format(new ProvenanceVerificationResult(steps));
         assertTrue(output.contains("FAILED"));
         assertTrue(output.contains("2/4"));
         assertTrue(output.contains("[FAIL]"));
@@ -87,7 +91,7 @@ class VerificationResultFormatterTest {
         );
         ProvenanceVerificationResult r1 = new ProvenanceVerificationResult(steps);
         ProvenanceVerificationResult r2 = new ProvenanceVerificationResult(steps);
-        String output = formatter.format(List.of(r1, r2));
+        String output = format(List.of(r1, r2));
         assertTrue(output.contains("(Record 1 of 2)"));
         assertTrue(output.contains("(Record 2 of 2)"));
     }
@@ -97,8 +101,53 @@ class VerificationResultFormatterTest {
         List<VerificationStep> steps = List.of(
             VerificationStep.success(VerificationStepName.SIGNATURE, "Signature verified against manifest")
         );
-        ProvenanceVerificationResult result = new ProvenanceVerificationResult(steps);
-        String output = formatter.format(List.of(result));
+        String output = format(new ProvenanceVerificationResult(steps));
         assertTrue(!output.contains("Record 1 of 1"));
+    }
+
+    // --- Summary + silent + skipped ---
+
+    @Test
+    void formatWithDefaults_appendsSummary() {
+        String output = format(new ProvenanceVerificationResult());
+        assertTrue(output.contains("=== Summary ==="));
+        assertTrue(output.contains("Records verified:  1"));
+        assertTrue(output.contains("Passed:            1"));
+        assertTrue(output.contains("Failed:            0"));
+        assertTrue(!output.contains("Skipped"));
+    }
+
+    @Test
+    void formatWithSkipped_includesSkippedLineInSummary() {
+        String output = formatter.format(
+            List.of(new ProvenanceVerificationResult()), new VerificationFormatOptions(false, 5));
+        assertTrue(output.contains("Skipped:           5"));
+    }
+
+    @Test
+    void formatWithSilent_hidesPassingRecordsButKeepsSummary() {
+        ProvenanceVerificationResult pass = new ProvenanceVerificationResult();
+        ProvenanceVerificationResult fail = new ProvenanceVerificationResult(
+            ProvenanceVerificationError.SIGNATURE_VERIFICATION_FAILED, "boom");
+        String output = formatter.format(List.of(pass, fail), new VerificationFormatOptions(true, 0));
+        // Only the failing record's block should appear
+        assertTrue(output.contains("FAILED"));
+        assertTrue(output.contains("boom"));
+        assertTrue(!output.contains("(Record 1 of"),
+            () -> "Did not expect passing record header in silent mode, got: " + output);
+        assertTrue(output.contains("=== Summary ==="));
+        assertTrue(output.contains("Records verified:  2"));
+        assertTrue(output.contains("Passed:            1"));
+        assertTrue(output.contains("Failed:            1"));
+    }
+
+    @Test
+    void formatWithSilent_allPassing_showsOnlySummary() {
+        String output = formatter.format(
+            List.of(new ProvenanceVerificationResult()), new VerificationFormatOptions(true, 0));
+        assertTrue(!output.contains("=== Provenance Record Verification ==="));
+        assertTrue(!output.contains("=== Signature Verification ==="));
+        assertTrue(output.startsWith("=== Summary ==="),
+            () -> "Expected output to start with summary, got: " + output);
     }
 }

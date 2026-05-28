@@ -49,12 +49,21 @@ public class VerificationTool {
         @Option(longName = "file-hash", description = "File hash as <path>=<base64>") String fileHash,
         @Option(longName = "file-hashes", description = "Path to hash file with one <path>=<base64> per line")
             Path fileHashesPath,
-        @Option(longName = "format", description = "Output format: text (default) or json", defaultValue = "text") String format
+        @Option(longName = "format", description = "Output format: text (default) or json", defaultValue = "text") String format,
+        @Option(longName = "silent", description = "Suppress output for passing records; the summary is always printed",
+            defaultValue = "false") boolean silent,
+        @Option(longName = "data-id",
+            description = "Verify only the record with this metadata.dataId (default: verify every record in the container)")
+            String dataId
     ) {
         Map<String, byte[]> hashes = resolveFileHashes(fileHash, fileHashesPath);
         Container container = readContainer(provenanceRecordPath);
-        List<ProvenanceVerificationResult> results = verifyAll(container.provenanceRecords(), hashes);
-        return resolveFormatter(format).format(results);
+        Collection<ProvenanceRecord> all = container.provenanceRecords();
+        Collection<ProvenanceRecord> selected = dataId == null ? all : selectByDataId(all, dataId);
+        int skipped = all.size() - selected.size();
+        List<ProvenanceVerificationResult> results = verifyAll(selected, hashes);
+        VerificationFormatOptions options = new VerificationFormatOptions(silent, skipped);
+        return resolveFormatter(format).format(results, options);
     }
 
     private VerificationResultFormatter resolveFormatter(String format) {
@@ -136,14 +145,20 @@ public class VerificationTool {
         }
     }
 
+    private List<ProvenanceRecord> selectByDataId(Collection<ProvenanceRecord> records, String dataId) {
+        List<ProvenanceRecord> matches = records.stream()
+            .filter(record -> dataId.equals(record.metadata().dataId()))
+            .toList();
+        if (matches.isEmpty()) {
+            throw new IllegalArgumentException("No record found with data-id: " + dataId);
+        }
+        return matches;
+    }
+
     private List<ProvenanceVerificationResult> verifyAll(Collection<ProvenanceRecord> records, Map<String, byte[]> hashes) {
         List<ProvenanceVerificationResult> results = new ArrayList<>();
         for (ProvenanceRecord record : records) {
-            if (hashes.isEmpty()) {
-                results.add(verificationService.verify(record));
-            } else {
-                results.add(verificationService.verifyWithFileHashes(record, hashes));
-            }
+            results.add(verificationService.verifyWithFileHashes(record, hashes));
         }
         return results;
     }

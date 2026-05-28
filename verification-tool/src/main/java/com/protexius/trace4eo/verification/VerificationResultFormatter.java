@@ -5,6 +5,5 @@ import com.protexius.trace4eo.provenance.verification.ProvenanceVerificationResu
 import java.util.List;
 
 public interface VerificationResultFormatter {
-    String format(ProvenanceVerificationResult result);
-    String format(List<ProvenanceVerificationResult> results);
+    String format(List<ProvenanceVerificationResult> results, VerificationFormatOptions options);
 }
