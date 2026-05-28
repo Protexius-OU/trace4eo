@@ -15,10 +15,10 @@
   left: 50%;
   transform: translateX(-50%);
   padding: var(--space-2) var(--space-4);
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid #cbd5e1;
+  background: var(--color-surface-glass);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
-  color: #475569;
+  color: var(--color-text-strong);
   font-size: var(--text-lg);
   z-index: 2;
   pointer-events: none;

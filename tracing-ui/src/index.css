@@ -59,6 +59,13 @@
 
   /* Map component */
   --color-surface-map: #faf8f3;
+  --color-surface-glass: rgba(255, 255, 255, 0.92);
+  --color-border-strong: #cbd5e1;
+  --color-text-warning: #b45309;
+
+  /* Login gradient */
+  --color-login-mid: #16213e;
+  --color-login-deep: #0f3460;
 
   /* Highlight (current record) */
   --color-highlight-bg: #fef9c3;

@@ -1,6 +1,8 @@
 import './IntegrityChain.css'
 import './IntegrityChainSandbox.css'
 import { useHashChainSandbox, type SandboxLayer, type LayerStatus } from '../hooks/useHashChainSandbox'
+import { Button } from '@/core/components/Button'
+import { VerificationBadge } from '@/core/components/VerificationBadge'
 
 function StatusIcon({ status }: { status: LayerStatus }) {
   switch (status) {
@@ -73,13 +75,9 @@ export default function IntegrityChainSandbox() {
       <div className="ic-header">
         <span className="ic-title">Hash-Chain Sandbox</span>
         <div className="ic-header-actions">
-          <button className="btn btn-secondary" onClick={sb.reset}>Reset</button>
-          <button className="btn btn-primary" onClick={sb.verify}>Verify</button>
-          {sb.verified && (
-            <span className={`ic-badge ${sb.overallPass ? 'ic-badge-pass' : 'ic-badge-fail'}`}>
-              {sb.overallPass ? '✓ Verified' : '✗ Failed'}
-            </span>
-          )}
+          <Button variant="secondary" onClick={sb.reset}>Reset</Button>
+          <Button onClick={sb.verify}>Verify</Button>
+          {sb.verified && <VerificationBadge passed={sb.overallPass} />}
         </div>
       </div>
 

@@ -11,6 +11,10 @@ interface Props {
   graph: ProvenanceGraph
 }
 
+const D3_LINK_STROKE = '#9ca3af'
+const D3_NODE_TEXT_COLOR = '#fff' 
+const D3_ROOT_STROKE = '#1a1a2e'
+
 type SimNode = DisplayNode & {
   x?: number
   y?: number
@@ -117,7 +121,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('stroke', '#9ca3af')
+      .attr('stroke', D3_LINK_STROKE)
       .attr('stroke-opacity', 0.8)
       .attr('stroke-width', 2)
 
@@ -157,7 +161,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
         const div = fo.append('xhtml:div')
           .style('font-size', '11px')
           .style('line-height', '1.3')
-          .style('color', '#fff')
+          .style('color', D3_NODE_TEXT_COLOR)
           .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
 
         div.append('xhtml:div')
@@ -183,7 +187,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
           .attr('rx', 6)
           .attr('ry', 6)
           .attr('fill', color)
-          .attr('stroke', isRoot ? '#1a1a2e' : strokeColor)
+          .attr('stroke', isRoot ? D3_ROOT_STROKE : strokeColor)
           .attr('stroke-width', isRoot ? 3 : 2)
           .style('cursor', isRoot ? 'default' : 'pointer')
 
@@ -197,7 +201,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
         const div = fo.append('xhtml:div')
           .style('font-size', '13px')
           .style('line-height', '1.3')
-          .style('color', '#fff')
+          .style('color', D3_NODE_TEXT_COLOR)
           .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
 
         const primaryLabel = truncate(stripPrefix(d.dataId, labelPrefix), LABEL_MAX_LEN) || 'N/A'

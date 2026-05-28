@@ -203,6 +203,12 @@ export default function ProvenanceChainList({ graph }: Props) {
               onMouseLeave={() => {
                 if (isDuplicate) setHoveredDupId(null)
               }}
+              onFocus={() => {
+                if (isDuplicate) setHoveredDupId(row.node.id)
+              }}
+              onBlur={() => {
+                if (isDuplicate) setHoveredDupId(null)
+              }}
               role={isViewing ? undefined : 'button'}
               tabIndex={isViewing ? undefined : 0}
               onKeyDown={(e) => {

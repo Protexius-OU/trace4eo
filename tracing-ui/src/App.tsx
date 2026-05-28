@@ -5,6 +5,7 @@ import './App.css'
 import { RecordListPage, RecordGraphPage } from './features/provenance'
 import HashChainSandboxPage from './features/provenance/pages/HashChainSandboxPage'
 import Spinner from '@/core/components/Spinner'
+import { Button } from '@/core/components/Button'
 
 export default function App() {
   const auth = useAuth()
@@ -24,9 +25,9 @@ export default function App() {
       <div className="app">
         <main className="main">
           <p>Authentication error: {auth.error.message}</p>
-          <button className="btn btn-primary" onClick={() => auth.signinRedirect()}>
+          <Button onClick={() => auth.signinRedirect()}>
             Try Again
-          </button>
+          </Button>
         </main>
       </div>
     )
@@ -43,7 +44,7 @@ export default function App() {
             <h1 className="login-title">Trace4EO</h1>
             <p className="login-subtitle">Earth Observation Provenance Tracing</p>
             <hr className="login-divider" />
-            <button className="login-btn" onClick={() => auth.signinRedirect()}>
+            <button type="button" className="login-btn" onClick={() => auth.signinRedirect()}>
               Sign In
             </button>
           </div>
@@ -59,9 +60,9 @@ export default function App() {
           <Link to="/" className="logo">Trace4EO</Link>
           <div className="nav-right">
             <span className="nav-user">{auth.user?.profile.email}</span>
-            <button className="btn-icon" onClick={() => auth.signoutRedirect()} title="Sign Out">
+            <Button variant="icon" onClick={() => auth.signoutRedirect()} title="Sign Out">
               <LogOut size={18} aria-hidden="true" />
-            </button>
+            </Button>
           </div>
         </nav>
       </header>

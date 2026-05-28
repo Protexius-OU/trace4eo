@@ -1,5 +1,5 @@
 .login {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: linear-gradient(135deg, var(--color-brand) 0%, var(--color-login-mid) 50%, var(--color-login-deep) 100%);
 }
 
 .login-card {

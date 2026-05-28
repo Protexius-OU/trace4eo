@@ -137,7 +137,7 @@ export function useRecordVerification(
               }
             }
           } catch (err) {
-            console.warn(`Skipping predecessor ${node.id} during file search:`, err)
+            console.debug('Skipping predecessor during file search:', err)
           }
         }
         dispatch({ type: 'PREDECESSORS_DONE', results: found })

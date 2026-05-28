@@ -8,6 +8,9 @@ import { getSignerDomain } from '../utils/signerIdentity'
 import { useAuthFetch } from '@/core/auth/useAuthFetch'
 import { useCheckboxFilter } from '../utils/useCheckboxFilter'
 import { FilterDropdown, DataIdFilter } from './Filters'
+import { Button } from '@/core/components/Button'
+import { TypeBadge } from '@/core/components/TypeBadge'
+import { TableSkeleton } from '@/core/components/TableSkeleton'
 
 const COLUMN_COUNT = 5
 const SKELETON_ROWS = 8
@@ -280,15 +283,7 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
         </thead>
         <tbody>
           {isLoading ? (
-            Array.from({ length: SKELETON_ROWS }).map((_, i) => (
-              <tr key={i}>
-                <td><div className="skeleton-cell skeleton-cell--wide" /></td>
-                <td><div className="skeleton-cell skeleton-cell--narrow" /></td>
-                <td><div className="skeleton-cell skeleton-cell--medium" /></td>
-                <td><div className="skeleton-cell skeleton-cell--medium" /></td>
-                <td><div className="skeleton-cell skeleton-cell--actions" /></td>
-              </tr>
-            ))
+            <TableSkeleton rows={SKELETON_ROWS} columns={['wide', 'narrow', 'medium', 'medium', 'actions']} />
           ) : records.length === 0 ? (
             <tr>
               <td colSpan={COLUMN_COUNT} className="td-empty">
@@ -308,7 +303,7 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
               <tr key={record.id}>
                 <td>{record.metadata.dataId}</td>
                 <td>
-                  <span className="badge badge-type">{record.metadata.dataType}</span>
+                  <TypeBadge type={record.metadata.dataType} />
                 </td>
                 <td>
                   <Tooltip text={getSignerEmail(record)}>
@@ -330,10 +325,11 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
                     <Link to={`/records/${record.id}/graph`} className="btn btn-primary">
                       View Details
                     </Link>
-                    <button
+                    <Button
+                      variant="icon"
                       onClick={() => handleDownload(record.id)}
                       disabled={downloadingId === record.id}
-                      className={`btn btn-icon${downloadErrors[record.id] ? ' btn-icon-error' : ''}`}
+                      className={downloadErrors[record.id] ? 'btn-icon-error' : undefined}
                       title={downloadErrors[record.id] ?? 'Download'}
                       aria-label={downloadErrors[record.id] ?? 'Download'}
                     >
@@ -344,7 +340,7 @@ export default function RecordTable({ records, filterOptions, filters, onFilterC
                       ) : (
                         <Download size={16} aria-hidden="true" />
                       )}
-                    </button>
+                    </Button>
                   </div>
                 </td>
               </tr>
