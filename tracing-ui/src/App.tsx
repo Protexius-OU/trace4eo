@@ -3,7 +3,7 @@ import { useAuth } from 'react-oidc-context'
 import { Globe, LogOut } from 'lucide-react'
 import './App.css'
 import { RecordListPage, RecordGraphPage } from './features/provenance'
-import { LocationsMapPage } from './features/locations'
+import HashChainSandboxPage from './features/provenance/pages/HashChainSandboxPage'
 import Spinner from '@/core/components/Spinner'
 
 export default function App() {
@@ -69,7 +69,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<RecordListPage />} />
           <Route path="/records/:id/graph" element={<RecordGraphPage />} />
-          <Route path="/map" element={<LocationsMapPage />} />
+          <Route path="/hash-chain-sandbox" element={<HashChainSandboxPage />} />
         </Routes>
       </main>
     </div>

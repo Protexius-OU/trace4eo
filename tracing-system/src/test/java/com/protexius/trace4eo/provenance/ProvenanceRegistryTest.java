@@ -607,13 +607,15 @@ class ProvenanceRegistryTest {
     }
 
     @Test
-    void countByLocationGroupsByLowercaseValue() {
-        createRecordWithAttributes("type-a", Map.of("location", "Germany"));
-        createRecordWithAttributes("type-a", Map.of("location", "germany"));
-        createRecordWithAttributes("type-a", Map.of("location", "GERMANY"));
-        createRecordWithAttributes("type-a", Map.of("location", "France"));
+    void countByLocationForIdsGroupsByLowercaseValue() {
+        List<UUID> ids = List.of(
+            createRecordWithAttributes("type-a", Map.of("location", "Germany")),
+            createRecordWithAttributes("type-a", Map.of("location", "germany")),
+            createRecordWithAttributes("type-a", Map.of("location", "GERMANY")),
+            createRecordWithAttributes("type-a", Map.of("location", "France"))
+        );
 
-        List<LocationCount> counts = provenanceRegistry.countByLocation();
+        List<LocationCount> counts = provenanceRegistry.countByLocationForIds(ids);
 
         assertEquals(2, counts.size());
         assertEquals("germany", counts.get(0).country());
@@ -623,12 +625,14 @@ class ProvenanceRegistryTest {
     }
 
     @Test
-    void countByLocationOnlyCountsLowercaseLocationKey() {
-        createRecordWithAttributes("type-a", Map.of("location", "Spain"));
-        createRecordWithAttributes("type-a", Map.of("Location", "Spain"));
-        createRecordWithAttributes("type-a", Map.of("LOCATION", "Spain"));
+    void countByLocationForIdsOnlyCountsLowercaseLocationKey() {
+        List<UUID> ids = List.of(
+            createRecordWithAttributes("type-a", Map.of("location", "Spain")),
+            createRecordWithAttributes("type-a", Map.of("Location", "Spain")),
+            createRecordWithAttributes("type-a", Map.of("LOCATION", "Spain"))
+        );
 
-        List<LocationCount> counts = provenanceRegistry.countByLocation();
+        List<LocationCount> counts = provenanceRegistry.countByLocationForIds(ids);
 
         assertEquals(1, counts.size());
         assertEquals("spain", counts.get(0).country());
@@ -636,12 +640,14 @@ class ProvenanceRegistryTest {
     }
 
     @Test
-    void countByLocationIgnoresOtherAttributeKeys() {
-        createRecordWithAttributes("type-a", Map.of("location", "Italy"));
-        createRecordWithAttributes("type-a", Map.of("region", "Italy"));
-        createRecordWithAttributes("type-a", Map.of("env", "prod"));
+    void countByLocationForIdsIgnoresOtherAttributeKeys() {
+        List<UUID> ids = List.of(
+            createRecordWithAttributes("type-a", Map.of("location", "Italy")),
+            createRecordWithAttributes("type-a", Map.of("region", "Italy")),
+            createRecordWithAttributes("type-a", Map.of("env", "prod"))
+        );
 
-        List<LocationCount> counts = provenanceRegistry.countByLocation();
+        List<LocationCount> counts = provenanceRegistry.countByLocationForIds(ids);
 
         assertEquals(1, counts.size());
         assertEquals("italy", counts.get(0).country());
@@ -649,13 +655,15 @@ class ProvenanceRegistryTest {
     }
 
     @Test
-    void countByLocationSkipsBlankAndMissingValues() {
-        createRecordWithAttributes("type-a", Map.of("location", "Poland"));
-        createRecordWithAttributes("type-a", Map.of("location", "   "));
-        createRecordWithAttributes("type-a", Map.of());
-        createRecordWithAttributes("type-a", null);
+    void countByLocationForIdsSkipsBlankAndMissingValues() {
+        List<UUID> ids = List.of(
+            createRecordWithAttributes("type-a", Map.of("location", "Poland")),
+            createRecordWithAttributes("type-a", Map.of("location", "   ")),
+            createRecordWithAttributes("type-a", Map.of()),
+            createRecordWithAttributes("type-a", null)
+        );
 
-        List<LocationCount> counts = provenanceRegistry.countByLocation();
+        List<LocationCount> counts = provenanceRegistry.countByLocationForIds(ids);
 
         assertEquals(1, counts.size());
         assertEquals("poland", counts.get(0).country());
@@ -663,11 +671,13 @@ class ProvenanceRegistryTest {
     }
 
     @Test
-    void countByLocationTrimsWhitespace() {
-        createRecordWithAttributes("type-a", Map.of("location", "  Estonia  "));
-        createRecordWithAttributes("type-a", Map.of("location", "Estonia"));
+    void countByLocationForIdsTrimsWhitespace() {
+        List<UUID> ids = List.of(
+            createRecordWithAttributes("type-a", Map.of("location", "  Estonia  ")),
+            createRecordWithAttributes("type-a", Map.of("location", "Estonia"))
+        );
 
-        List<LocationCount> counts = provenanceRegistry.countByLocation();
+        List<LocationCount> counts = provenanceRegistry.countByLocationForIds(ids);
 
         assertEquals(1, counts.size());
         assertEquals("estonia", counts.get(0).country());
@@ -675,11 +685,34 @@ class ProvenanceRegistryTest {
     }
 
     @Test
-    void countByLocationReturnsEmptyWhenNoLocationsPresent() {
-        createRecordWithAttributes("type-a", Map.of("env", "prod"));
-        createRecordWithAttributes("type-a", null);
+    void countByLocationForIdsReturnsEmptyWhenNoLocationsPresent() {
+        List<UUID> ids = List.of(
+            createRecordWithAttributes("type-a", Map.of("env", "prod")),
+            createRecordWithAttributes("type-a", null)
+        );
 
-        List<LocationCount> counts = provenanceRegistry.countByLocation();
+        List<LocationCount> counts = provenanceRegistry.countByLocationForIds(ids);
+
+        assertTrue(counts.isEmpty());
+    }
+
+    @Test
+    void countByLocationForIdsExcludesRecordsOutsideIdSet() {
+        UUID included = createRecordWithAttributes("type-a", Map.of("location", "Estonia"));
+        createRecordWithAttributes("type-a", Map.of("location", "Latvia"));
+
+        List<LocationCount> counts = provenanceRegistry.countByLocationForIds(List.of(included));
+
+        assertEquals(1, counts.size());
+        assertEquals("estonia", counts.get(0).country());
+        assertEquals(1, counts.get(0).recordCount());
+    }
+
+    @Test
+    void countByLocationForIdsReturnsEmptyForEmptyIdCollection() {
+        createRecordWithAttributes("type-a", Map.of("location", "Estonia"));
+
+        List<LocationCount> counts = provenanceRegistry.countByLocationForIds(List.of());
 
         assertTrue(counts.isEmpty());
     }
@@ -729,7 +762,7 @@ class ProvenanceRegistryTest {
         return RecordFilterCriteria.of(dataTypes, dataId, signerIdentities, attributeTokens);
     }
 
-    private void createRecordWithAttributes(String dataType, Map<String, String> attributes) {
+    private UUID createRecordWithAttributes(String dataType, Map<String, String> attributes) {
         UUID id = UUID.randomUUID();
         Instant now = Instant.now();
         Metadata metadata = new Metadata("data-" + id, dataType, List.of(), attributes);
@@ -743,5 +776,6 @@ class ProvenanceRegistryTest {
             now,
             null
         );
+        return id;
     }
 }

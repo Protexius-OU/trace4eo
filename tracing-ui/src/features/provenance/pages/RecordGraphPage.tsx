@@ -12,9 +12,14 @@ import ProvenanceGraphViewer from '../components/ProvenanceGraphViewer'
 import ProvenanceChainList from '../components/ProvenanceChainList'
 import IntegrityChain from '../components/IntegrityChain'
 import Spinner from '@/core/components/Spinner'
+import { ProvenanceChainMap } from '@/features/locations'
 
-type ChainView = 'graph' | 'list'
+type ChainView = 'graph' | 'list' | 'map'
 const CHAIN_VIEW_STORAGE_KEY = 'provenance-chain-view'
+
+function parseChainView(value: string | null): ChainView {
+  return value === 'list' || value === 'map' ? value : 'graph'
+}
 
 export default function RecordGraphPage() {
   const authFetch = useAuthFetch()
@@ -22,8 +27,7 @@ export default function RecordGraphPage() {
 
   const [chainView, setChainView] = useState<ChainView>(() => {
     if (typeof window === 'undefined') return 'graph'
-    const saved = window.localStorage.getItem(CHAIN_VIEW_STORAGE_KEY)
-    return saved === 'list' ? 'list' : 'graph'
+    return parseChainView(window.localStorage.getItem(CHAIN_VIEW_STORAGE_KEY))
   })
 
   useEffect(() => {
@@ -166,10 +170,17 @@ export default function RecordGraphPage() {
             >
               List
             </button>
+            <button
+              type="button"
+              className={`chain-view-toggle-btn${chainView === 'map' ? ' active' : ''}`}
+              onClick={() => setChainView('map')}
+            >
+              Map
+            </button>
           </div>
-          {chainView === 'graph'
-            ? <ProvenanceGraphViewer graph={graphData} />
-            : <ProvenanceChainList graph={graphData} />}
+          {chainView === 'graph' && <ProvenanceGraphViewer graph={graphData} />}
+          {chainView === 'list' && <ProvenanceChainList graph={graphData} />}
+          {chainView === 'map' && <ProvenanceChainMap rootId={id} />}
         </>
       )}
     </div>

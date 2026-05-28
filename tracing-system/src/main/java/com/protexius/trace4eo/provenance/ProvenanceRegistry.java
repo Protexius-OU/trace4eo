@@ -203,18 +203,23 @@ public class ProvenanceRegistry {
             .list();
     }
 
-    public List<LocationCount> countByLocation() {
+    public List<LocationCount> countByLocationForIds(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
         return jdbcClient.sql("""
                 select country, count(*) as record_count
                 from (
                     select lower(trim(pr.metadata->'attributes'->>'location')) as country
                     from provenance_record pr
+                    where pr.id in (:ids)
                 ) loc
                 where country is not null
                   and country <> ''
                 group by country
                 order by record_count desc, country asc
                 """)
+            .param("ids", Set.copyOf(ids))
             .query((rs, rowNum) -> new LocationCount(
                 rs.getString("country"),
                 rs.getLong("record_count")
@@ -240,6 +245,9 @@ public class ProvenanceRegistry {
                     .append(") in (:attrValues_").append(i).append(")");
             }
         }
+        if (criteria.recordIds() != null) {
+            sql.append(" and pr.id in (:recordIds)");
+        }
     }
 
     private JdbcClient.StatementSpec bindFilterParams(
@@ -263,6 +271,9 @@ public class ProvenanceRegistry {
                 query = query.param("attrValues_" + index, lowercased(entry.getValue()));
                 index++;
             }
+        }
+        if (criteria.recordIds() != null) {
+            query = query.param("recordIds", criteria.recordIds());
         }
         return query;
     }

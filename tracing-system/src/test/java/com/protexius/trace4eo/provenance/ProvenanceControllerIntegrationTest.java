@@ -363,6 +363,86 @@ class ProvenanceControllerIntegrationTest {
     }
 
     @Test
+    void getChainLocationCountsAggregatesAcrossPredecessors() {
+        String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+        String type = "chain-loc-" + uniqueSuffix;
+        String oslo = "oslo-" + uniqueSuffix;
+        String bergen = "bergen-" + uniqueSuffix;
+        String tromso = "tromso-" + uniqueSuffix;
+
+        UUID predA = UUID.randomUUID();
+        UUID predB = UUID.randomUUID();
+        UUID root = UUID.randomUUID();
+        UUID unrelated = UUID.randomUUID();
+
+        restTemplate.postForEntity("/api/provenance",
+            createTestRecord(predA, "data-" + predA, type, null, Collections.emptyList(), Map.of("location", oslo)),
+            Void.class);
+        restTemplate.postForEntity("/api/provenance",
+            createTestRecord(predB, "data-" + predB, type, null, Collections.emptyList(), Map.of("location", oslo)),
+            Void.class);
+        restTemplate.postForEntity("/api/provenance",
+            createTestRecord(root, "data-" + root, type, null,
+                List.of(new Predecessor(predA), new Predecessor(predB)), Map.of("location", bergen)),
+            Void.class);
+        restTemplate.postForEntity("/api/provenance",
+            createTestRecord(unrelated, "data-" + unrelated, type, null,
+                Collections.emptyList(), Map.of("location", tromso)),
+            Void.class);
+
+        ResponseEntity<LocationCount[]> response = restTemplate.getForEntity(
+            "/api/provenance/{id}/location-counts", LocationCount[].class, root
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        List<LocationCount> counts = List.of(response.getBody());
+        assertEquals(2, counts.size());
+        assertEquals(oslo, counts.get(0).country());
+        assertEquals(2, counts.get(0).recordCount());
+        assertEquals(bergen, counts.get(1).country());
+        assertEquals(1, counts.get(1).recordCount());
+    }
+
+    @Test
+    void getChainLocationCountsReturns404WhenRecordMissing() {
+        UUID unknown = UUID.randomUUID();
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+            "/api/provenance/{id}/location-counts", String.class, unknown
+        );
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+    }
+
+    @Test
+    void listRecordsScopedToChainWithInChainOf() {
+        String uniqueSuffix = UUID.randomUUID().toString().substring(0, 8);
+        String type = "in-chain-" + uniqueSuffix;
+        UUID pred = UUID.randomUUID();
+        UUID root = UUID.randomUUID();
+        UUID unrelated = UUID.randomUUID();
+
+        restTemplate.postForEntity("/api/provenance",
+            createTestRecord(pred, "data-" + pred, type, null, Collections.emptyList()), Void.class);
+        restTemplate.postForEntity("/api/provenance",
+            createTestRecord(root, "data-" + root, type, null, List.of(new Predecessor(pred))), Void.class);
+        restTemplate.postForEntity("/api/provenance",
+            createTestRecord(unrelated, "data-" + unrelated, type, null, Collections.emptyList()), Void.class);
+
+        ResponseEntity<String> response = restTemplate.getForEntity(
+            "/api/provenance?dataType={t}&inChainOf={r}", String.class, type, root
+        );
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertTrue(response.getBody().contains("\"totalElements\":2"), response.getBody());
+        assertTrue(response.getBody().contains(root.toString()));
+        assertTrue(response.getBody().contains(pred.toString()));
+        assertTrue(!response.getBody().contains(unrelated.toString()));
+    }
+
+    @Test
     void verifyFileHashesEndpointReturns404WhenRecordNotFound() {
         UUID unknownId = UUID.randomUUID();
         List<FileHashInput> inputs = List.of(new FileHashInput("test.dat", "AAAA"));

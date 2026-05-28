@@ -26,8 +26,13 @@ public class SigningToolConfiguration {
     }
 
     @Bean
-    public OidcTokenResolver oidcTokenResolver(HttpClient httpClient, ObjectMapper objectMapper) {
-        return new OidcTokenResolver(System.getenv("SIGSTORE_ID_TOKEN"), httpClient, objectMapper);
+    public SigstoreDeviceFlowClient sigstoreDeviceFlowClient(HttpClient httpClient, ObjectMapper objectMapper) {
+        return new SigstoreDeviceFlowClient(httpClient, objectMapper);
+    }
+
+    @Bean
+    public OidcTokenResolver oidcTokenResolver(SigstoreDeviceFlowClient deviceFlowClient) {
+        return new OidcTokenResolver(System.getenv("SIGSTORE_ID_TOKEN"), deviceFlowClient);
     }
 
     @Bean

@@ -1,5 +1,25 @@
 # trace4eo
 
+trace4eo is an open-source framework for recording, signing, and verifying the
+**provenance and traceability of Earth Observation (EO) data products** —
+including AI-based processing stages and model-related artifacts.
+
+It follows a *capture–sign–register–verify* methodology that decouples provenance
+recording from the EO pipelines themselves, so existing producers can be
+instrumented without modification:
+
+- **Capture** — each processing stage emits a structured provenance record (stable
+  identifier, data type, declared predecessors, domain-specific attributes, and a
+  manifest of cryptographic hashes over its output files).
+- **Sign** — the canonicalised manifest is signed *keyless* via Sigstore: the
+  producer authenticates through an OIDC identity provider, obtains a short-lived
+  certificate bound to that identity, and signs the manifest digest.
+- **Register** — the signature and a transparency-log inclusion proof are embedded
+  in a self-contained signed container, which can also be registered with the
+  tracing service (queryable REST API + graph view across predecessor links).
+- **Verify** — any third party can independently re-hash the data, re-derive the
+  manifest, and verify the signature against the certificate and transparency log.
+
 The project consists of multiple software components:
 
 * Provenance SDK
@@ -13,31 +33,46 @@ The project consists of multiple software components:
 * Java 25
 * For UI, `npm` and `node`
 
+## Building & testing
+
+```bash
+# Build all Java modules — includes Checkstyle, SpotBugs, and tests
+./gradlew clean build
+
+# Run the CLI tools
+./gradlew :signing-tool:bootRun --args="<command> <options>"
+./gradlew :verification-tool:bootRun --args="<command> <options>"
+
+# Frontend: type-check and build
+cd tracing-ui && npx tsc --noEmit && npm run build
+```
+
 ## Running via Docker
 
-Use `./build-dev.sh` to build the backend image, frontend, and Docker images. Then `./start-dev.sh` to start all
-services (PostgreSQL, Keycloak, backend, frontend).
-
-Database volumes are preserved across `./stop-dev.sh` / `./start-dev.sh` cycles. To start with a clean database, pass
-the `--fresh` flag:
+Build the images, then start all services (PostgreSQL, Keycloak, backend, frontend):
 
 ```bash
-./start-dev.sh --fresh
+./build-dev.sh   # build all modules + backend and frontend Docker images
+./start-dev.sh   # start all services
 ```
 
-To populate the deployment with sample provenance records (two tier-1 batches of 50, two tier-2 aggregates, and a
-tier-3/4/5 chain), first start the Sigstore OIDC token daemon in a separate terminal — it performs a one-time
-browser login and then keeps refreshing it, stored on path `~/.sigstore-id-token`:
+`start-dev.sh` accepts optional flags:
+
+- `--fresh` — start with a clean database. Volumes are otherwise preserved across `./stop-dev.sh` / `./start-dev.sh` cycles.
+- `--seed` — populate the deployment with sample provenance records once the services are up.
+
+Seeding requires a Sigstore OIDC token. Before seeding, start the token daemon in a separate terminal — it performs a
+one-time browser login, then keeps the token refreshed at `~/.sigstore-id-token`:
 
 ```bash
-python3 sigstore-token-daemon.py
+./gradlew :signing-tool:bootRun --args="sigstore-token-daemon"
 ```
 
-Then either pass `--seed` to `start-dev.sh`, or run `./seed-dev.sh` directly after the services are up:
+With the daemon running, seed either during startup or against an already-running stack:
 
 ```bash
-./start-dev.sh --seed
-./seed-dev.sh                 # equivalent, when services are already running
+./start-dev.sh --seed   # seed as part of startup
+./seed-dev.sh           # or seed a stack that is already running
 ```
 
 ### Building a container image for the tracing system
@@ -98,3 +133,7 @@ and checks if there are any known, publicly disclosed, vulnerabilities.
 
 To run the analysis, configure `dependencyCheck.nvd.apiKey` in your local `gradle.properties` file and run
 `./gradlew dependencyCheckAnalyze`
+
+## License
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for the full text.

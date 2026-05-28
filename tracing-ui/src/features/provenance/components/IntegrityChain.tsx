@@ -211,6 +211,7 @@ function Connector({ label, status }: {
 }
 
 const SHOW_CRYPTO_STORAGE_KEY = 'ic-show-crypto'
+const MINIFIED_STORAGE_KEY = 'ic-minified'
 
 export default function IntegrityChain({ record, verificationResult, fileVerificationResponse, predecessorFileResults = [], isSearchingPredecessors = false }: Props) {
   const { manifest, filesInfo, metadata, signature } = record
@@ -222,6 +223,22 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
     if (typeof window === 'undefined') return false
     return window.localStorage.getItem(SHOW_CRYPTO_STORAGE_KEY) === 'true'
   })
+  const [minified, setMinified] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem(MINIFIED_STORAGE_KEY) === 'true'
+  })
+
+  // Crypto details and minified are opposite ends of a density spectrum,
+  // so enabling one disables the other.
+  function toggleCrypto(checked: boolean) {
+    setShowCrypto(checked)
+    if (checked) setMinified(false)
+  }
+
+  function toggleMinified(checked: boolean) {
+    setMinified(checked)
+    if (checked) setShowCrypto(false)
+  }
 
   useEffect(() => {
     setAllFilesExpanded(false)
@@ -232,6 +249,11 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
     if (typeof window === 'undefined') return
     window.localStorage.setItem(SHOW_CRYPTO_STORAGE_KEY, String(showCrypto))
   }, [showCrypto])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(MINIFIED_STORAGE_KEY, String(minified))
+  }, [minified])
 
   const verified = verificationResult !== null
 
@@ -258,15 +280,23 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
     : 'signs manifest hash'
 
   return (
-    <div className="integrity-chain">
+    <div className={`integrity-chain${minified ? ' ic-minified' : ''}`}>
       <div className="ic-header">
         <span className="ic-title">Integrity Chain</span>
         <div className="ic-header-actions">
           <label className="ic-crypto-toggle">
             <input
               type="checkbox"
+              checked={minified}
+              onChange={e => toggleMinified(e.target.checked)}
+            />
+            <span>Minified</span>
+          </label>
+          <label className="ic-crypto-toggle">
+            <input
+              type="checkbox"
               checked={showCrypto}
-              onChange={e => setShowCrypto(e.target.checked)}
+              onChange={e => toggleCrypto(e.target.checked)}
             />
             <span>Cryptographic details</span>
           </label>
@@ -281,27 +311,29 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
       </div>
 
       {/* === Signature layer === */}
-      <div className={`ic-node ic-node-${sigStatus}`}>
-        <div className="ic-node-head">
-          <StatusIcon status={sigStatus} />
-          <span className="ic-node-title">Sigstore Signature</span>
-        </div>
-        {details && (
-          <div className="ic-node-body">
-            <div>Signed by <strong>{details.signerIdentity}</strong></div>
-            <div>Uploaded by <strong>{record.uploaderIdentity ?? '—'}</strong></div>
-            <div>
-              <a
-                href={`https://search.sigstore.dev/?hash=${details.manifestHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                View Rekor transparency log.
-              </a>
-            </div>
+      {!minified && (
+        <div className={`ic-node ic-node-${sigStatus}`}>
+          <div className="ic-node-head">
+            <StatusIcon status={sigStatus} />
+            <span className="ic-node-title">Sigstore Signature</span>
           </div>
-        )}
-      </div>
+          {details && (
+            <div className="ic-node-body">
+              <div>Signed by <strong>{details.signerIdentity}</strong></div>
+              <div>Uploaded by <strong>{record.uploaderIdentity ?? '—'}</strong></div>
+              <div>
+                <a
+                  href={`https://search.sigstore.dev/?hash=${details.manifestHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  View Rekor transparency log.
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {showCrypto && (
         <>
@@ -348,7 +380,7 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
       )}
 
       {/* === Data layer === */}
-      <div className={showCrypto ? 'ic-split' : 'ic-stack'}>
+      <div className={showCrypto || minified ? 'ic-split' : 'ic-stack'}>
         {/* Metadata */}
         <div className={`ic-node ic-node-${metaHashStatus}`}>
           <div className="ic-node-head">
@@ -364,7 +396,7 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
               <span className="ic-field-label">Data Type</span>
               <span className="ic-field-value">{metadata.dataType}</span>
             </div>
-            {metadata.predecessors.length > 0 && (
+            {!minified && metadata.predecessors.length > 0 && (
               <div className="ic-field">
                 <span className="ic-field-label">Predecessors</span>
                 <span className="ic-field-value">
@@ -372,7 +404,7 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
                 </span>
               </div>
             )}
-            {metadata.attributes && Object.entries(metadata.attributes)
+            {!minified && metadata.attributes && Object.entries(metadata.attributes)
               .sort(([a], [b]) => a.localeCompare(b))
               .map(([key, value]) => (
                 <div className="ic-field" key={`attr-${key}`}>
@@ -435,22 +467,24 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
       </div>
 
       {/* Summary */}
-      <div className="ic-summary">
-        {!verified && (
-          <span>Click <strong>Verify</strong> to check that nothing has been tampered with.</span>
-        )}
-        {verified && verificationResult.status && (
-          <span>
-            Changing any file, metadata field, or file listing would break
-            the hash chain, invalidating the signature.
-          </span>
-        )}
-        {verified && !verificationResult.status && (
-          <span className="ic-summary-fail">
-            <strong>Integrity check failed.</strong> {verificationResult.errorMessage}
-          </span>
-        )}
-      </div>
+      {!minified && (
+        <div className="ic-summary">
+          {!verified && (
+            <span>Click <strong>Verify</strong> to check that nothing has been tampered with.</span>
+          )}
+          {verified && verificationResult.status && (
+            <span>
+              Changing any file, metadata field, or file listing would break
+              the hash chain, invalidating the signature.
+            </span>
+          )}
+          {verified && !verificationResult.status && (
+            <span className="ic-summary-fail">
+              <strong>Integrity check failed.</strong> {verificationResult.errorMessage}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   )
 }

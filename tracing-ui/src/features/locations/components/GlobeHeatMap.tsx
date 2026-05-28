@@ -17,6 +17,7 @@ interface CountryFeature {
 
 interface Props {
   counts: LocationCount[]
+  chainRootId?: string
 }
 
 const EUROPE_VIEW = { lat: 52, lng: 15, altitude: 1.8 }
@@ -36,10 +37,10 @@ const COUNTRY_POLYGONS: CountryFeature[] = (() => {
   return collection.features
 })()
 
-// Module-scope so navigating away from /map and back doesn't reallocate.
+// Module-scope so remounting the map doesn't reallocate the material.
 const GLOBE_MATERIAL = new MeshBasicMaterial({ color: OCEAN_COLOR })
 
-export default function GlobeHeatMap({ counts }: Props) {
+export default function GlobeHeatMap({ counts, chainRootId }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const globeRef = useRef<GlobeMethods | undefined>(undefined)
   const [size, setSize] = useState<{ width: number; height: number } | null>(null)
@@ -145,6 +146,7 @@ export default function GlobeHeatMap({ counts }: Props) {
         <LocationRecordsModal
           countryName={openCountry.name}
           countryKey={openCountry.key}
+          chainRootId={chainRootId}
           onClose={() => setOpenCountry(null)}
         />
       )}

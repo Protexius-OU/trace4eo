@@ -45,12 +45,17 @@ export function FilterDropdown({ label, values, displayValues, selected, onToggl
 
   useEffect(() => {
     if (!isOpen) return
+    // capture so we catch scrolls on nested scrollers (e.g. the modal table),
+    // but ignore scrolling within the menu's own list so it stays open
+    const handleScroll = (event: Event) => {
+      if (menuRef.current?.contains(event.target as Node)) return
+      setIsOpen(false)
+    }
     const close = () => setIsOpen(false)
-    // capture so we catch scrolls on nested scrollers (e.g. the modal table)
-    window.addEventListener('scroll', close, true)
+    window.addEventListener('scroll', handleScroll, true)
     window.addEventListener('resize', close)
     return () => {
-      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('scroll', handleScroll, true)
       window.removeEventListener('resize', close)
     }
   }, [isOpen])

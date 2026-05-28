@@ -14,24 +14,28 @@ import '../../provenance/components/Modal.css'
 interface Props {
   countryName: string
   countryKey: string
+  chainRootId?: string
   onClose: () => void
 }
 
 const PAGE_SIZE = 20
 
-export default function LocationRecordsModal({ countryName, countryKey, onClose }: Props) {
+export default function LocationRecordsModal({ countryName, countryKey, chainRootId, onClose }: Props) {
   const authFetch = useAuthFetch()
   const locationAttribute = useMemo<AttributeChip[]>(
     () => [{ key: 'location', value: countryKey }],
     [countryKey],
   )
   const [page, setPage] = useState(0)
-  const [filters, setFilters] = useState<RecordFilters>({ attributes: locationAttribute })
+  const [filters, setFilters] = useState<RecordFilters>({
+    attributes: locationAttribute,
+    inChainOf: chainRootId,
+  })
 
   const handleFilterChange = useCallback((next: RecordFilters) => {
-    setFilters({ ...next, attributes: locationAttribute })
+    setFilters({ ...next, attributes: locationAttribute, inChainOf: chainRootId })
     setPage(0)
-  }, [locationAttribute])
+  }, [locationAttribute, chainRootId])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -56,7 +60,7 @@ export default function LocationRecordsModal({ countryName, countryKey, onClose 
     isFetching: recordsFetching,
     error: recordsError,
   } = useQuery({
-    queryKey: ['recordsByLocation', countryKey, page, filters],
+    queryKey: ['recordsByLocation', countryKey, chainRootId ?? null, page, filters],
     queryFn: () => fetchRecords(authFetch, page, PAGE_SIZE, filters),
     placeholderData: keepPreviousData,
   })

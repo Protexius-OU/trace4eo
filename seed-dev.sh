@@ -10,7 +10,7 @@
 #
 # Requires:
 #   - Local docker deployment running (./start-dev.sh)
-#   - sigstore-token-daemon.py running with a fresh token in ~/.sigstore-id-token
+#   - signing-tool sigstore-token-daemon command running with a fresh token in ~/.sigstore-id-token
 
 set -euo pipefail
 
@@ -20,13 +20,13 @@ TOKEN_FILE=$HOME/.sigstore-id-token
 WORK_DIR=build/seed-data
 
 if [ ! -s "$TOKEN_FILE" ]; then
-  echo "ERROR: $TOKEN_FILE missing or empty. Start sigstore-token-daemon.py first." >&2
+  echo "ERROR: $TOKEN_FILE missing or empty. Start the signing-tool sigstore-token-daemon command first." >&2
   exit 1
 fi
 
 echo "Building signing-tool jar..."
 ./gradlew --quiet --console=plain :signing-tool:bootJar
-JAR=$(ls -t signing-tool/build/libs/signing-tool-*.jar 2>/dev/null | head -1)
+JAR=$(ls -t signing-tool/build/libs/signing-tool-*.jar 2>/dev/null | grep -v -- '-plain\.jar$' | head -1)
 if [ -z "$JAR" ] || [ ! -f "$JAR" ]; then
   echo "ERROR: signing-tool jar not found under signing-tool/build/libs" >&2
   exit 1
@@ -35,7 +35,12 @@ fi
 # Re-read the token from disk each call so we always use whatever the daemon
 # last wrote — Sigstore id_tokens only live ~60s.
 run_tool() {
-  SIGSTORE_ID_TOKEN="$(<"$TOKEN_FILE")" java -jar "$JAR" "$@"
+  # protobuf-java 4.30 calls Unsafe.arrayBaseOffset, terminally deprecated on JDK 24+.
+  # Suppress the warning until protobuf-java upstream stops using Unsafe memory APIs.
+  SIGSTORE_ID_TOKEN="$(<"$TOKEN_FILE")" java \
+    --sun-misc-unsafe-memory-access=allow \
+    -Dlogging.level.dev.sigstore=DEBUG \
+    -jar "$JAR" "$@"
 }
 
 capture_uuid() {

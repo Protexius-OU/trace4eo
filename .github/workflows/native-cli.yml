@@ -32,7 +32,7 @@ jobs:
           java-version: '25'
           distribution: 'graalvm'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: gradle/actions/setup-gradle@v5
+      - uses: gradle/actions/setup-gradle@v6
       - name: Build native binaries
         run: ./gradlew :signing-tool:nativeCompile :verification-tool:nativeCompile
       - name: Rename with platform suffix
@@ -57,7 +57,7 @@ jobs:
           java-version: '25'
           distribution: 'graalvm'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: gradle/actions/setup-gradle@v5
+      - uses: gradle/actions/setup-gradle@v6
       - name: Build native binaries
         run: ./gradlew :signing-tool:nativeCompile :verification-tool:nativeCompile
       - name: Rename with platform suffix

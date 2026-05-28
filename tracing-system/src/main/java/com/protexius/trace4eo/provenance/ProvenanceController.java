@@ -1,5 +1,6 @@
 package com.protexius.trace4eo.provenance;
 
+import com.protexius.trace4eo.provenance.graph.GraphNode;
 import com.protexius.trace4eo.provenance.graph.ProvenanceGraph;
 import com.protexius.trace4eo.provenance.graph.ProvenanceGraphService;
 import com.protexius.trace4eo.provenance.io.zip.ZipContainerWriter;
@@ -23,7 +24,9 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @ConditionalOnBean(ProvenanceService.class)
 @RestController
@@ -53,10 +56,20 @@ public class ProvenanceController {
         @RequestParam(value = "dataType", required = false) List<String> dataTypes,
         @RequestParam(value = "dataId", required = false) String dataId,
         @RequestParam(value = "signerIdentity", required = false) List<String> signerIdentities,
-        @RequestParam(value = "attribute", required = false) List<String> attributes
+        @RequestParam(value = "attribute", required = false) List<String> attributes,
+        @RequestParam(value = "inChainOf", required = false) UUID inChainOf
     ) {
         RecordFilterCriteria criteria = RecordFilterCriteria.of(dataTypes, dataId, signerIdentities, attributes);
+        if (inChainOf != null) {
+            criteria = criteria.withRecordIds(resolveChainIds(inChainOf));
+        }
         return provenanceService.findAll(page, size, criteria);
+    }
+
+    private Set<UUID> resolveChainIds(UUID rootId) {
+        return provenanceGraphService.buildGraph(rootId)
+            .map(graph -> graph.nodes().stream().map(GraphNode::id).collect(Collectors.toSet()))
+            .orElse(Set.of());
     }
 
     @GetMapping("/check-access")
@@ -70,11 +83,6 @@ public class ProvenanceController {
     @GetMapping("/filters")
     public FilterOptions getFilterOptions() {
         return provenanceService.getFilterOptions();
-    }
-
-    @GetMapping("/location-counts")
-    public List<LocationCount> getLocationCounts() {
-        return provenanceService.getLocationCounts();
     }
 
     @PostMapping("/validate-predecessors")
@@ -135,6 +143,14 @@ public class ProvenanceController {
     @GetMapping("/{id}/graph")
     public ResponseEntity<ProvenanceGraph> getProvenanceGraph(@PathVariable("id") UUID id) {
         return ResponseEntity.of(provenanceGraphService.buildGraph(id));
+    }
+
+    @GetMapping("/{id}/location-counts")
+    public ResponseEntity<List<LocationCount>> getChainLocationCounts(@PathVariable("id") UUID id) {
+        return provenanceGraphService.buildGraph(id)
+            .map(graph -> graph.nodes().stream().map(GraphNode::id).collect(Collectors.toSet()))
+            .map(ids -> ResponseEntity.ok(provenanceService.getLocationCountsForIds(ids)))
+            .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     private String extractUploaderIdentity(Authentication authentication) {
