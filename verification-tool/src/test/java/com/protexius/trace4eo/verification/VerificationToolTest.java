@@ -50,6 +50,10 @@ class VerificationToolTest {
     );
     private final VerificationTool verificationTool = new VerificationTool(verificationService, provenanceJsonMapper, formatters);
 
+    private String verify(Path file, String fileHash, Path fileHashes, String format) {
+        return verificationTool.verify(file, fileHash, fileHashes, format, false, null);
+    }
+
     // SHA-256 of empty bytes (content of test.txt in provenance-record.json), base64-encoded
     private static final String EMPTY_SHA256_B64 = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
     // base64 of 32 zero bytes
@@ -57,7 +61,7 @@ class VerificationToolTest {
 
     @Test
     void verifyProvenanceRecord() {
-        String result = verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), null, null, "text");
+        String result = verify(Path.of(PROVENANCE_RECORD_FILE), null, null, "text");
         assertTrue(result.contains("PASSED"), () -> "Expected PASSED, got: " + result);
     }
 
@@ -69,13 +73,13 @@ class VerificationToolTest {
         new ZipContainerWriter(provenanceJsonMapper)
             .writeTo(container, Files.newOutputStream(zipPath));
 
-        String result = verificationTool.verify(zipPath, null, null, "text");
+        String result = verify(zipPath, null, null, "text");
         assertTrue(result.contains("PASSED"), () -> "Expected PASSED, got: " + result);
     }
 
     @Test
     void verifyProvenanceRecordWithInvalidSignature() {
-        String result = verificationTool.verify(
+        String result = verify(
             Path.of(INVALID_SIGNATURE_PROVENANCE_RECORD_FILE), null, null, "text");
         assertTrue(result.contains("FAILED"));
         assertTrue(result.contains("[FAIL]"));
@@ -84,7 +88,7 @@ class VerificationToolTest {
 
     @Test
     void verifyProvenanceRecordWithInvalidContents() {
-        String result = verificationTool.verify(
+        String result = verify(
             Path.of(INVALID_CONTENTS_PROVENANCE_RECORD_FILE), null, null, "text");
         assertTrue(result.contains("FAILED"));
         assertTrue(result.contains("[FAIL]"));
@@ -93,7 +97,7 @@ class VerificationToolTest {
 
     @Test
     void verifyProvenanceRecordWithCorrectInlineHash() {
-        String result = verificationTool.verify(
+        String result = verify(
             Path.of(PROVENANCE_RECORD_FILE), "test.txt=" + EMPTY_SHA256_B64, null, "text");
         assertTrue(result.contains("PASSED"), () -> "Expected PASSED, got: " + result);
         assertTrue(result.contains("[OK]"));
@@ -102,7 +106,7 @@ class VerificationToolTest {
 
     @Test
     void verifyProvenanceRecordWithWrongInlineHash() {
-        String result = verificationTool.verify(
+        String result = verify(
             Path.of(PROVENANCE_RECORD_FILE), "test.txt=" + WRONG_SHA256_B64, null, "text");
         assertTrue(result.contains("FAILED"));
         assertTrue(result.contains("[FAIL]"));
@@ -111,7 +115,7 @@ class VerificationToolTest {
 
     @Test
     void verifyProvenanceRecordWithCorrectHashFile() {
-        String result = verificationTool.verify(
+        String result = verify(
             Path.of(PROVENANCE_RECORD_FILE), null, Path.of(HASHES_FILE), "text");
         assertTrue(result.contains("PASSED"), () -> "Expected PASSED, got: " + result);
         assertTrue(result.contains("[OK]"));
@@ -120,7 +124,7 @@ class VerificationToolTest {
 
     @Test
     void verifyProvenanceRecordWithWrongHashFile() {
-        String result = verificationTool.verify(
+        String result = verify(
             Path.of(PROVENANCE_RECORD_FILE), null, Path.of(WRONG_HASHES_FILE), "text");
         assertTrue(result.contains("FAILED"));
         assertTrue(result.contains("[FAIL]"));
@@ -129,7 +133,7 @@ class VerificationToolTest {
 
     @Test
     void verifyProvenanceRecordWithInlineAndHashFile() {
-        String result = verificationTool.verify(
+        String result = verify(
             Path.of(PROVENANCE_RECORD_FILE), "test.txt=" + EMPTY_SHA256_B64, Path.of(HASHES_FILE), "text");
         assertTrue(result.contains("PASSED"), () -> "Expected PASSED, got: " + result);
     }
@@ -138,7 +142,7 @@ class VerificationToolTest {
     void verifyProvenanceRecordSkipsUnrecognizedEntriesInHashFile() {
         // hashes.txt has test.txt (in the record) and data.txt (not in the record).
         // Only test.txt should be verified; data.txt should be silently skipped.
-        String result = verificationTool.verify(
+        String result = verify(
             Path.of(PROVENANCE_RECORD_FILE), null, Path.of(HASHES_FILE), "text");
         assertTrue(result.contains("1 of 1"), "Expected '1 of 1 file content hashes verified' (data.txt skipped)");
     }
@@ -147,44 +151,44 @@ class VerificationToolTest {
     void verifyProvenanceRecordFailsForInvalidEntryInHashFile() {
         // invalid-hashes.txt has two valid entries followed by one with invalid base64.
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), null, Path.of(INVALID_HASHES_FILE), "text"));
+            () -> verify(Path.of(PROVENANCE_RECORD_FILE), null, Path.of(INVALID_HASHES_FILE), "text"));
     }
 
     @Test
     void verifyProvenanceRecordWithInvalidHashFormat() {
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), "test.txt", null, "text"));
+            () -> verify(Path.of(PROVENANCE_RECORD_FILE), "test.txt", null, "text"));
     }
 
     @Test
     void verifyProvenanceRecordFailsForNonExistentFile() {
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of("nonexistent.json"), null, null, "text"));
+            () -> verify(Path.of("nonexistent.json"), null, null, "text"));
     }
 
     @Test
     void verifyProvenanceRecordFailsForNonExistentHashManifest(@TempDir Path tempDir) {
         Path missing = tempDir.resolve("missing.txt");
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), null, missing, "text"));
+            () -> verify(Path.of(PROVENANCE_RECORD_FILE), null, missing, "text"));
     }
 
     @Test
     void verifyProvenanceRecordFailsForInvalidBase64InHash() {
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), "test.txt=not!valid!!base64", null, "text"));
+            () -> verify(Path.of(PROVENANCE_RECORD_FILE), "test.txt=not!valid!!base64", null, "text"));
     }
 
     @Test
     void verifyProvenanceRecordFailsForBlankPathInHash() {
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), "=" + EMPTY_SHA256_B64, null, "text"));
+            () -> verify(Path.of(PROVENANCE_RECORD_FILE), "=" + EMPTY_SHA256_B64, null, "text"));
     }
 
     @Test
     void verifyProvenanceRecordFailsForUnknownFormat() {
         assertThrows(IllegalArgumentException.class,
-            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), null, null, "xml"));
+            () -> verify(Path.of(PROVENANCE_RECORD_FILE), null, null, "xml"));
     }
 
     @Test
@@ -215,9 +219,121 @@ class VerificationToolTest {
         FileHashInfo fileHashInfo = record.filesInfo().files().iterator().next();
         String fileHash = fileHashInfo.path() + "=" + Base64.getEncoder().encodeToString(fileHashInfo.hashValue());
 
-        String result = verificationTool.verify(jsonPath, fileHash, null, "text");
+        String result = verify(jsonPath, fileHash, null, "text");
         assertTrue(result.contains("[OK]"));
         assertTrue(result.contains("File Contents"));
+    }
+
+    // --- New behavior: summary, --silent, --data-id ---
+
+    @Test
+    void textOutput_alwaysIncludesSummary() {
+        String result = verify(Path.of(PROVENANCE_RECORD_FILE), null, null, "text");
+        assertTrue(result.contains("=== Summary ==="), () -> "Expected summary header, got: " + result);
+        assertTrue(result.contains("Records verified:  1"));
+        assertTrue(result.contains("Passed:            1"));
+        assertTrue(result.contains("Failed:            0"));
+    }
+
+    @Test
+    void textOutput_summaryDoesNotMentionSkippedWhenNoneSkipped() {
+        String result = verify(Path.of(PROVENANCE_RECORD_FILE), null, null, "text");
+        assertTrue(!result.contains("Skipped"), () -> "Did not expect Skipped line, got: " + result);
+    }
+
+    @Test
+    void silentMode_suppressesPassingRecordButKeepsSummary() {
+        String result = verificationTool.verify(
+            Path.of(PROVENANCE_RECORD_FILE), null, null, "text", true, null);
+        assertTrue(!result.contains("=== Provenance Record Verification ==="),
+            () -> "Expected passing record to be hidden in silent mode, got: " + result);
+        assertTrue(result.contains("=== Summary ==="));
+        assertTrue(result.contains("Records verified:  1"));
+        assertTrue(result.contains("Passed:            1"));
+    }
+
+    @Test
+    void silentMode_keepsFailingRecord() {
+        String result = verificationTool.verify(
+            Path.of(INVALID_SIGNATURE_PROVENANCE_RECORD_FILE), null, null, "text", true, null);
+        assertTrue(result.contains("=== Provenance Record Verification ==="),
+            () -> "Expected failing record to be shown in silent mode, got: " + result);
+        assertTrue(result.contains("[FAIL]"));
+        assertTrue(result.contains("=== Summary ==="));
+        assertTrue(result.contains("Failed:            1"));
+    }
+
+    @Test
+    void jsonOutput_includesSummaryAndResults() {
+        String result = verify(Path.of(PROVENANCE_RECORD_FILE), null, null, "json");
+        assertTrue(result.contains("\"summary\""));
+        assertTrue(result.contains("\"records\" : 1"));
+        assertTrue(result.contains("\"passed\" : 1"));
+        assertTrue(result.contains("\"failed\" : 0"));
+        assertTrue(result.contains("\"skipped\" : 0"));
+        assertTrue(result.contains("\"results\""));
+    }
+
+    @Test
+    void jsonOutput_silentFiltersResultsButKeepsSummary() {
+        String result = verificationTool.verify(
+            Path.of(PROVENANCE_RECORD_FILE), null, null, "json", true, null);
+        assertTrue(result.contains("\"results\" : [ ]"),
+            () -> "Expected empty results array in silent mode, got: " + result);
+        assertTrue(result.contains("\"passed\" : 1"));
+    }
+
+    @Test
+    void dataId_unknownValue_throws() {
+        assertThrows(IllegalArgumentException.class,
+            () -> verificationTool.verify(Path.of(PROVENANCE_RECORD_FILE), null, null, "text", false, "no-such-id"));
+    }
+
+    @Test
+    void dataId_selectsOnlyMatchingRecord(@TempDir Path tempDir) throws IOException {
+        Path otherFile = tempDir.resolve("other.txt");
+        Files.writeString(otherFile, "different content");
+
+        ProvenanceRecord recordA = buildRecord("product-a", Path.of(TEST_FILE));
+        ProvenanceRecord recordB = buildRecord("product-b", otherFile);
+
+        Path jsonPath = tempDir.resolve("two-records.json");
+        SequencedSet<ProvenanceRecord> records = new LinkedHashSet<>();
+        records.add(recordA);
+        records.add(recordB);
+        new JsonContainerWriter(provenanceJsonMapper)
+            .writeTo(new Container(recordA.id(), records), Files.newOutputStream(jsonPath));
+
+        String full = verificationTool.verify(jsonPath, null, null, "text", false, null);
+        assertTrue(full.contains("Records verified:  2"),
+            () -> "Expected both records to be verified without --data-id, got: " + full);
+        assertTrue(!full.contains("Skipped"),
+            () -> "Did not expect Skipped line without --data-id, got: " + full);
+
+        String filtered = verificationTool.verify(jsonPath, null, null, "text", false, "product-a");
+        assertTrue(filtered.contains("Records verified:  1"),
+            () -> "Expected only the matching record to be verified, got: " + filtered);
+        assertTrue(filtered.contains("Skipped:           1"),
+            () -> "Expected skipped count in summary, got: " + filtered);
+    }
+
+    private ProvenanceRecord buildRecord(String dataId, Path file) throws IOException {
+        Metadata metadata = new Metadata(dataId, "container-type", List.of(), null);
+        FilesInfo filesInfo = new FilesInfoBuilder(HashAlgorithm.SHA256)
+            .addFile(file)
+            .build();
+        Manifest manifest = new ManifestBuilder(HashAlgorithm.SHA256, provenanceJsonMapper)
+            .withFilesInfo(filesInfo)
+            .withMetadata(metadata)
+            .build();
+        ProvenanceSignature signature = provenanceJsonMapper.readValue(
+            Path.of(SIGNATURE_FILE), ProvenanceSignature.class);
+        return new ProvenanceRecordBuilder()
+            .withMetadata(metadata)
+            .withFilesInfo(filesInfo)
+            .withManifest(manifest)
+            .withSignature(signature)
+            .build();
     }
 
 }

@@ -161,24 +161,7 @@ public final class ProvenanceVerificationService {
         }
 
         // Step 3: Verify provided file hashes
-        if (providedHashes.isEmpty()) {
-            steps.add(VerificationStep.success(VerificationStepName.FILE_CONTENTS,
-                "File content verification skipped (no hashes provided)"));
-        } else {
-            int total = record.filesInfo().files().size();
-            long provided = record.filesInfo().files().stream()
-                .filter(f -> providedHashes.containsKey(f.path()))
-                .count();
-            List<String> mismatches = collectProvidedHashMismatches(record.filesInfo(), providedHashes);
-            if (mismatches.isEmpty()) {
-                steps.add(VerificationStep.success(VerificationStepName.FILE_CONTENTS,
-                    String.format("%d of %d file content hashes verified", provided, total)));
-            } else {
-                steps.add(VerificationStep.failure(VerificationStepName.FILE_CONTENTS,
-                    String.format("%d of %d file content hashes verified", provided - mismatches.size(), total),
-                    String.join("\n", mismatches)));
-            }
-        }
+        steps.add(buildFileContentsStep(record, providedHashes));
 
         // Step 4: Verify signature against manifest
         ProvenanceVerificationResult signatureResult = verifySignature(record);
@@ -191,6 +174,35 @@ public final class ProvenanceVerificationService {
         }
 
         return new ProvenanceVerificationResult(steps);
+    }
+
+    private VerificationStep buildFileContentsStep(ProvenanceRecord record, Map<String, byte[]> providedHashes) {
+        if (providedHashes.isEmpty()) {
+            return VerificationStep.success(VerificationStepName.FILE_CONTENTS,
+                "File content verification skipped (no hashes provided)");
+        }
+        int totalInRecord = record.filesInfo().files().size();
+        long attempted = record.filesInfo().files().stream()
+            .filter(f -> providedHashes.containsKey(f.path()))
+            .count();
+        if (attempted == 0) {
+            return VerificationStep.partial(VerificationStepName.FILE_CONTENTS,
+                "File content verification skipped (none of the provided hashes match files in this record)");
+        }
+        List<String> mismatches = collectProvidedHashMismatches(record.filesInfo(), providedHashes);
+        long verified = attempted - mismatches.size();
+        String summary = String.format("%d of %d file content hashes verified", verified, attempted);
+        if (!mismatches.isEmpty()) {
+            return VerificationStep.failure(VerificationStepName.FILE_CONTENTS, summary,
+                String.join("\n", mismatches));
+        }
+        if (attempted < totalInRecord) {
+            int uncovered = totalInRecord - (int) attempted;
+            return VerificationStep.partial(VerificationStepName.FILE_CONTENTS,
+                String.format("%s (%d %s in record not covered by provided hashes)",
+                    summary, uncovered, uncovered == 1 ? "file" : "files"));
+        }
+        return VerificationStep.success(VerificationStepName.FILE_CONTENTS, summary);
     }
 
     private List<String> collectProvidedHashMismatches(FilesInfo filesInfo, Map<String, byte[]> providedHashes) {
