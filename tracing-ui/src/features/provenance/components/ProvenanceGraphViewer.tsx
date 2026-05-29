@@ -11,6 +11,10 @@ interface Props {
   graph: ProvenanceGraph
 }
 
+const D3_LINK_STROKE = '#9ca3af'
+const D3_NODE_TEXT_COLOR = '#fff' 
+const D3_ROOT_STROKE = '#1a1a2e'
+
 type SimNode = DisplayNode & {
   x?: number
   y?: number
@@ -38,12 +42,12 @@ function truncate(str: string | null | undefined, maxLen: number): string {
 function NodeDetails({ node }: { node: GraphNode }) {
   return (
     <>
-      <div style={{ fontWeight: 600, marginBottom: '4px', paddingRight: '20px' }}>{node.dataType || 'Unknown'}</div>
-      <div><span style={{ color: '#666' }}>ID:</span> <span style={{ fontFamily: 'monospace', fontSize: '10px' }}>{node.id}</span></div>
-      <div><span style={{ color: '#666' }}>Data ID:</span> {node.dataId || 'N/A'}</div>
-      <div><span style={{ color: '#666' }}>Signed:</span> {node.signingTime ? new Date(node.signingTime).toLocaleString() : 'N/A'}</div>
-      <div><span style={{ color: '#666' }}>Signed by:</span> {node.signerIdentity || '—'}</div>
-      <div><span style={{ color: '#666' }}>Predecessors:</span> {node.predecessorCount}</div>
+      <div className="graph-tooltip__title">{node.dataType || 'Unknown'}</div>
+      <div><span className="graph-node-label">ID:</span> <span className="graph-node-id">{node.id}</span></div>
+      <div><span className="graph-node-label">Data ID:</span> {node.dataId || 'N/A'}</div>
+      <div><span className="graph-node-label">Signed:</span> {node.signingTime ? new Date(node.signingTime).toLocaleString() : 'N/A'}</div>
+      <div><span className="graph-node-label">Signed by:</span> {node.signerIdentity || '—'}</div>
+      <div><span className="graph-node-label">Predecessors:</span> {node.predecessorCount}</div>
     </>
   )
 }
@@ -117,7 +121,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
       .selectAll('line')
       .data(links)
       .join('line')
-      .attr('stroke', '#9ca3af')
+      .attr('stroke', D3_LINK_STROKE)
       .attr('stroke-opacity', 0.8)
       .attr('stroke-width', 2)
 
@@ -157,7 +161,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
         const div = fo.append('xhtml:div')
           .style('font-size', '11px')
           .style('line-height', '1.3')
-          .style('color', '#fff')
+          .style('color', D3_NODE_TEXT_COLOR)
           .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
 
         div.append('xhtml:div')
@@ -183,7 +187,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
           .attr('rx', 6)
           .attr('ry', 6)
           .attr('fill', color)
-          .attr('stroke', isRoot ? '#1a1a2e' : strokeColor)
+          .attr('stroke', isRoot ? D3_ROOT_STROKE : strokeColor)
           .attr('stroke-width', isRoot ? 3 : 2)
           .style('cursor', isRoot ? 'default' : 'pointer')
 
@@ -197,7 +201,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
         const div = fo.append('xhtml:div')
           .style('font-size', '13px')
           .style('line-height', '1.3')
-          .style('color', '#fff')
+          .style('color', D3_NODE_TEXT_COLOR)
           .style('text-shadow', '0 1px 2px rgba(0,0,0,0.3)')
 
         const primaryLabel = truncate(stripPrefix(d.dataId, labelPrefix), LABEL_MAX_LEN) || 'N/A'
@@ -316,7 +320,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
 
   return (
     <div className="graph-wrapper">
-      <div ref={containerRef} className="graph-container" style={{ height: '600px', position: 'relative' }}>
+      <div ref={containerRef} className="graph-container">
         <svg ref={svgRef} width="100%" height="100%" />
 
         <div className="graph-timeline-axis" aria-hidden="true">
@@ -333,7 +337,7 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
           )}
           {sortedTypes.map(type => (
             <span key={type ?? 'unknown'} className="graph-legend-item">
-              <svg width="14" height="14" style={{ flexShrink: 0 }}>
+              <svg width="14" height="14">
                 <rect x="1" y="1" width="12" height="12" rx="2" ry="2" fill={typeColors(type)} />
               </svg>
               <span>{stripPrefix(type?.trim(), labelPrefix) || type?.trim() || 'Unknown'}</span>
@@ -343,25 +347,13 @@ export default function ProvenanceGraphViewer({ graph }: Props) {
 
         {tooltip && (
           <div
-            style={{
-              position: 'fixed',
-              left: tooltip.x,
-              top: tooltip.y,
-              background: 'white',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              padding: '8px 12px',
-              fontSize: '12px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-              zIndex: 1000,
-              pointerEvents: 'none',
-              maxWidth: '22rem',
-            }}
+            className="graph-tooltip"
+            style={{ left: tooltip.x, top: tooltip.y }}
           >
             {tooltip.node.isGroup ? (
               <>
-                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Grouped Predecessors</div>
-                <div><span style={{ color: '#666' }}>Hidden:</span> {(tooltip.node as GroupNode).count} predecessors</div>
+                <div className="graph-tooltip__title">Grouped Predecessors</div>
+                <div><span className="graph-node-label">Hidden:</span> {(tooltip.node as GroupNode).count} predecessors</div>
               </>
             ) : (
               <NodeDetails node={tooltip.node as GraphNode} />

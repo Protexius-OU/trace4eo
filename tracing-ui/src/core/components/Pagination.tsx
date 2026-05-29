@@ -17,7 +17,7 @@ export default function Pagination({ page, totalPages, onPageChange }: Props) {
       >
         Previous
       </button>
-      <span style={{ padding: '0.5rem 1rem' }}>
+      <span>
         Page {page + 1} of {totalPages}
       </span>
       <button

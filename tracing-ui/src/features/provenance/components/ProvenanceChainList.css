@@ -15,7 +15,7 @@
 .chain-row {
   display: flex;
   align-items: flex-start;
-  gap: 0.875rem;
+  gap: var(--space-3);
   padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -36,8 +36,8 @@
 .chain-row-highlighted,
 .chain-row-highlighted[role="button"]:hover,
 .chain-row-highlighted[role="button"]:focus-visible {
-  background: #fef9c3;
-  outline: 1px solid #facc15;
+  background: var(--color-highlight-bg);
+  outline: 1px solid var(--color-highlight-border);
   outline-offset: -1px;
 }
 
@@ -70,14 +70,14 @@
 }
 
 .chain-viewing-badge {
-  font-size: 0.625rem;
+  font-size: var(--text-2xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--color-status-pass-fg);
   background: var(--color-status-pass-bg);
   border: 1px solid var(--color-status-pass-border);
   padding: 0.0625rem 0.4375rem;
-  border-radius: 9999px;
+  border-radius: var(--radius-pill);
   text-transform: uppercase;
 }
 

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
 import './RecordGraphPage.css'
 import { useParams, Link } from 'react-router-dom'
+import { Button } from '@/core/components/Button'
+import { useLocalStorage } from '@/core/hooks/useLocalStorage'
 import { useQuery } from '@tanstack/react-query'
 import { fetchGraph, fetchRecord } from '../api/provenanceApi'
 import { useAuthFetch } from '@/core/auth/useAuthFetch'
@@ -11,28 +12,17 @@ import Sentinel2FileCheckResult from '../components/Sentinel2FileCheckResult'
 import ProvenanceGraphViewer from '../components/ProvenanceGraphViewer'
 import ProvenanceChainList from '../components/ProvenanceChainList'
 import IntegrityChain from '../components/IntegrityChain'
+import Spinner from '@/core/components/Spinner'
 import { ProvenanceChainMap } from '@/features/locations'
 
 type ChainView = 'graph' | 'list' | 'map'
 const CHAIN_VIEW_STORAGE_KEY = 'provenance-chain-view'
 
-function parseChainView(value: string | null): ChainView {
-  return value === 'list' || value === 'map' ? value : 'graph'
-}
-
 export default function RecordGraphPage() {
   const authFetch = useAuthFetch()
   const { id } = useParams<{ id: string }>()
 
-  const [chainView, setChainView] = useState<ChainView>(() => {
-    if (typeof window === 'undefined') return 'graph'
-    return parseChainView(window.localStorage.getItem(CHAIN_VIEW_STORAGE_KEY))
-  })
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem(CHAIN_VIEW_STORAGE_KEY, chainView)
-  }, [chainView])
+  const [chainView, setChainView] = useLocalStorage<ChainView>(CHAIN_VIEW_STORAGE_KEY, 'graph')
 
   const { data: graphData, isLoading: graphLoading, error: graphError } = useQuery({
     queryKey: ['graph', id],
@@ -40,7 +30,7 @@ export default function RecordGraphPage() {
     enabled: !!id,
   })
 
-  const { data: recordData } = useQuery({
+  const { data: recordData, error: recordError } = useQuery({
     queryKey: ['record', id],
     queryFn: () => fetchRecord(authFetch, id!),
     enabled: !!id,
@@ -71,42 +61,41 @@ export default function RecordGraphPage() {
       <div className="record-header">
         <h1>Provenance Record Details</h1>
         <div className="record-header-actions">
-          <button
+          <Button
             onClick={handleVerify}
             disabled={rv.isVerifying}
-            className="btn btn-primary"
           >
             {rv.isVerifying ? 'Verifying...' : 'Verify'}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
             onClick={() => fileInputRef.current?.click()}
             disabled={rv.isVerifyingFiles || !recordData}
-            className="btn btn-secondary"
           >
             {rv.isSearchingPredecessors ? 'Searching...' : rv.isVerifyingFiles ? 'Hashing...' : 'Verify Files'}
-          </button>
+          </Button>
           {isSentinel2Record && (
             <>
-              <button
+              <Button
+                variant="secondary"
                 onClick={handleVerifyTrace}
                 disabled={s2.isVerifyingTrace}
-                className="btn btn-secondary"
               >
                 {s2.isVerifyingTrace ? 'Verifying Trace...' : 'Verify Trace'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={() => traceFileInputRef.current?.click()}
                 disabled={!!s2.traceCheckStatus}
-                className="btn btn-secondary"
                 title="Pick one or more files from the Sentinel-2 product. Each is hashed locally and compared to the Copernicus registry."
               >
                 {s2.traceCheckStatus ? 'Working…' : 'Check Against Copernicus'}
-              </button>
+              </Button>
               <input
                 ref={traceFileInputRef}
                 type="file"
                 multiple
-                style={{ display: 'none' }}
+                className="hidden"
                 onChange={handleVerifyTraceFile}
               />
             </>
@@ -115,7 +104,7 @@ export default function RecordGraphPage() {
             ref={fileInputRef}
             type="file"
             multiple
-            style={{ display: 'none' }}
+            className="hidden"
             onChange={handleVerifyFiles}
           />
           <Link to="/" className="btn btn-secondary">Back to List</Link>
@@ -146,7 +135,9 @@ export default function RecordGraphPage() {
         />
       )}
 
-      {graphLoading && <p className="loading">Loading graph...</p>}
+      {recordError && <p className="error">Error loading record: {String(recordError)}</p>}
+
+      {graphLoading && <Spinner label="Loading graph…" />}
 
       {graphError && <p className="error">Error loading graph: {String(graphError)}</p>}
 

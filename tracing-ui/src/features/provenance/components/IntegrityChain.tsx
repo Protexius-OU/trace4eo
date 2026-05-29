@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react'
+import { useLocalStorage } from '@/core/hooks/useLocalStorage'
 import { Link } from 'react-router-dom'
+import { Check, X, Minus, HelpCircle } from 'lucide-react'
 import type { ProvenanceRecord, VerificationResult, VerificationStepName, FileVerificationResponse, FileHashInfo, PredecessorFileResult } from '../types/provenance'
+import { VerificationBadge } from '@/core/components/VerificationBadge'
 import './IntegrityChain.css'
 
 const FILE_COLLAPSE_THRESHOLD = 5
@@ -31,12 +34,13 @@ function connectorClass(status: Status): string {
 }
 
 function StatusIcon({ status }: { status: Status }) {
+  const props = { size: 14, strokeWidth: 2.5, 'aria-hidden': true as const }
   switch (status) {
-    case 'pass': return <span className="ic-status ic-status-pass">✓</span>
-    case 'fail': return <span className="ic-status ic-status-fail">✗</span>
-    case 'skipped': return <span className="ic-status ic-status-skipped">&ndash;</span>
-    case 'unknown': return <span className="ic-status ic-status-unknown">?</span>
-    default: return null
+    case 'pass':    return <Check       {...props} className="ic-status ic-status-pass" />
+    case 'fail':    return <X           {...props} className="ic-status ic-status-fail" />
+    case 'skipped': return <Minus       {...props} className="ic-status ic-status-skipped" />
+    case 'unknown': return <HelpCircle  {...props} className="ic-status ic-status-unknown" />
+    default:        return null
   }
 }
 
@@ -58,7 +62,7 @@ function FileRow({ file, status, showHash }: { file: { path: string | null; hash
 function ShowMoreButton({ hidden, expanded, onToggle }: { hidden: number; expanded: boolean; onToggle: () => void }) {
   if (hidden <= 0) return null
   return (
-    <button className="ic-show-more" onClick={onToggle}>
+    <button type="button" className="ic-show-more" onClick={onToggle}>
       {expanded ? 'Show less' : `Show ${hidden} more`}
     </button>
   )
@@ -109,7 +113,11 @@ function NotInRecordRow({
               {predecessorResult.recordDataId} ({predecessorResult.recordDataType})
             </Link>
             {' — '}
-            {predecessorResult.status === 'MATCHED' ? '✓ Matched' : '✗ Mismatch'}
+            <span className="ic-status-inline">
+              {predecessorResult.status === 'MATCHED'
+                ? <><Check size={12} strokeWidth={2.5} aria-hidden="true" />Matched</>
+                : <><X size={12} strokeWidth={2.5} aria-hidden="true" />Mismatch</>}
+            </span>
             {` at depth ${predecessorResult.foundAtDepth}`}
           </span>
         ) : isSearching ? (
@@ -213,14 +221,8 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
 
   const [allFilesExpanded, setAllFilesExpanded] = useState(false)
   const [uncheckedExpanded, setUncheckedExpanded] = useState(false)
-  const [showCrypto, setShowCrypto] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false
-    return window.localStorage.getItem(SHOW_CRYPTO_STORAGE_KEY) === 'true'
-  })
-  const [minified, setMinified] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false
-    return window.localStorage.getItem(MINIFIED_STORAGE_KEY) === 'true'
-  })
+  const [showCrypto, setShowCrypto] = useLocalStorage(SHOW_CRYPTO_STORAGE_KEY, false)
+  const [minified, setMinified] = useLocalStorage(MINIFIED_STORAGE_KEY, false)
 
   // Crypto details and minified are opposite ends of a density spectrum,
   // so enabling one disables the other.
@@ -238,16 +240,6 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
     setAllFilesExpanded(false)
     setUncheckedExpanded(false)
   }, [fileVerificationResponse])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem(SHOW_CRYPTO_STORAGE_KEY, String(showCrypto))
-  }, [showCrypto])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    window.localStorage.setItem(MINIFIED_STORAGE_KEY, String(minified))
-  }, [minified])
 
   const verified = verificationResult !== null
 
@@ -295,9 +287,7 @@ export default function IntegrityChain({ record, verificationResult, fileVerific
             <span>Cryptographic details</span>
           </label>
           {verified && (
-            <span className={`ic-badge ${verificationResult.status ? 'ic-badge-pass' : 'ic-badge-fail'}`}>
-              {verificationResult.status ? '✓ Verified' : '✗ Failed'}
-            </span>
+            <VerificationBadge passed={verificationResult.status} />
           )}
         </div>
       </div>

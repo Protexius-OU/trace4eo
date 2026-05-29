@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { ChevronDown } from 'lucide-react'
 
 interface FilterDropdownProps {
   label: string
@@ -31,8 +32,15 @@ export function FilterDropdown({ label, values, displayValues, selected, onToggl
       if (menuRef.current?.contains(target)) return
       setIsOpen(false)
     }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsOpen(false)
+    }
     document.addEventListener('mousedown', handleMouseDown)
-    return () => document.removeEventListener('mousedown', handleMouseDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleMouseDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [isOpen])
 
   useEffect(() => {
@@ -68,9 +76,7 @@ export function FilterDropdown({ label, values, displayValues, selected, onToggl
         aria-haspopup="true"
       >
         {toggleLabel}
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" className="dropdown-arrow">
-          <path d="M2 4l4 4 4-4H2z"/>
-        </svg>
+        <ChevronDown size={12} className="dropdown-arrow" aria-hidden="true" />
       </button>
       {isOpen && createPortal(
         <div

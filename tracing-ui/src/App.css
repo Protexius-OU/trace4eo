@@ -1,55 +1,55 @@
 .login {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: linear-gradient(135deg, var(--color-brand) 0%, var(--color-login-mid) 50%, var(--color-login-deep) 100%);
 }
 
 .login-card {
-  background: white;
-  border-radius: 12px;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
   padding: 3rem 2.5rem 2.5rem;
   max-width: 380px;
   width: 100%;
   text-align: center;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-xl);
 }
 
 .login-icon {
-  color: #1a1a2e;
+  color: var(--color-brand);
   margin-bottom: 1.5rem;
 }
 
 .login-title {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--color-brand);
   letter-spacing: -0.02em;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
 }
 
 .login-subtitle {
-  color: #888;
-  font-size: 0.9rem;
+  color: var(--color-text-subtle);
+  font-size: var(--text-lg);
   margin-bottom: 0;
 }
 
 .login-divider {
   border: none;
-  border-top: 1px solid #e5e5e5;
+  border-top: 1px solid var(--color-border);
   margin: 1.75rem 0;
 }
 
 .login-btn {
   width: 100%;
-  padding: 0.75rem 1.5rem;
-  font-size: 0.95rem;
+  padding: var(--space-3) 1.5rem;
+  font-size: var(--text-lg);
   font-weight: 500;
   border: none;
-  border-radius: 6px;
-  background: #1a1a2e;
-  color: white;
+  border-radius: var(--radius-md);
+  background: var(--color-brand);
+  color: var(--color-text-inverse);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--transition-base);
 }
 
 .login-btn:hover {
-  background: #2a2a4e;
+  background: var(--color-brand-hover);
 }

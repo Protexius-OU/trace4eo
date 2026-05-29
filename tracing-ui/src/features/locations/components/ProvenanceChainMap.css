@@ -3,7 +3,7 @@
   width: 100%;
   height: 70vh;
   min-height: 480px;
-  background: #faf8f3;
+  background: var(--color-surface-map);
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-border-subtle);
   overflow: hidden;
@@ -14,17 +14,17 @@
   top: 1rem;
   left: 50%;
   transform: translateX(-50%);
-  padding: 0.5rem 1rem;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  color: #475569;
-  font-size: 0.9rem;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface-glass);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text-strong);
+  font-size: var(--text-lg);
   z-index: 2;
   pointer-events: none;
 }
 
 .chain-map-status-error {
-  color: #b91c1c;
-  border-color: #fca5a5;
+  color: var(--color-status-fail-fg);
+  border-color: var(--color-status-fail-line);
 }
